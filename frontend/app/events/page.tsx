@@ -21,7 +21,12 @@ export default function EventsPage() {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const response = await fetch('http://localhost:5000/events');
+                // Use window.location to dynamically determine the API URL
+                const apiUrl = window.location.hostname === 'localhost' 
+                    ? 'http://localhost:5000/events'
+                    : 'http://141.95.123.145:5000/events';
+                
+                const response = await fetch(apiUrl);
                 const data = await response.json();
                 setEvents(data);
             } catch (error) {
