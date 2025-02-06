@@ -4,7 +4,14 @@ from bs4 import BeautifulSoup
 import cloudscraper
 
 app = Flask(__name__)
-CORS(app)
+# Enable CORS for all domains with security settings
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 @app.route("/")
 def home():
@@ -56,8 +63,12 @@ def scrape_news():
     return events
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
-    app.run(debug=True)
+    # Remove the duplicate app.run and set host to '0.0.0.0' to allow external access
+    app.run(
+        host="0.0.0.0",  # Allows external access
+        port=5000,       # Standard port
+        debug=True       # Enable debug mode
+    )
     
     
     
