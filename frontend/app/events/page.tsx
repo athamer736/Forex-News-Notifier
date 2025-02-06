@@ -14,6 +14,9 @@ interface ForexEvent {
     previous: string;
 }
 
+// Get the API URL from environment variable or default to localhost
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function EventsPage() {
     const [events, setEvents] = useState<ForexEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -21,7 +24,7 @@ export default function EventsPage() {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const response = await fetch('http://localhost:5000/events');
+                const response = await fetch(`${API_URL}/events`);
                 const data = await response.json();
                 setEvents(data);
             } catch (error) {

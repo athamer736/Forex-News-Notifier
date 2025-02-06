@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # Remove the duplicate app.run and set host to '0.0.0.0' to allow external access
     app.run(
         host="0.0.0.0",  # Allows external access
-        port=3000,       # Standard port
+        port=5000,       # Standard port
         debug=True       # Enable debug mode
     )
     
