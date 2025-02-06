@@ -1,8 +1,10 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
+from flask_cors import CORS
 from bs4 import BeautifulSoup
 import cloudscraper
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/")
 def home():
@@ -10,12 +12,8 @@ def home():
 
 @app.route("/events")
 def events():
-
-    # TODO: Add a button to scrape the news on every user request
     events = scrape_news()
-    for event in events:
-        print(event)
-    return render_template("events.html", events=events)
+    return jsonify(events)
 
 def scrape_news():
     scraper = cloudscraper.create_scraper()
