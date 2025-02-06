@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Forex Events</title>
+</head>
+<body>
+    <h1>Upcoming Forex Events</h1>
+    <ul>
+    {% for e in events %}
+        <li>
+            <strong>{{ e.time }}</strong> - {{ e.currency }}: {{ e.event }} ({{ e.impact }})
+        </li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
