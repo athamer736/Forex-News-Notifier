@@ -8,6 +8,15 @@ app = Flask(__name__)
 def home():
     return render_template("index.html")
 
+@app.route("/events")
+def events():
+
+    # TODO: Add a button to scrape the news on every user request
+    events = scrape_news()
+    for event in events:
+        print(event)
+    return render_template("events.html", events=events)
+
 def scrape_news():
     scraper = cloudscraper.create_scraper()
     url = "https://www.forexfactory.com/"
@@ -54,7 +63,5 @@ if __name__ == "__main__":
     
     
     
-    # TODO: Add a button to scrape the news
-    events = scrape_news()
-    for event in events:
-        print(event)
+    
+    
