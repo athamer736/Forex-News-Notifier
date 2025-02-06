@@ -18,7 +18,7 @@
     <ul>
     {% for e in events %}
         <li>
-            <strong>{{ e.time }}</strong> - {{ e.currency }}: {{ e.event }} ({{ e.impact }})
+            <strong>{{ e.time }}</strong> - {{ e.currency }}: {{ e.event_title }} ({{ e.impact }})
             <div class="event-details">
                 <span class="data-point">Forecast: {{ e.forecast if e.forecast else 'N/A' }}</span>
                 <span class="data-point">Actual: {{ e.actual if e.actual else 'N/A' }}</span>
