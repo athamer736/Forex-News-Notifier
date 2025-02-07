@@ -15,3 +15,6 @@ venv/
 
 # macOS specific files
 .DS_Store
+
+# Add this line to your .gitignore file
+   venv/
