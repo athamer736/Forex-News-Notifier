@@ -244,9 +244,11 @@ def get_events():
         user_id = request.args.get('userId', 'default')
         time_range = request.args.get('range', '24h')
         currencies = request.args.get('currencies', '')  # Get currencies as comma-separated string
+        impacts = request.args.get('impacts', '')  # Get impacts as comma-separated string
         
-        # Parse currencies into a list
+        # Parse currencies and impacts into lists
         selected_currencies = [c.strip().upper() for c in currencies.split(',')] if currencies else []
+        selected_impacts = [i.strip().capitalize() for i in impacts.split(',')] if impacts else []
         
         # Validate time range
         if time_range not in VALID_TIME_RANGES:
@@ -268,7 +270,7 @@ def get_events():
             # Continue with existing stored events if available
 
         # Get filtered events based on user's preferences
-        filtered_events = get_filtered_events(time_range, user_timezone, selected_currencies)
+        filtered_events = get_filtered_events(time_range, user_timezone, selected_currencies, selected_impacts)
         
         return jsonify(filtered_events)
 
