@@ -18,15 +18,29 @@ interface TimeRangeOption {
     label: string;
 }
 
+interface CurrencyOption {
+    value: string;
+    label: string;
+}
+
 const timeRangeOptions: TimeRangeOption[] = [
-    { value: '1h', label: 'Next Hour' },
-    { value: '4h', label: 'Next 4 Hours' },
-    { value: '8h', label: 'Next 8 Hours' },
-    { value: '12h', label: 'Next 12 Hours' },
     { value: '24h', label: 'Next 24 Hours' },
-    { value: 'today', label: 'Rest of Today' },
+    { value: 'today', label: 'Today' },
     { value: 'tomorrow', label: 'Tomorrow' },
-    { value: 'week', label: 'Next 7 Days' },
+    { value: 'week', label: 'Full Week (Mon-Sun)' },
+    { value: 'remaining_week', label: 'Remaining Week' }
+];
+
+const currencyOptions: CurrencyOption[] = [
+    { value: 'USD', label: 'USD - US Dollar' },
+    { value: 'EUR', label: 'EUR - Euro' },
+    { value: 'GBP', label: 'GBP - British Pound' },
+    { value: 'JPY', label: 'JPY - Japanese Yen' },
+    { value: 'CNY', label: 'CNY - Chinese Yuan' },
+    { value: 'AUD', label: 'AUD - Australian Dollar' },
+    { value: 'CAD', label: 'CAD - Canadian Dollar' },
+    { value: 'CHF', label: 'CHF - Swiss Franc' },
+    { value: 'NZD', label: 'NZD - New Zealand Dollar' }
 ];
 
 function EventsPage() {
@@ -34,6 +48,7 @@ function EventsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [timeRange, setTimeRange] = useState<string>('24h');
+    const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
 
     const fetchEvents = async () => {
@@ -41,12 +56,36 @@ function EventsPage() {
             setError(null);
             setLoading(true);
             const userId = localStorage.getItem('userId') || 'default';
-            const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-                ? 'http://localhost:5000'
-                : 'http://141.95.123.145:5000';
             
+            // Determine the base URL based on hostname
+            let baseUrl;
+            if (typeof window !== 'undefined') {
+                if (window.location.hostname === 'localhost') {
+                    baseUrl = 'http://localhost:5000';
+                } else if (window.location.hostname === '192.168.0.144') {
+                    baseUrl = 'http://192.168.0.144:5000';
+                } else {
+                    baseUrl = 'http://141.95.123.145:5000';
+                }
+            } else {
+                baseUrl = 'http://141.95.123.145:5000'; // Default to server
+            }
+            
+            console.log('Using base URL:', baseUrl);
             console.log('Fetching events for user:', userId);
-            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}`);
+
+            // Add currencies to the query parameters if any are selected
+            const currencyParam = selectedCurrencies.length > 0 ? `&currencies=${selectedCurrencies.join(',')}` : '';
+            
+            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}${currencyParam}`, {
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Origin': typeof window !== 'undefined' ? window.location.origin : '',
+                }
+            });
             
             if (!response.ok) {
                 const errorData = await response.json();
@@ -94,14 +133,30 @@ function EventsPage() {
                 console.log('Current timezone:', timezone);
                 console.log('Current offset:', offset);
                 
-                const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-                    ? 'http://localhost:5000'
-                    : 'http://141.95.123.145:5000';
+                // Determine the base URL based on hostname
+                let baseUrl;
+                if (typeof window !== 'undefined') {
+                    if (window.location.hostname === 'localhost') {
+                        baseUrl = 'http://localhost:5000';
+                    } else if (window.location.hostname === '192.168.0.144') {
+                        baseUrl = 'http://192.168.0.144:5000';
+                    } else {
+                        baseUrl = 'http://141.95.123.145:5000';
+                    }
+                } else {
+                    baseUrl = 'http://141.95.123.145:5000'; // Default to server
+                }
+                
+                console.log('Using base URL:', baseUrl);
 
                 const response = await fetch(`${baseUrl}/timezone`, {
                     method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include',
                     headers: {
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json',
+                        'Origin': typeof window !== 'undefined' ? window.location.origin : '',
                     },
                     body: JSON.stringify({
                         userId,
@@ -132,7 +187,7 @@ function EventsPage() {
         }, 5 * 60 * 1000);  // Refresh every 5 minutes
         
         return () => clearInterval(interval);
-    }, [timeRange]);
+    }, [timeRange, selectedCurrencies]);
 
     const getImpactColor = (impact: string) => {
         switch (impact.toLowerCase()) {
@@ -145,6 +200,15 @@ function EventsPage() {
             default:
                 return 'default';
         }
+    };
+
+    const handleCurrencyChange = (event: any) => {
+        const value = event.target.value;
+        setSelectedCurrencies(typeof value === 'string' ? value.split(',') : value);
+    };
+
+    const handleRemoveCurrency = (currencyToRemove: string) => {
+        setSelectedCurrencies(prev => prev.filter(currency => currency !== currencyToRemove));
     };
 
     if (loading) {
@@ -190,43 +254,119 @@ function EventsPage() {
                     Stay updated with the latest economic events
                 </Typography>
                 
-                <Box mt={4} mb={4}>
-                    <Typography 
-                        variant="h6" 
-                        sx={{ 
-                            mb: 2,
-                            fontWeight: 600,
-                            color: '#fff',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                        }}
-                    >
-                        Time Range
-                    </Typography>
-                    <FormControl sx={{ minWidth: 250 }}>
-                        <Select
-                            value={timeRange}
-                            onChange={(e) => setTimeRange(e.target.value)}
-                            sx={{
-                                backgroundColor: '#fff',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.5)',
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.7)',
-                                },
+                <Box mt={4} mb={4} display="flex" flexDirection="column" alignItems="center" gap={3}>
+                    <Box>
+                        <Typography 
+                            variant="h6" 
+                            sx={{ 
+                                mb: 2,
+                                fontWeight: 600,
+                                color: '#fff',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
                             }}
                         >
-                            {timeRangeOptions.map((option) => (
-                                <MenuItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                            Time Range
+                        </Typography>
+                        <FormControl sx={{ minWidth: 250 }}>
+                            <Select
+                                value={timeRange}
+                                onChange={(e) => setTimeRange(e.target.value)}
+                                sx={{
+                                    backgroundColor: '#fff',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.7)',
+                                    },
+                                }}
+                            >
+                                {timeRangeOptions.map((option) => (
+                                    <MenuItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    <Box>
+                        <Typography 
+                            variant="h6" 
+                            sx={{ 
+                                mb: 2,
+                                fontWeight: 600,
+                                color: '#fff',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                            }}
+                        >
+                            Currencies
+                        </Typography>
+                        <FormControl sx={{ minWidth: 250 }}>
+                            <Select
+                                multiple
+                                value={selectedCurrencies}
+                                onChange={handleCurrencyChange}
+                                renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {(selected as string[]).map((value) => (
+                                            <Chip 
+                                                key={value} 
+                                                label={value}
+                                                onDelete={() => handleRemoveCurrency(value)}
+                                                onMouseDown={(event) => {
+                                                    event.stopPropagation(); // Prevent select from opening
+                                                }}
+                                                sx={{
+                                                    backgroundColor: '#1976d2',
+                                                    color: '#fff',
+                                                    '& .MuiChip-deleteIcon': {
+                                                        color: '#fff',
+                                                        '&:hover': {
+                                                            color: '#ff4444'
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        ))}
+                                    </Box>
+                                )}
+                                sx={{
+                                    backgroundColor: '#fff',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.7)',
+                                    },
+                                }}
+                            >
+                                {currencyOptions.map((option) => (
+                                    <MenuItem key={option.value} value={option.value}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                                            <span>{option.label}</span>
+                                            {selectedCurrencies.includes(option.value) && (
+                                                <Chip 
+                                                    size="small" 
+                                                    label="Selected" 
+                                                    color="primary"
+                                                    sx={{ ml: 1 }}
+                                                />
+                                            )}
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
                 </Box>
             </Box>
 
