@@ -7,7 +7,7 @@ import requests
 from fetch_events import fetch_events
 from timezone_handler import set_user_timezone, get_user_timezone, convert_to_local_time
 from event_filter import filter_events_by_range, TimeRange
-from event_store import get_filtered_events
+from event_store import get_filtered_events, event_store
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -163,7 +163,7 @@ def after_request(response):
     return response
 
 # Valid time ranges for filtering
-VALID_TIME_RANGES = ['1h', '4h', '8h', '12h', '24h', 'today', 'tomorrow', 'week']
+VALID_TIME_RANGES = ['1h', '4h', '8h', '12h', '24h', 'today', 'tomorrow', 'week', 'last_week', 'historical', 'all']
 
 @app.route("/")
 def home():
@@ -227,6 +227,50 @@ def get_events():
     except Exception as e:
         logger.exception("Error processing events request")
         return jsonify({'error': str(e)}), 500
+
+@app.route("/debug/events", methods=["GET"])
+def debug_events():
+    """Debug endpoint to show both raw and filtered events"""
+    try:
+        # Get request parameters
+        user_id = request.args.get('userId', 'default')
+        time_range = request.args.get('range', '24h')
+        
+        # Get user's timezone
+        user_timezone = get_user_timezone(user_id)
+        if not user_timezone:
+            user_timezone = 'UTC'
+            
+        # Ensure we have latest events
+        fetch_events()
+        
+        # Get both raw and filtered events
+        raw_events = event_store['events']
+        filtered_events = get_filtered_events(time_range, user_timezone)
+        
+        # Create debug info
+        debug_info = {
+            'metadata': {
+                'total_raw_events': len(raw_events),
+                'total_filtered_events': len(filtered_events),
+                'user_timezone': user_timezone,
+                'time_range': time_range,
+                'last_updated': event_store['last_updated'].isoformat() if event_store['last_updated'] else None
+            },
+            'raw_events': raw_events,
+            'filtered_events': filtered_events
+        }
+        
+        logger.info(f"Debug info - Raw events: {len(raw_events)}, Filtered events: {len(filtered_events)}")
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        logger.exception("Error in debug endpoint")
+        return jsonify({
+            'error': str(e),
+            'raw_events_count': len(event_store['events']) if event_store['events'] else 0,
+            'last_updated': event_store['last_updated'].isoformat() if event_store['last_updated'] else None
+        }), 500
 
 if __name__ == "__main__":
     app.run(

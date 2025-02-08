@@ -35,10 +35,15 @@ function EventsPage() {
     const [error, setError] = useState<string | null>(null);
     const [timeRange, setTimeRange] = useState<string>('24h');
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 5; // seconds
 
-    const fetchEvents = async () => {
+    const fetchEvents = async (isRetry = false) => {
         try {
-            setError(null);
+            if (!isRetry) {
+                setError(null);
+            }
             setLoading(true);
             const userId = localStorage.getItem('userId') || 'default';
             
@@ -59,36 +64,62 @@ function EventsPage() {
             console.log('Using base URL:', baseUrl);
             console.log('Fetching events for user:', userId);
 
-            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}`, {
-                mode: 'cors',
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Origin': typeof window !== 'undefined' ? window.location.origin : '',
-                }
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                const errorMessage = errorData.error || 'Failed to fetch events';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+            try {
+                const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}`, {
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Origin': typeof window !== 'undefined' ? window.location.origin : '',
+                    },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
                 
-                // Check if it's a rate limit error with retry information
-                if (errorMessage.includes('Rate limit exceeded') && errorMessage.includes('Retrying in')) {
-                    const seconds = parseInt(errorMessage.match(/\d+/)[0]);
-                    setRetryTimer(seconds);
-                    throw new Error(`Rate limit exceeded. Retrying in ${seconds} seconds...`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    const errorMessage = errorData.error || 'Failed to fetch events';
+                    
+                    // Check if it's a rate limit error with retry information
+                    if (errorMessage.includes('Rate limit exceeded') && errorMessage.includes('Retrying in')) {
+                        const seconds = parseInt(errorMessage.match(/\d+/)[0]);
+                        setRetryTimer(seconds);
+                        throw new Error(`Rate limit exceeded. Retrying in ${seconds} seconds...`);
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
-                throw new Error(errorMessage);
+                const data = await response.json();
+                console.log('Received events:', data);
+                setEvents(data);
+                setRetryCount(0); // Reset retry count on success
+            } finally {
+                clearTimeout(timeoutId);
             }
+        } catch (err) {
+            console.error('Error fetching events:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch events';
             
-            const data = await response.json();
-            console.log('Received events:', data);
-            setEvents(data);
-        } catch (error) {
-            console.error('Error fetching events:', error);
-            setError(error instanceof Error ? error.message : 'Failed to fetch events');
+            // Handle timeout/abort errors
+            if (err instanceof Error && err.name === 'AbortError') {
+                if (retryCount < MAX_RETRIES) {
+                    console.log(`Retry attempt ${retryCount + 1} of ${MAX_RETRIES}`);
+                    setRetryCount(prev => prev + 1);
+                    setRetryTimer(RETRY_DELAY);
+                    setError(`Request timed out. Retrying in ${RETRY_DELAY} seconds...`);
+                    return;
+                } else {
+                    setError('Failed to fetch events after multiple attempts. Please try again later.');
+                }
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setLoading(false);
         }
@@ -98,12 +129,13 @@ function EventsPage() {
         if (retryTimer !== null) {
             const timer = setTimeout(() => {
                 setRetryTimer(null);
-                setError(null);
-                fetchEvents();  // Retry the fetch
+                if (retryCount < MAX_RETRIES) {
+                    void fetchEvents(true);  // Retry the fetch
+                }
             }, retryTimer * 1000);
             return () => clearTimeout(timer);
         }
-    }, [retryTimer]);
+    }, [retryTimer, retryCount]);
 
     useEffect(() => {
         const setUserTimezone = async () => {
@@ -155,17 +187,17 @@ function EventsPage() {
                 } else {
                     console.error('Failed to set timezone:', await response.text());
                 }
-            } catch (error) {
-                console.error('Error setting timezone:', error);
+            } catch (err) {
+                console.error('Error setting timezone:', err);
             }
         };
 
         // Set timezone and fetch events
-        setUserTimezone().then(fetchEvents);
+        void setUserTimezone().then(() => void fetchEvents());
 
         // Set up interval for fetching events
         const interval = setInterval(() => {
-            setUserTimezone().then(fetchEvents);
+            void setUserTimezone().then(() => void fetchEvents());
         }, 5 * 60 * 1000);  // Refresh every 5 minutes
         
         return () => clearInterval(interval);

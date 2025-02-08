@@ -4,6 +4,7 @@ import time
 import logging
 import pytz
 from event_store import store_events, event_store
+from mt5_calendar import MT5Calendar
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -16,6 +17,9 @@ HEADERS = {
     'Accept-Language': 'en-US,en;q=0.9'
 }
 
+# Initialize MT5 Calendar
+mt5_calendar = MT5Calendar()
+
 def should_fetch_data():
     """Check if we should fetch new data based on last update time"""
     if not event_store['last_updated']:
@@ -27,8 +31,23 @@ def should_fetch_data():
     # Only fetch if it's been more than 1 hour since last update
     return time_since_update >= 1
 
+def fetch_calendar_data(url):
+    """Fetch data from a specific calendar URL"""
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=15)
+        
+        if response.status_code == 429:
+            logger.warning(f"Rate limit hit for {url}. The API updates once per hour.")
+            return None
+            
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"Error fetching data from {url}: {str(e)}")
+        return None
+
 def fetch_and_store_events():
-    """Fetch events from the API and store them"""
+    """Fetch events from ForexFactory and MT5, then store them"""
     try:
         # Check if we need to fetch new data
         if not should_fetch_data():
@@ -37,54 +56,78 @@ def fetch_and_store_events():
             ))
             return True
             
-        logger.info("Fetching new data from API")
+        logger.info("Fetching new data from sources")
         
-        # Try to fetch this week's data
-        url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-        response = requests.get(url, headers=HEADERS, timeout=15)
+        # URLs for different time periods from ForexFactory
+        ff_urls = {
+            'last_week': "https://nfs.faireconomy.media/ff_calendar_lastweek.json",
+            'this_week': "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+            'next_week': "https://nfs.faireconomy.media/ff_calendar_nextweek.json"
+        }
         
-        if response.status_code == 429:
-            logger.warning("Rate limit hit. The API updates once per hour.")
+        all_events = []
+        
+        # Fetch from ForexFactory
+        for period, url in ff_urls.items():
+            logger.info(f"Fetching {period} data from ForexFactory")
+            events = fetch_calendar_data(url)
+            if events:
+                for event in events:
+                    event['source'] = 'forexfactory'
+                all_events.extend(events)
+                logger.info(f"Added {len(events)} events from ForexFactory {period}")
+            else:
+                logger.warning(f"No data retrieved from ForexFactory for {period}")
+                
+        # Fetch from MT5
+        logger.info("Fetching data from MetaTrader 5")
+        mt5_events = mt5_calendar.fetch_calendar_events()
+        if mt5_events:
+            all_events.extend(mt5_events)
+            logger.info(f"Added {len(mt5_events)} events from MT5")
+        else:
+            logger.warning("No data retrieved from MT5")
+        
+        if not all_events:
+            logger.warning("No events fetched from any source")
             if event_store['events']:
                 logger.info("Using cached data")
                 return True
             return False
             
-        response.raise_for_status()
-        events = response.json()
-        logger.info(f"Successfully fetched {len(events)} events")
+        logger.info(f"Successfully fetched {len(all_events)} total events")
         
         # Convert times to UTC and format events
         formatted_events = []
-        et_tz = pytz.timezone('America/New_York')  # API times are in ET
+        et_tz = pytz.timezone('America/New_York')  # ForexFactory times are in ET
         current_utc = datetime.now(pytz.UTC)
         
-        for event in events:
+        for event in all_events:
             try:
-                # Parse the date string (in ET)
-                date_str = event['date'].replace('Z', '').replace('+00:00', '')
-                et_time = datetime.fromisoformat(date_str)
-                
-                # Make sure it's timezone aware
-                if et_time.tzinfo is None:
-                    et_time = et_tz.localize(et_time)
-                
-                # Convert to UTC
-                utc_time = et_time.astimezone(pytz.UTC)
-                
-                # Only include events that haven't happened yet or are very recent
-                time_diff = (utc_time - current_utc).total_seconds() / 3600
-                if time_diff > -1:  # Include events from the last hour
+                if event['source'] == 'forexfactory':
+                    # Parse the date string (in ET)
+                    date_str = event['date'].replace('Z', '').replace('+00:00', '')
+                    et_time = datetime.fromisoformat(date_str)
+                    if et_time.tzinfo is None:
+                        et_time = et_tz.localize(et_time)
+                    utc_time = et_time.astimezone(pytz.UTC)
+                    
+                    # Format event data
                     formatted_event = {
                         'time': utc_time.isoformat(),
                         'currency': event['country'],
                         'impact': event['impact'],
                         'event_title': event['title'],
                         'forecast': event.get('forecast', 'N/A'),
-                        'previous': event.get('previous', 'N/A')
+                        'previous': event.get('previous', 'N/A'),
+                        'actual': event.get('actual', 'N/A'),
+                        'source': event['source']
                     }
-                    formatted_events.append(formatted_event)
-                    logger.debug(f"Added event: {formatted_event['event_title']} at {formatted_event['time']}")
+                else:  # MT5 events are already formatted
+                    formatted_event = event
+                    
+                formatted_events.append(formatted_event)
+                logger.debug(f"Added event: {formatted_event['event_title']} at {formatted_event['time']} from {formatted_event['source']}")
             
             except Exception as e:
                 logger.error(f"Error processing event: {event}")

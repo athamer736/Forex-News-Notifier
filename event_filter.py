@@ -5,7 +5,7 @@ from typing import List, Dict, Literal
 
 logger = logging.getLogger(__name__)
 
-TimeRange = Literal['1h', '4h', '8h', '12h', '24h', 'today', 'tomorrow', 'week']
+TimeRange = Literal['1h', '4h', '8h', '12h', '24h', 'today', 'tomorrow', 'week', 'last_week', 'historical', 'all']
 
 def filter_events_by_range(events: List[Dict], time_range: TimeRange, user_timezone: str = 'UTC') -> List[Dict]:
     """
@@ -22,13 +22,16 @@ def filter_events_by_range(events: List[Dict], time_range: TimeRange, user_timez
             - 'today': Rest of today
             - 'tomorrow': Tomorrow's events
             - 'week': Next 7 days
+            - 'last_week': Past 7 days
+            - 'historical': All past events
+            - 'all': All events (no filtering)
         user_timezone (str): User's timezone name (e.g., 'America/New_York')
         
     Returns:
         List[Dict]: Filtered list of events within the specified range
     """
-    if not events:
-        logger.debug("No events to filter")
+    if not events or time_range == 'all':
+        logger.debug("No events to filter or 'all' range specified")
         return events
 
     try:
@@ -56,6 +59,14 @@ def filter_events_by_range(events: List[Dict], time_range: TimeRange, user_timez
             # Next 7 days
             start_time = current_time
             end_time = current_time + timedelta(days=7)
+        elif time_range == 'last_week':
+            # Past 7 days
+            start_time = current_time - timedelta(days=7)
+            end_time = current_time
+        elif time_range == 'historical':
+            # All past events up to now
+            start_time = datetime.min.replace(tzinfo=pytz.UTC).astimezone(user_tz)
+            end_time = current_time
         else:
             logger.error(f"Invalid time range: {time_range}")
             return events
