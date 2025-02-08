@@ -2,9 +2,11 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
+import Image from 'next/image';
+import { GB, US, FR, DE, JP, CN, SG, AU } from 'country-flag-icons/react/3x2';
 
 interface ForexEvent {
     time: string;
@@ -13,6 +15,7 @@ interface ForexEvent {
     event_title: string;
     forecast: string;
     previous: string;
+    isNew: boolean;
 }
 
 interface TimeRangeOption {
@@ -23,6 +26,12 @@ interface TimeRangeOption {
 interface CurrencyOption {
     value: string;
     label: string;
+}
+
+interface TimezoneOption {
+    value: string;
+    label: string;
+    FlagComponent?: React.ComponentType<{ title?: string; className?: string }>;
 }
 
 const timeRangeOptions: TimeRangeOption[] = [
@@ -45,6 +54,20 @@ const currencyOptions: CurrencyOption[] = [
     { value: 'NZD', label: 'NZD - New Zealand Dollar' }
 ];
 
+const timezoneOptions: TimezoneOption[] = [
+    { value: 'UTC', label: 'UTC' },
+    { value: 'America/New_York', label: 'New York (EST/EDT)', FlagComponent: US },
+    { value: 'America/Chicago', label: 'Chicago (CST/CDT)', FlagComponent: US },
+    { value: 'America/Los_Angeles', label: 'Los Angeles (PST/PDT)', FlagComponent: US },
+    { value: 'Europe/London', label: 'London (GMT/BST)', FlagComponent: GB },
+    { value: 'Europe/Paris', label: 'Paris (CET/CEST)', FlagComponent: FR },
+    { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)', FlagComponent: DE },
+    { value: 'Asia/Tokyo', label: 'Tokyo (JST)', FlagComponent: JP },
+    { value: 'Asia/Shanghai', label: 'Shanghai (CST)', FlagComponent: CN },
+    { value: 'Asia/Singapore', label: 'Singapore (SGT)', FlagComponent: SG },
+    { value: 'Australia/Sydney', label: 'Sydney (AEST/AEDT)', FlagComponent: AU }
+];
+
 const impactOptions = [
     { value: 'High', label: 'High Impact', color: '#d32f2f' },
     { value: 'Medium', label: 'Medium Impact', color: '#ed6c02' },
@@ -61,11 +84,28 @@ function EventsPage() {
     const [selectedImpacts, setSelectedImpacts] = useState<string[]>([]);
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+    const [selectedTimezone, setSelectedTimezone] = useState<string>('');
+    const [isUpdating, setIsUpdating] = useState<boolean>(false);
+    const [initialLoad, setInitialLoad] = useState(true);
+
+    // Initialize timezone on component mount
+    useEffect(() => {
+        const storedTimezone = localStorage.getItem('timezone');
+        const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const defaultTimezone = storedTimezone || browserTimezone;
+        
+        // Check if the timezone is in our options list
+        const isValidTimezone = timezoneOptions.some(option => option.value === defaultTimezone);
+        setSelectedTimezone(isValidTimezone ? defaultTimezone : 'UTC');
+    }, []);
 
     const fetchEvents = async () => {
         try {
+            setIsUpdating(true);
             setError(null);
-            setLoading(true);
+            if (initialLoad) {
+                setLoading(true);
+            }
             const userId = localStorage.getItem('userId') || 'default';
             
             // Determine the base URL based on hostname
@@ -115,12 +155,26 @@ function EventsPage() {
             
             const data = await response.json();
             console.log('Received events:', data);
-            setEvents(data);
+            setEvents(prev => {
+                // Fade out old events that are not in the new data
+                const oldEventIds = new Set(prev.map((e: ForexEvent) => `${e.time}-${e.event_title}`));
+                const newEventIds = new Set(data.map((e: ForexEvent) => `${e.time}-${e.event_title}`));
+                
+                return data.map((event: ForexEvent) => ({
+                    ...event,
+                    isNew: !oldEventIds.has(`${event.time}-${event.event_title}`),
+                }));
+            });
         } catch (error) {
             console.error('Error fetching events:', error);
             setError(error instanceof Error ? error.message : 'Failed to fetch events');
         } finally {
             setLoading(false);
+            setInitialLoad(false);
+            // Add a small delay before removing the updating state for smooth transition
+            setTimeout(() => {
+                setIsUpdating(false);
+            }, 300);
         }
     };
 
@@ -139,7 +193,7 @@ function EventsPage() {
         const setUserTimezone = async () => {
             try {
                 const userId = localStorage.getItem('userId') || 'default';
-                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const timezone = selectedTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
                 const offset = new Date().getTimezoneOffset();
                 
                 console.log('Current timezone:', timezone);
@@ -182,6 +236,9 @@ function EventsPage() {
                     console.log('Timezone set response:', data);
                     localStorage.setItem('timezone', timezone);
                     localStorage.setItem('userId', userId);
+                    if (!selectedTimezone) {
+                        setSelectedTimezone(timezone);
+                    }
                 } else {
                     console.error('Failed to set timezone:', await response.text());
                 }
@@ -199,7 +256,7 @@ function EventsPage() {
         }, 5 * 60 * 1000);  // Refresh every 5 minutes
         
         return () => clearInterval(interval);
-    }, [timeRange, selectedCurrencies, selectedImpacts]);
+    }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone]);
 
     const getImpactColor = (impact: string) => {
         switch (impact.toLowerCase()) {
@@ -216,18 +273,22 @@ function EventsPage() {
         }
     };
 
-    const handleCurrencyChange = (event: any) => {
+    const handleCurrencyChange = (event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
         setSelectedCurrencies(typeof value === 'string' ? value.split(',') : value);
+        // Don't close the dropdown
+        event.stopPropagation();
     };
 
     const handleRemoveCurrency = (currencyToRemove: string) => {
         setSelectedCurrencies(prev => prev.filter(currency => currency !== currencyToRemove));
     };
 
-    const handleImpactChange = (event: any) => {
+    const handleImpactChange = (event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
         setSelectedImpacts(typeof value === 'string' ? value.split(',') : value);
+        // Don't close the dropdown
+        event.stopPropagation();
     };
 
     const handleRemoveImpact = (impactToRemove: string) => {
@@ -235,7 +296,17 @@ function EventsPage() {
     };
 
     const TableView = () => (
-        <TableContainer component={Paper} sx={{ maxWidth: '1600px', margin: '0 auto', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+        <TableContainer 
+            component={Paper} 
+            sx={{ 
+                maxWidth: '1600px', 
+                margin: '0 auto', 
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                opacity: isUpdating ? 0.7 : 1,
+                transition: 'opacity 0.3s ease-in-out',
+                minHeight: '200px'
+            }}
+        >
             <Table sx={{ minWidth: 650 }}>
                 <TableHead>
                     <TableRow sx={{ 
@@ -255,48 +326,66 @@ function EventsPage() {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {events.map((event, index) => (
-                        <TableRow
-                            key={`${event.time}-${event.event_title}-${index}`}
-                            sx={{ 
-                                '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.02)' },
-                                '&:nth-of-type(even)': { backgroundColor: 'rgba(255, 255, 255, 1)' },
-                                '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-                                '& td': { 
-                                    color: '#000',
-                                    borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
-                                }
-                            }}
-                        >
-                            <TableCell>{event.time}</TableCell>
-                            <TableCell>
-                                <Chip 
-                                    label={event.currency}
-                                    size="small"
-                                    sx={{ 
-                                        fontWeight: 'bold',
-                                        backgroundColor: '#e3f2fd',
-                                        color: '#1976d2'
-                                    }}
-                                />
+                    {events.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={6} sx={{ border: 'none' }}>
+                                <Box sx={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center',
+                                    minHeight: '200px',
+                                    color: 'rgba(0, 0, 0, 0.6)',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 500
+                                }}>
+                                    No news available to display
+                                </Box>
                             </TableCell>
-                            <TableCell>
-                                <Chip 
-                                    label={event.impact}
-                                    size="small"
-                                    sx={{ 
-                                        fontWeight: 'medium',
-                                        minWidth: '80px',
-                                        backgroundColor: getImpactColor(event.impact),
-                                        color: '#fff'
-                                    }}
-                                />
-                            </TableCell>
-                            <TableCell>{event.event_title}</TableCell>
-                            <TableCell align="right">{event.forecast || 'N/A'}</TableCell>
-                            <TableCell align="right">{event.previous || 'N/A'}</TableCell>
                         </TableRow>
-                    ))}
+                    ) : (
+                        events.map((event, index) => (
+                            <TableRow
+                                key={`${event.time}-${event.event_title}-${index}`}
+                                sx={{ 
+                                    '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.02)' },
+                                    '&:nth-of-type(even)': { backgroundColor: 'rgba(255, 255, 255, 1)' },
+                                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+                                    '& td': { 
+                                        color: '#000',
+                                        borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+                                    }
+                                }}
+                            >
+                                <TableCell>{event.time}</TableCell>
+                                <TableCell>
+                                    <Chip 
+                                        label={event.currency}
+                                        size="small"
+                                        sx={{ 
+                                            fontWeight: 'bold',
+                                            backgroundColor: '#e3f2fd',
+                                            color: '#1976d2'
+                                        }}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Chip 
+                                        label={event.impact}
+                                        size="small"
+                                        sx={{ 
+                                            fontWeight: 'medium',
+                                            minWidth: '80px',
+                                            backgroundColor: getImpactColor(event.impact),
+                                            color: '#fff'
+                                        }}
+                                    />
+                                </TableCell>
+                                <TableCell>{event.event_title}</TableCell>
+                                <TableCell align="right">{event.forecast || 'N/A'}</TableCell>
+                                <TableCell align="right">{event.previous || 'N/A'}</TableCell>
+                            </TableRow>
+                        ))
+                    )}
                 </TableBody>
             </Table>
         </TableContainer>
@@ -306,13 +395,15 @@ function EventsPage() {
         <Box 
             sx={{ 
                 display: 'grid',
-                gridTemplateColumns: events.length === 1 
+                opacity: isUpdating ? 0.7 : 1,
+                transition: 'opacity 0.3s ease-in-out',
+                gridTemplateColumns: events.length === 0 ? '1fr' : events.length === 1 
                     ? 'minmax(450px, 1fr)'
                     : events.length === 2 
                         ? 'repeat(2, minmax(450px, 1fr))'
                         : 'repeat(3, minmax(450px, 1fr))',
                 gap: 3,
-                maxWidth: events.length === 1 
+                maxWidth: events.length <= 1 
                     ? '600px' 
                     : events.length === 2 
                         ? '1200px' 
@@ -321,7 +412,7 @@ function EventsPage() {
                 padding: '0 16px',
                 justifyContent: 'center',
                 '@media (max-width: 1500px)': {
-                    gridTemplateColumns: 'repeat(2, minmax(450px, 1fr))',
+                    gridTemplateColumns: events.length > 1 ? 'repeat(2, minmax(450px, 1fr))' : '1fr',
                     maxWidth: '1200px'
                 },
                 '@media (max-width: 1000px)': {
@@ -332,109 +423,132 @@ function EventsPage() {
                     justifySelf: 'center',
                     width: '100%',
                     maxWidth: '500px'
-                }
+                },
+                minHeight: '200px'
             }}
         >
-            {events.map((event, index) => (
-                <Card 
-                    key={`${event.time}-${event.event_title}-${index}`}
-                    sx={{ 
-                        height: '100%',
-                        minHeight: '200px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        transition: 'transform 0.2s, box-shadow 0.2s',
-                        '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: 3,
-                        }
-                    }}
-                >
-                    <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                            <Typography 
-                                variant="subtitle1" 
-                                component="div" 
-                                sx={{ fontWeight: 500 }}
-                            >
-                                {event.time}
-                            </Typography>
-                            <Chip 
-                                label={event.impact}
-                                size="small"
-                                sx={{ 
-                                    fontWeight: 'medium',
-                                    minWidth: '80px',
-                                    backgroundColor: getImpactColor(event.impact),
-                                    color: '#fff'
-                                }}
-                            />
-                        </Box>
-                        
-                        <Box mb={2}>
-                            <Chip 
-                                label={event.currency}
-                                size="small"
-                                sx={{ 
-                                    mb: 1,
-                                    fontWeight: 'bold',
-                                    backgroundColor: '#e3f2fd',
-                                    color: '#1976d2'
-                                }}
-                            />
-                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {event.event_title}
-                            </Typography>
-                        </Box>
-                        
-                        <Box 
-                            display="flex" 
-                            gap={2} 
-                            mt="auto"
-                            sx={{
-                                '& > div': {
-                                    flex: 1,
-                                    textAlign: 'center',
-                                    p: 1,
-                                    borderRadius: 1,
-                                    bgcolor: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid',
-                                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                                }
-                            }}
-                        >
-                            <div>
-                                <Typography 
-                                    variant="caption" 
-                                    color="text.secondary"
-                                    display="block"
-                                >
-                                    Forecast
-                                </Typography>
-                                <Typography variant="body2" fontWeight="500">
-                                    {event.forecast || 'N/A'}
-                                </Typography>
-                            </div>
-                            <div>
-                                <Typography 
-                                    variant="caption" 
-                                    color="text.secondary"
-                                    display="block"
-                                >
-                                    Previous
-                                </Typography>
-                                <Typography variant="body2" fontWeight="500">
-                                    {event.previous || 'N/A'}
-                                </Typography>
-                            </div>
-                        </Box>
-                    </CardContent>
+            {events.length === 0 ? (
+                <Card sx={{ 
+                    minHeight: '200px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                }}>
+                    <Typography 
+                        variant="h6" 
+                        sx={{ 
+                            color: 'rgba(0, 0, 0, 0.6)',
+                            fontWeight: 500
+                        }}
+                    >
+                        No news available to display
+                    </Typography>
                 </Card>
-            ))}
+            ) : (
+                events.map((event, index) => (
+                    <Card 
+                        key={`${event.time}-${event.event_title}-${index}`}
+                        sx={{ 
+                            height: '100%',
+                            minHeight: '200px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            transition: 'all 0.3s ease-in-out',
+                            transform: event.isNew ? 'scale(0.98)' : 'scale(1)',
+                            opacity: event.isNew ? 0.7 : 1,
+                            '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: 3,
+                            }
+                        }}
+                    >
+                        <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                                <Typography 
+                                    variant="subtitle1" 
+                                    component="div" 
+                                    sx={{ fontWeight: 500 }}
+                                >
+                                    {event.time}
+                                </Typography>
+                                <Chip 
+                                    label={event.impact}
+                                    size="small"
+                                    sx={{ 
+                                        fontWeight: 'medium',
+                                        minWidth: '80px',
+                                        backgroundColor: getImpactColor(event.impact),
+                                        color: '#fff'
+                                    }}
+                                />
+                            </Box>
+                            
+                            <Box mb={2}>
+                                <Chip 
+                                    label={event.currency}
+                                    size="small"
+                                    sx={{ 
+                                        mb: 1,
+                                        fontWeight: 'bold',
+                                        backgroundColor: '#e3f2fd',
+                                        color: '#1976d2'
+                                    }}
+                                />
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    {event.event_title}
+                                </Typography>
+                            </Box>
+                            
+                            <Box 
+                                display="flex" 
+                                gap={2} 
+                                mt="auto"
+                                sx={{
+                                    '& > div': {
+                                        flex: 1,
+                                        textAlign: 'center',
+                                        p: 1,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid',
+                                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                                    }
+                                }}
+                            >
+                                <div>
+                                    <Typography 
+                                        variant="caption" 
+                                        color="text.secondary"
+                                        display="block"
+                                    >
+                                        Forecast
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight="500">
+                                        {event.forecast || 'N/A'}
+                                    </Typography>
+                                </div>
+                                <div>
+                                    <Typography 
+                                        variant="caption" 
+                                        color="text.secondary"
+                                        display="block"
+                                    >
+                                        Previous
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight="500">
+                                        {event.previous || 'N/A'}
+                                    </Typography>
+                                </div>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                ))
+            )}
         </Box>
     );
 
-    if (loading) {
+    if (loading && initialLoad) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
                 <CircularProgress />
@@ -480,13 +594,13 @@ function EventsPage() {
                     flexDirection="row" 
                     justifyContent="center" 
                     alignItems="flex-start" 
-                    gap={4} 
+                    gap={2} 
                     mb={6}
                     sx={{
                         flexWrap: 'wrap',
-                        maxWidth: '1200px',
+                        maxWidth: '900px',
                         margin: '0 auto',
-                        position: 'relative'  // Added for view toggle positioning
+                        position: 'relative'
                     }}
                 >
                     {/* View Toggle Button */}
@@ -513,16 +627,104 @@ function EventsPage() {
                         </IconButton>
                     </Box>
 
-                    {/* Time Range Filter */}
-                    <Box sx={{ minWidth: '250px' }}>
+                    {/* Timezone Selector */}
+                    <Box sx={{ minWidth: '200px', pb: 3 }}>
                         <Typography 
                             variant="h6" 
                             sx={{ 
-                                mb: 2,
+                                mb: 1,
                                 fontWeight: 600,
                                 color: '#fff',
                                 textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
+                                letterSpacing: '0.5px',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            Timezone
+                        </Typography>
+                        <FormControl fullWidth>
+                            <Select
+                                value={selectedTimezone}
+                                onChange={(e) => setSelectedTimezone(e.target.value)}
+                                sx={{
+                                    backgroundColor: '#fff',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.7)',
+                                    },
+                                }}
+                                renderValue={(value) => {
+                                    const option = timezoneOptions.find(opt => opt.value === value);
+                                    return (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {option?.FlagComponent && (
+                                                <Box sx={{ width: 24, height: 16 }}>
+                                                    <option.FlagComponent title={option.label} />
+                                                </Box>
+                                            )}
+                                            {!option?.FlagComponent && (
+                                                <Box 
+                                                    sx={{ 
+                                                        width: 24, 
+                                                        height: 16, 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center' 
+                                                    }}
+                                                >
+                                                    🌐
+                                                </Box>
+                                            )}
+                                            <span>{option?.label}</span>
+                                        </Box>
+                                    );
+                                }}
+                            >
+                                {timezoneOptions.map((option) => (
+                                    <MenuItem key={option.value} value={option.value}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {option.FlagComponent && (
+                                                <Box sx={{ width: 24, height: 16 }}>
+                                                    <option.FlagComponent title={option.label} />
+                                                </Box>
+                                            )}
+                                            {!option.FlagComponent && (
+                                                <Box 
+                                                    sx={{ 
+                                                        width: 24, 
+                                                        height: 16, 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center' 
+                                                    }}
+                                                >
+                                                    🌐
+                                                </Box>
+                                            )}
+                                            <span>{option.label}</span>
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {/* Time Range Filter */}
+                    <Box sx={{ minWidth: '200px', pb: 3 }}>
+                        <Typography 
+                            variant="h6" 
+                            sx={{ 
+                                mb: 1,
+                                fontWeight: 600,
+                                color: '#fff',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                fontSize: '0.9rem'
                             }}
                         >
                             Time Range
@@ -554,15 +756,16 @@ function EventsPage() {
                     </Box>
 
                     {/* Currency Filter */}
-                    <Box sx={{ minWidth: '250px' }}>
+                    <Box sx={{ minWidth: '200px', pb: 3 }}>
                         <Typography 
                             variant="h6" 
                             sx={{ 
-                                mb: 2,
+                                mb: 1,
                                 fontWeight: 600,
                                 color: '#fff',
                                 textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
+                                letterSpacing: '0.5px',
+                                fontSize: '0.9rem'
                             }}
                         >
                             Currencies
@@ -572,30 +775,45 @@ function EventsPage() {
                                 multiple
                                 value={selectedCurrencies}
                                 onChange={handleCurrencyChange}
-                                renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {(selected as string[]).map((value) => (
+                                displayEmpty
+                                MenuProps={{
+                                    PaperProps: {
+                                        sx: {
+                                            '& .Mui-selected': {
+                                                backgroundColor: 'rgba(25, 118, 210, 0.08) !important'
+                                            }
+                                        }
+                                    }
+                                }}
+                                renderValue={(selected) => {
+                                    if (selected.length === 0) {
+                                        return <span style={{ color: 'rgba(0, 0, 0, 0.6)' }}>Select currencies...</span>;
+                                    }
+                                    if (selected.length === 1) {
+                                        return (
                                             <Chip 
-                                                key={value} 
-                                                label={value}
-                                                onDelete={() => handleRemoveCurrency(value)}
-                                                onMouseDown={(event) => {
-                                                    event.stopPropagation();
-                                                }}
+                                                label={selected[0]}
                                                 sx={{
                                                     backgroundColor: '#1976d2',
                                                     color: '#fff',
-                                                    '& .MuiChip-deleteIcon': {
-                                                        color: '#fff',
-                                                        '&:hover': {
-                                                            color: '#ff4444'
-                                                        }
-                                                    }
+                                                    height: '24px'
                                                 }}
                                             />
-                                        ))}
-                                    </Box>
-                                )}
+                                        );
+                                    }
+                                    return (
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Chip 
+                                                label={`${selected.length} currencies selected`}
+                                                sx={{
+                                                    backgroundColor: '#1976d2',
+                                                    color: '#fff',
+                                                    height: '24px'
+                                                }}
+                                            />
+                                        </Box>
+                                    );
+                                }}
                                 sx={{
                                     backgroundColor: '#fff',
                                     '& .MuiOutlinedInput-notchedOutline': {
@@ -610,8 +828,48 @@ function EventsPage() {
                                 }}
                             >
                                 {currencyOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
-                                        {option.label}
+                                    <MenuItem 
+                                        key={option.value} 
+                                        value={option.value}
+                                        sx={{
+                                            position: 'relative',
+                                            border: selectedCurrencies.includes(option.value) ? '1px solid #1976d2' : 'none',
+                                            backgroundColor: selectedCurrencies.includes(option.value) ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                                            borderRadius: '4px',
+                                            my: 0.5,
+                                            '&:hover': {
+                                                backgroundColor: selectedCurrencies.includes(option.value) ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)'
+                                            }
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                                            <span>{option.label}</span>
+                                            {selectedCurrencies.includes(option.value) && (
+                                                <Chip 
+                                                    size="small"
+                                                    label="×"
+                                                    onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleRemoveCurrency(option.value);
+                                                    }}
+                                                    onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                    }}
+                                                    sx={{ 
+                                                        ml: 1,
+                                                        minWidth: '24px',
+                                                        height: '24px',
+                                                        backgroundColor: '#1976d2',
+                                                        color: '#fff',
+                                                        '&:hover': {
+                                                            backgroundColor: '#d32f2f'
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        </Box>
                                     </MenuItem>
                                 ))}
                             </Select>
@@ -619,15 +877,16 @@ function EventsPage() {
                     </Box>
 
                     {/* Impact Filter */}
-                    <Box sx={{ minWidth: '250px' }}>
+                    <Box sx={{ minWidth: '200px', pb: 3 }}>
                         <Typography 
                             variant="h6" 
                             sx={{ 
-                                mb: 2,
+                                mb: 1,
                                 fontWeight: 600,
                                 color: '#fff',
                                 textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
+                                letterSpacing: '0.5px',
+                                fontSize: '0.9rem'
                             }}
                         >
                             Impact Levels
@@ -637,30 +896,46 @@ function EventsPage() {
                                 multiple
                                 value={selectedImpacts}
                                 onChange={handleImpactChange}
-                                renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {(selected as string[]).map((value) => (
+                                displayEmpty
+                                MenuProps={{
+                                    PaperProps: {
+                                        sx: {
+                                            '& .Mui-selected': {
+                                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important'
+                                            }
+                                        }
+                                    }
+                                }}
+                                renderValue={(selected) => {
+                                    if (selected.length === 0) {
+                                        return <span style={{ color: 'rgba(0, 0, 0, 0.6)' }}>Select impact levels...</span>;
+                                    }
+                                    if (selected.length === 1) {
+                                        const impact = selected[0] as string;
+                                        return (
                                             <Chip 
-                                                key={value} 
-                                                label={value}
-                                                onDelete={() => handleRemoveImpact(value)}
-                                                onMouseDown={(event) => {
-                                                    event.stopPropagation();
-                                                }}
+                                                label={impact}
                                                 sx={{
-                                                    backgroundColor: getImpactColor(value),
+                                                    backgroundColor: getImpactColor(impact),
                                                     color: '#fff',
-                                                    '& .MuiChip-deleteIcon': {
-                                                        color: '#fff',
-                                                        '&:hover': {
-                                                            color: '#ff4444'
-                                                        }
-                                                    }
+                                                    height: '24px'
                                                 }}
                                             />
-                                        ))}
-                                    </Box>
-                                )}
+                                        );
+                                    }
+                                    return (
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Chip 
+                                                label={`${selected.length} impacts selected`}
+                                                sx={{
+                                                    backgroundColor: '#424242',
+                                                    color: '#fff',
+                                                    height: '24px'
+                                                }}
+                                            />
+                                        </Box>
+                                    );
+                                }}
                                 sx={{
                                     backgroundColor: '#fff',
                                     '& .MuiOutlinedInput-notchedOutline': {
@@ -675,7 +950,20 @@ function EventsPage() {
                                 }}
                             >
                                 {impactOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
+                                    <MenuItem 
+                                        key={option.value} 
+                                        value={option.value}
+                                        sx={{
+                                            position: 'relative',
+                                            border: selectedImpacts.includes(option.value) ? `1px solid ${option.color}` : 'none',
+                                            backgroundColor: selectedImpacts.includes(option.value) ? `${option.color}15` : 'transparent',
+                                            borderRadius: '4px',
+                                            my: 0.5,
+                                            '&:hover': {
+                                                backgroundColor: selectedImpacts.includes(option.value) ? `${option.color}20` : 'rgba(0, 0, 0, 0.04)'
+                                            }
+                                        }}
+                                    >
                                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                 <Box
@@ -691,12 +979,26 @@ function EventsPage() {
                                             </Box>
                                             {selectedImpacts.includes(option.value) && (
                                                 <Chip 
-                                                    size="small" 
-                                                    label="Selected" 
+                                                    size="small"
+                                                    label="×"
+                                                    onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleRemoveImpact(option.value);
+                                                    }}
+                                                    onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                    }}
                                                     sx={{ 
                                                         ml: 1,
+                                                        minWidth: '24px',
+                                                        height: '24px',
                                                         backgroundColor: option.color,
-                                                        color: '#fff'
+                                                        color: '#fff',
+                                                        '&:hover': {
+                                                            backgroundColor: '#d32f2f'
+                                                        }
                                                     }}
                                                 />
                                             )}
@@ -709,17 +1011,7 @@ function EventsPage() {
                 </Box>
             </Box>
 
-            {(!events || events.length === 0) && (
-                <Box textAlign="center">
-                    <Typography variant="h6" color="text.secondary">
-                        No events available for the selected time range
-                    </Typography>
-                </Box>
-            )}
-
-            {events && events.length > 0 && (
-                viewMode === 'grid' ? <GridView /> : <TableView />
-            )}
+            {viewMode === 'grid' ? <GridView /> : <TableView />}
         </Container>
     );
 }
