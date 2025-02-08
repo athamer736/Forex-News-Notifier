@@ -3,17 +3,54 @@ from flask_cors import CORS
 import logging
 import socket
 import requests
+import threading
+import time
+from datetime import datetime
 
 from fetch_events import fetch_events
 from timezone_handler import set_user_timezone, get_user_timezone, convert_to_local_time
 from event_filter import filter_events_by_range, TimeRange
-from event_store import get_filtered_events
+from event_store import get_filtered_events, event_store, get_cache_status, load_cached_events
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+def update_cache():
+    """Background task to update the event cache periodically"""
+    while True:
+        try:
+            logger.info("Updating event cache...")
+            fetch_events()
+            logger.info(f"Cache updated successfully. Next update in 1 hour. Current cache size: {len(event_store['events'])} events")
+            # Sleep for 1 hour
+            time.sleep(3600)
+        except Exception as e:
+            logger.error(f"Error updating cache: {str(e)}")
+            # If there's an error, wait 5 minutes before retrying
+            time.sleep(300)
+
+def start_background_tasks():
+    """Start background tasks for the application"""
+    # Try to load from cache first
+    logger.info("Attempting to load events from cache...")
+    if load_cached_events():
+        logger.info("Successfully loaded events from cache")
+    else:
+        # Initial fetch of events if cache load fails
+        logger.info("Cache load failed. Performing initial event fetch...")
+        try:
+            fetch_events()
+            logger.info(f"Initial cache populated with {len(event_store['events'])} events")
+        except Exception as e:
+            logger.error(f"Error during initial event fetch: {str(e)}")
+
+    # Start background thread for periodic updates
+    update_thread = threading.Thread(target=update_cache, daemon=True)
+    update_thread.start()
+    logger.info("Background update thread started")
 
 def get_local_ip():
     """Get the local IP address"""
@@ -162,8 +199,15 @@ def after_request(response):
             
     return response
 
+@app.before_request
+def initialize_app():
+    """Initialize the application on first request"""
+    if not hasattr(app, '_got_first_request'):
+        start_background_tasks()
+        app._got_first_request = True
+
 # Valid time ranges for filtering
-VALID_TIME_RANGES = ['1h', '4h', '8h', '12h', '24h', 'today', 'tomorrow', 'week']
+VALID_TIME_RANGES = ['24h', 'today', 'tomorrow', 'week', 'remaining_week']
 
 @app.route("/")
 def home():
@@ -199,6 +243,10 @@ def get_events():
         # Get user's timezone and time range preference
         user_id = request.args.get('userId', 'default')
         time_range = request.args.get('range', '24h')
+        currencies = request.args.get('currencies', '')  # Get currencies as comma-separated string
+        
+        # Parse currencies into a list
+        selected_currencies = [c.strip().upper() for c in currencies.split(',')] if currencies else []
         
         # Validate time range
         if time_range not in VALID_TIME_RANGES:
@@ -220,13 +268,33 @@ def get_events():
             # Continue with existing stored events if available
 
         # Get filtered events based on user's preferences
-        filtered_events = get_filtered_events(time_range, user_timezone)
+        filtered_events = get_filtered_events(time_range, user_timezone, selected_currencies)
         
         return jsonify(filtered_events)
 
     except Exception as e:
         logger.exception("Error processing events request")
         return jsonify({'error': str(e)}), 500
+
+@app.route("/cache/status")
+def cache_status():
+    """Get the current status of the event cache"""
+    return jsonify(get_cache_status())
+
+@app.route("/cache/refresh", methods=["POST"])
+def refresh_cache():
+    """Force a refresh of the event cache"""
+    try:
+        fetch_events()
+        return jsonify({
+            "message": "Cache refresh successful",
+            "status": get_cache_status()
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "status": get_cache_status()
+        }), 500
 
 if __name__ == "__main__":
     app.run(
