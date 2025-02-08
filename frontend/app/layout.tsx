@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-[#0a0a0a] text-white">
+      <body className="min-h-screen bg-[#0a0a0a] text-white" suppressHydrationWarning>
         <main className="flex min-h-screen flex-col">
           {children}
         </main>
