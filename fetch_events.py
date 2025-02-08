@@ -2,105 +2,118 @@ import requests
 from datetime import datetime, timedelta
 import time
 import logging
+import pytz
+from event_store import store_events, event_store
 
-# Cache for storing forex events
-cache = {
-    'data': None,
-    'last_updated': None
-}
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Headers for the API request
 HEADERS = {
-    'User-Agent': 'ForexNewsNotifier/1.0',
-    'Accept': 'application/json'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept': 'application/json',
+    'Accept-Language': 'en-US,en;q=0.9'
 }
 
-def fetch_events():
+def should_fetch_data():
+    """Check if we should fetch new data based on last update time"""
+    if not event_store['last_updated']:
+        return True
+        
+    # Get time since last update
+    time_since_update = (datetime.now(pytz.UTC) - event_store['last_updated']).total_seconds() / 3600
+    
+    # Only fetch if it's been more than 1 hour since last update
+    return time_since_update >= 1
+
+def fetch_and_store_events():
+    """Fetch events from the API and store them"""
     try:
-        current_time = datetime.now()
+        # Check if we need to fetch new data
+        if not should_fetch_data():
+            logger.info("Using cached data - next update in {} minutes".format(
+                int(60 - ((datetime.now(pytz.UTC) - event_store['last_updated']).total_seconds() / 60))
+            ))
+            return True
+            
+        logger.info("Fetching new data from API")
         
-        # Return cached data if it's less than 15 minutes old
-        if cache['data'] and cache['last_updated'] and \
-           current_time - cache['last_updated'] < timedelta(minutes=15):
-            logging.debug("Returning cached data")
-            return cache['data']
+        # Try to fetch this week's data
+        url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+        response = requests.get(url, headers=HEADERS, timeout=15)
         
-        # Add delay between requests to avoid rate limiting
-        if cache['last_updated']:
-            time_since_last_request = (current_time - cache['last_updated']).total_seconds()
-            if time_since_last_request < 5:  # Ensure at least 5 seconds between requests
-                time.sleep(5 - time_since_last_request)
-
-        max_retries = 3
-        retry_delay = 10  # seconds, increased from 2 to 10
-
-        for attempt in range(max_retries):
+        if response.status_code == 429:
+            logger.warning("Rate limit hit. The API updates once per hour.")
+            if event_store['events']:
+                logger.info("Using cached data")
+                return True
+            return False
+            
+        response.raise_for_status()
+        events = response.json()
+        logger.info(f"Successfully fetched {len(events)} events")
+        
+        # Convert times to UTC and format events
+        formatted_events = []
+        et_tz = pytz.timezone('America/New_York')  # API times are in ET
+        current_utc = datetime.now(pytz.UTC)
+        
+        for event in events:
             try:
-                logging.debug(f"Attempt {attempt + 1} to fetch data")
-                url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+                # Parse the date string (in ET)
+                date_str = event['date'].replace('Z', '').replace('+00:00', '')
+                et_time = datetime.fromisoformat(date_str)
                 
-                # If we have cached data and this isn't our first attempt, return cached data
-                if attempt > 0 and cache['data']:
-                    logging.info("Using cached data after failed attempt")
-                    return cache['data']
+                # Make sure it's timezone aware
+                if et_time.tzinfo is None:
+                    et_time = et_tz.localize(et_time)
                 
-                response = requests.get(
-                    url, 
-                    headers=HEADERS,
-                    timeout=10
-                )
+                # Convert to UTC
+                utc_time = et_time.astimezone(pytz.UTC)
                 
-                if response.status_code == 429:  # Too Many Requests
-                    logging.warning("Rate limit hit, attempt %d", attempt + 1)
-                    if cache['data']:
-                        logging.info("Returning cached data due to rate limit")
-                        return cache['data']
-                    time.sleep(retry_delay * (attempt + 1))
-                    continue
-                
-                response.raise_for_status()
-                raw_events = response.json()
-                logging.debug(f"Received {len(raw_events)} events from API")
-                
-                formatted_events = []
-                for event in raw_events:
-                    try:
-                        # Convert date string to a more readable format
-                        date_obj = datetime.fromisoformat(event['date'].replace('Z', '+00:00'))
-                        formatted_date = date_obj.strftime('%Y-%m-%d %H:%M')
-
-                        formatted_event = {
-                            'time': formatted_date,
-                            'currency': event['country'],
-                            'impact': event['impact'],
-                            'event_title': event['title'],
-                            'forecast': event['forecast'],
-                            'previous': event['previous']
-                        }
-                        formatted_events.append(formatted_event)
-                    except Exception as e:
-                        logging.error(f"Error formatting event: {event}")
-                        logging.exception(e)
-                        continue
-
-                # Update cache
-                cache['data'] = formatted_events
-                cache['last_updated'] = current_time
-                logging.info(f"Successfully fetched and formatted {len(formatted_events)} events")
-                return formatted_events
-
-            except requests.exceptions.RequestException as e:
-                logging.error(f"Request failed on attempt {attempt + 1}: {str(e)}")
-                if cache['data']:
-                    logging.info("Returning cached data after request failure")
-                    return cache['data']
-                if attempt == max_retries - 1:
-                    raise Exception(f"Failed to fetch forex events: {str(e)}")
-                time.sleep(retry_delay * (attempt + 1))
-
+                # Only include events that haven't happened yet or are very recent
+                time_diff = (utc_time - current_utc).total_seconds() / 3600
+                if time_diff > -1:  # Include events from the last hour
+                    formatted_event = {
+                        'time': utc_time.isoformat(),
+                        'currency': event['country'],
+                        'impact': event['impact'],
+                        'event_title': event['title'],
+                        'forecast': event.get('forecast', 'N/A'),
+                        'previous': event.get('previous', 'N/A')
+                    }
+                    formatted_events.append(formatted_event)
+                    logger.debug(f"Added event: {formatted_event['event_title']} at {formatted_event['time']}")
+            
+            except Exception as e:
+                logger.error(f"Error processing event: {event}")
+                logger.exception(e)
+                continue
+        
+        if not formatted_events:
+            logger.warning("No valid events found after processing")
+            return False
+        
+        # Sort events by time
+        formatted_events.sort(key=lambda x: x['time'])
+        
+        # Store the events
+        store_events(formatted_events)
+        logger.info(f"Successfully processed and stored {len(formatted_events)} events")
+        return True
+        
     except Exception as e:
-        logging.exception("Unexpected error in fetch_events")
-        if cache['data']:
-            logging.info("Returning cached data after unexpected error")
-            return cache['data']
-        raise Exception(f"An unexpected error occurred: {str(e)}") 
+        logger.error(f"Error in fetch_and_store_events: {str(e)}")
+        if event_store['events']:
+            logger.info("Using cached data after error")
+            return True
+        return False
+
+def fetch_events():
+    """Main function to fetch events"""
+    try:
+        return fetch_and_store_events()
+    except Exception as e:
+        logger.error(f"Error in fetch_events: {str(e)}")
+        return False 
