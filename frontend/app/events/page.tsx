@@ -41,12 +41,33 @@ function EventsPage() {
             setError(null);
             setLoading(true);
             const userId = localStorage.getItem('userId') || 'default';
-            const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-                ? 'http://localhost:5000'
-                : 'http://141.95.123.145:5000';
             
+            // Determine the base URL based on hostname
+            let baseUrl;
+            if (typeof window !== 'undefined') {
+                if (window.location.hostname === 'localhost') {
+                    baseUrl = 'http://localhost:5000';
+                } else if (window.location.hostname === '192.168.0.144') {
+                    baseUrl = 'http://192.168.0.144:5000';
+                } else {
+                    baseUrl = 'http://141.95.123.145:5000';
+                }
+            } else {
+                baseUrl = 'http://141.95.123.145:5000'; // Default to server
+            }
+            
+            console.log('Using base URL:', baseUrl);
             console.log('Fetching events for user:', userId);
-            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}`);
+
+            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}`, {
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Origin': typeof window !== 'undefined' ? window.location.origin : '',
+                }
+            });
             
             if (!response.ok) {
                 const errorData = await response.json();
@@ -94,14 +115,30 @@ function EventsPage() {
                 console.log('Current timezone:', timezone);
                 console.log('Current offset:', offset);
                 
-                const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-                    ? 'http://localhost:5000'
-                    : 'http://141.95.123.145:5000';
+                // Determine the base URL based on hostname
+                let baseUrl;
+                if (typeof window !== 'undefined') {
+                    if (window.location.hostname === 'localhost') {
+                        baseUrl = 'http://localhost:5000';
+                    } else if (window.location.hostname === '192.168.0.144') {
+                        baseUrl = 'http://192.168.0.144:5000';
+                    } else {
+                        baseUrl = 'http://141.95.123.145:5000';
+                    }
+                } else {
+                    baseUrl = 'http://141.95.123.145:5000'; // Default to server
+                }
+                
+                console.log('Using base URL:', baseUrl);
 
                 const response = await fetch(`${baseUrl}/timezone`, {
                     method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include',
                     headers: {
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json',
+                        'Origin': typeof window !== 'undefined' ? window.location.origin : '',
                     },
                     body: JSON.stringify({
                         userId,
