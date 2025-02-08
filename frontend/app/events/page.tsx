@@ -2,7 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl } from '@mui/material';
+import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import TableViewIcon from '@mui/icons-material/TableView';
+import GridViewIcon from '@mui/icons-material/GridView';
 
 interface ForexEvent {
     time: string;
@@ -58,6 +60,7 @@ function EventsPage() {
     const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
     const [selectedImpacts, setSelectedImpacts] = useState<string[]>([]);
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
     const fetchEvents = async () => {
         try {
@@ -231,6 +234,206 @@ function EventsPage() {
         setSelectedImpacts(prev => prev.filter(impact => impact !== impactToRemove));
     };
 
+    const TableView = () => (
+        <TableContainer component={Paper} sx={{ maxWidth: '1600px', margin: '0 auto', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+            <Table sx={{ minWidth: 650 }}>
+                <TableHead>
+                    <TableRow sx={{ 
+                        '& th': { 
+                            color: '#000', 
+                            fontWeight: 600,
+                            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                            borderBottom: '2px solid rgba(0, 0, 0, 0.1)'
+                        } 
+                    }}>
+                        <TableCell>Time</TableCell>
+                        <TableCell>Currency</TableCell>
+                        <TableCell>Impact</TableCell>
+                        <TableCell>Event</TableCell>
+                        <TableCell align="right">Forecast</TableCell>
+                        <TableCell align="right">Previous</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {events.map((event, index) => (
+                        <TableRow
+                            key={`${event.time}-${event.event_title}-${index}`}
+                            sx={{ 
+                                '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.02)' },
+                                '&:nth-of-type(even)': { backgroundColor: 'rgba(255, 255, 255, 1)' },
+                                '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+                                '& td': { 
+                                    color: '#000',
+                                    borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+                                }
+                            }}
+                        >
+                            <TableCell>{event.time}</TableCell>
+                            <TableCell>
+                                <Chip 
+                                    label={event.currency}
+                                    size="small"
+                                    sx={{ 
+                                        fontWeight: 'bold',
+                                        backgroundColor: '#e3f2fd',
+                                        color: '#1976d2'
+                                    }}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <Chip 
+                                    label={event.impact}
+                                    size="small"
+                                    sx={{ 
+                                        fontWeight: 'medium',
+                                        minWidth: '80px',
+                                        backgroundColor: getImpactColor(event.impact),
+                                        color: '#fff'
+                                    }}
+                                />
+                            </TableCell>
+                            <TableCell>{event.event_title}</TableCell>
+                            <TableCell align="right">{event.forecast || 'N/A'}</TableCell>
+                            <TableCell align="right">{event.previous || 'N/A'}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </TableContainer>
+    );
+
+    const GridView = () => (
+        <Box 
+            sx={{ 
+                display: 'grid',
+                gridTemplateColumns: events.length === 1 
+                    ? 'minmax(450px, 1fr)'
+                    : events.length === 2 
+                        ? 'repeat(2, minmax(450px, 1fr))'
+                        : 'repeat(3, minmax(450px, 1fr))',
+                gap: 3,
+                maxWidth: events.length === 1 
+                    ? '600px' 
+                    : events.length === 2 
+                        ? '1200px' 
+                        : '1600px',
+                margin: '0 auto',
+                padding: '0 16px',
+                justifyContent: 'center',
+                '@media (max-width: 1500px)': {
+                    gridTemplateColumns: 'repeat(2, minmax(450px, 1fr))',
+                    maxWidth: '1200px'
+                },
+                '@media (max-width: 1000px)': {
+                    gridTemplateColumns: '1fr',
+                    maxWidth: '600px'
+                },
+                '& > *': {
+                    justifySelf: 'center',
+                    width: '100%',
+                    maxWidth: '500px'
+                }
+            }}
+        >
+            {events.map((event, index) => (
+                <Card 
+                    key={`${event.time}-${event.event_title}-${index}`}
+                    sx={{ 
+                        height: '100%',
+                        minHeight: '200px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: 3,
+                        }
+                    }}
+                >
+                    <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                            <Typography 
+                                variant="subtitle1" 
+                                component="div" 
+                                sx={{ fontWeight: 500 }}
+                            >
+                                {event.time}
+                            </Typography>
+                            <Chip 
+                                label={event.impact}
+                                size="small"
+                                sx={{ 
+                                    fontWeight: 'medium',
+                                    minWidth: '80px',
+                                    backgroundColor: getImpactColor(event.impact),
+                                    color: '#fff'
+                                }}
+                            />
+                        </Box>
+                        
+                        <Box mb={2}>
+                            <Chip 
+                                label={event.currency}
+                                size="small"
+                                sx={{ 
+                                    mb: 1,
+                                    fontWeight: 'bold',
+                                    backgroundColor: '#e3f2fd',
+                                    color: '#1976d2'
+                                }}
+                            />
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                {event.event_title}
+                            </Typography>
+                        </Box>
+                        
+                        <Box 
+                            display="flex" 
+                            gap={2} 
+                            mt="auto"
+                            sx={{
+                                '& > div': {
+                                    flex: 1,
+                                    textAlign: 'center',
+                                    p: 1,
+                                    borderRadius: 1,
+                                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid',
+                                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
+                        >
+                            <div>
+                                <Typography 
+                                    variant="caption" 
+                                    color="text.secondary"
+                                    display="block"
+                                >
+                                    Forecast
+                                </Typography>
+                                <Typography variant="body2" fontWeight="500">
+                                    {event.forecast || 'N/A'}
+                                </Typography>
+                            </div>
+                            <div>
+                                <Typography 
+                                    variant="caption" 
+                                    color="text.secondary"
+                                    display="block"
+                                >
+                                    Previous
+                                </Typography>
+                                <Typography variant="body2" fontWeight="500">
+                                    {event.previous || 'N/A'}
+                                </Typography>
+                            </div>
+                        </Box>
+                    </CardContent>
+                </Card>
+            ))}
+        </Box>
+    );
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -264,18 +467,54 @@ function EventsPage() {
                     gutterBottom
                     sx={{
                         fontWeight: 'bold',
-                        color: '#666666',
-                        transition: 'color 0.3s ease'
+                        color: '#cccccc',
+                        transition: 'color 0.3s ease',
+                        mb: 4
                     }}
                 >
                     Forex Economic Calendar
                 </Typography>
-                <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                    Stay updated with the latest economic events
-                </Typography>
                 
-                <Box mt={4} mb={4} display="flex" flexDirection="column" alignItems="center" gap={3}>
-                    <Box>
+                <Box 
+                    display="flex" 
+                    flexDirection="row" 
+                    justifyContent="center" 
+                    alignItems="flex-start" 
+                    gap={4} 
+                    mb={6}
+                    sx={{
+                        flexWrap: 'wrap',
+                        maxWidth: '1200px',
+                        margin: '0 auto',
+                        position: 'relative'  // Added for view toggle positioning
+                    }}
+                >
+                    {/* View Toggle Button */}
+                    <Box 
+                        sx={{ 
+                            position: 'absolute',
+                            right: 0,
+                            top: -50,
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            borderRadius: '8px',
+                            padding: '4px'
+                        }}
+                    >
+                        <IconButton 
+                            onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
+                            sx={{ 
+                                color: '#000',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                }
+                            }}
+                        >
+                            {viewMode === 'grid' ? <TableViewIcon /> : <GridViewIcon />}
+                        </IconButton>
+                    </Box>
+
+                    {/* Time Range Filter */}
+                    <Box sx={{ minWidth: '250px' }}>
                         <Typography 
                             variant="h6" 
                             sx={{ 
@@ -288,7 +527,7 @@ function EventsPage() {
                         >
                             Time Range
                         </Typography>
-                        <FormControl sx={{ minWidth: 250 }}>
+                        <FormControl fullWidth>
                             <Select
                                 value={timeRange}
                                 onChange={(e) => setTimeRange(e.target.value)}
@@ -314,7 +553,8 @@ function EventsPage() {
                         </FormControl>
                     </Box>
 
-                    <Box>
+                    {/* Currency Filter */}
+                    <Box sx={{ minWidth: '250px' }}>
                         <Typography 
                             variant="h6" 
                             sx={{ 
@@ -327,7 +567,7 @@ function EventsPage() {
                         >
                             Currencies
                         </Typography>
-                        <FormControl sx={{ minWidth: 250 }}>
+                        <FormControl fullWidth>
                             <Select
                                 multiple
                                 value={selectedCurrencies}
@@ -340,7 +580,7 @@ function EventsPage() {
                                                 label={value}
                                                 onDelete={() => handleRemoveCurrency(value)}
                                                 onMouseDown={(event) => {
-                                                    event.stopPropagation(); // Prevent select from opening
+                                                    event.stopPropagation();
                                                 }}
                                                 sx={{
                                                     backgroundColor: '#1976d2',
@@ -371,24 +611,15 @@ function EventsPage() {
                             >
                                 {currencyOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                                            <span>{option.label}</span>
-                                            {selectedCurrencies.includes(option.value) && (
-                                                <Chip 
-                                                    size="small" 
-                                                    label="Selected" 
-                                                    color="primary"
-                                                    sx={{ ml: 1 }}
-                                                />
-                                            )}
-                                        </Box>
+                                        {option.label}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Box>
 
-                    <Box>
+                    {/* Impact Filter */}
+                    <Box sx={{ minWidth: '250px' }}>
                         <Typography 
                             variant="h6" 
                             sx={{ 
@@ -401,7 +632,7 @@ function EventsPage() {
                         >
                             Impact Levels
                         </Typography>
-                        <FormControl sx={{ minWidth: 250 }}>
+                        <FormControl fullWidth>
                             <Select
                                 multiple
                                 value={selectedImpacts}
@@ -487,100 +718,7 @@ function EventsPage() {
             )}
 
             {events && events.length > 0 && (
-                <Box display="flex" flexDirection="column" gap={3}>
-                    {events.map((event, index) => (
-                        <Card 
-                            key={`${event.time}-${event.event_title}-${index}`}
-                            sx={{ 
-                                width: '100%',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: 3,
-                                }
-                            }}
-                        >
-                            <CardContent sx={{ p: 3 }}>
-                                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3}>
-                                    <Box>
-                                        <Typography 
-                                            variant="h6" 
-                                            component="div" 
-                                            gutterBottom
-                                            sx={{ fontWeight: 500 }}
-                                        >
-                                            {event.time}
-                                        </Typography>
-                                        <Box display="flex" alignItems="center" gap={1}>
-                                            <Chip 
-                                                label={event.currency}
-                                                size="small"
-                                                sx={{ 
-                                                    fontWeight: 'bold',
-                                                    backgroundColor: '#e3f2fd',
-                                                    color: '#1976d2'
-                                                }}
-                                            />
-                                            <Typography variant="subtitle1">
-                                                {event.event_title}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                    <Chip 
-                                        label={event.impact}
-                                        size="small"
-                                        sx={{ 
-                                            fontWeight: 'medium',
-                                            minWidth: '80px',
-                                            backgroundColor: getImpactColor(event.impact),
-                                            color: '#fff'
-                                        }}
-                                    />
-                                </Box>
-                                <Box 
-                                    display="flex" 
-                                    gap={4} 
-                                    sx={{
-                                        '& > div': {
-                                            flex: 1,
-                                            textAlign: 'center',
-                                            p: 2,
-                                            borderRadius: 2,
-                                            bgcolor: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid',
-                                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                                        }
-                                    }}
-                                >
-                                    <div>
-                                        <Typography 
-                                            variant="subtitle2" 
-                                            color="text.secondary"
-                                            sx={{ mb: 1 }}
-                                        >
-                                            Forecast
-                                        </Typography>
-                                        <Typography variant="body1" fontWeight="500">
-                                            {event.forecast || 'N/A'}
-                                        </Typography>
-                                    </div>
-                                    <div>
-                                        <Typography 
-                                            variant="subtitle2" 
-                                            color="text.secondary"
-                                            sx={{ mb: 1 }}
-                                        >
-                                            Previous
-                                        </Typography>
-                                        <Typography variant="body1" fontWeight="500">
-                                            {event.previous || 'N/A'}
-                                        </Typography>
-                                    </div>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </Box>
+                viewMode === 'grid' ? <GridView /> : <TableView />
             )}
         </Container>
     );
