@@ -27,7 +27,7 @@ const timeRangeOptions: TimeRangeOption[] = [
     { value: '24h', label: 'Next 24 Hours' },
     { value: 'today', label: 'Today' },
     { value: 'tomorrow', label: 'Tomorrow' },
-    { value: 'week', label: 'Full Week (Mon-Sun)' },
+    { value: 'week', label: 'Current Week' },
     { value: 'remaining_week', label: 'Remaining Week' }
 ];
 
@@ -43,12 +43,20 @@ const currencyOptions: CurrencyOption[] = [
     { value: 'NZD', label: 'NZD - New Zealand Dollar' }
 ];
 
+const impactOptions = [
+    { value: 'High', label: 'High Impact', color: '#d32f2f' },
+    { value: 'Medium', label: 'Medium Impact', color: '#ed6c02' },
+    { value: 'Low', label: 'Low Impact', color: '#2e7d32' },
+    { value: 'Non-Economic', label: 'Non-Economic', color: '#424242' }
+];
+
 function EventsPage() {
     const [events, setEvents] = useState<ForexEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [timeRange, setTimeRange] = useState<string>('24h');
     const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
+    const [selectedImpacts, setSelectedImpacts] = useState<string[]>([]);
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
 
     const fetchEvents = async () => {
@@ -74,10 +82,11 @@ function EventsPage() {
             console.log('Using base URL:', baseUrl);
             console.log('Fetching events for user:', userId);
 
-            // Add currencies to the query parameters if any are selected
+            // Add currencies and impacts to the query parameters if any are selected
             const currencyParam = selectedCurrencies.length > 0 ? `&currencies=${selectedCurrencies.join(',')}` : '';
+            const impactParam = selectedImpacts.length > 0 ? `&impacts=${selectedImpacts.join(',')}` : '';
             
-            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}${currencyParam}`, {
+            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}${currencyParam}${impactParam}`, {
                 mode: 'cors',
                 credentials: 'include',
                 headers: {
@@ -187,18 +196,20 @@ function EventsPage() {
         }, 5 * 60 * 1000);  // Refresh every 5 minutes
         
         return () => clearInterval(interval);
-    }, [timeRange, selectedCurrencies]);
+    }, [timeRange, selectedCurrencies, selectedImpacts]);
 
     const getImpactColor = (impact: string) => {
         switch (impact.toLowerCase()) {
             case 'high':
-                return 'error';
+                return '#d32f2f';
             case 'medium':
-                return 'warning';
+                return '#ed6c02';
             case 'low':
-                return 'success';
+                return '#2e7d32';
+            case 'non-economic':
+                return '#424242';
             default:
-                return 'default';
+                return '#424242';
         }
     };
 
@@ -209,6 +220,15 @@ function EventsPage() {
 
     const handleRemoveCurrency = (currencyToRemove: string) => {
         setSelectedCurrencies(prev => prev.filter(currency => currency !== currencyToRemove));
+    };
+
+    const handleImpactChange = (event: any) => {
+        const value = event.target.value;
+        setSelectedImpacts(typeof value === 'string' ? value.split(',') : value);
+    };
+
+    const handleRemoveImpact = (impactToRemove: string) => {
+        setSelectedImpacts(prev => prev.filter(impact => impact !== impactToRemove));
     };
 
     if (loading) {
@@ -367,6 +387,94 @@ function EventsPage() {
                             </Select>
                         </FormControl>
                     </Box>
+
+                    <Box>
+                        <Typography 
+                            variant="h6" 
+                            sx={{ 
+                                mb: 2,
+                                fontWeight: 600,
+                                color: '#fff',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                            }}
+                        >
+                            Impact Levels
+                        </Typography>
+                        <FormControl sx={{ minWidth: 250 }}>
+                            <Select
+                                multiple
+                                value={selectedImpacts}
+                                onChange={handleImpactChange}
+                                renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {(selected as string[]).map((value) => (
+                                            <Chip 
+                                                key={value} 
+                                                label={value}
+                                                onDelete={() => handleRemoveImpact(value)}
+                                                onMouseDown={(event) => {
+                                                    event.stopPropagation();
+                                                }}
+                                                sx={{
+                                                    backgroundColor: getImpactColor(value),
+                                                    color: '#fff',
+                                                    '& .MuiChip-deleteIcon': {
+                                                        color: '#fff',
+                                                        '&:hover': {
+                                                            color: '#ff4444'
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        ))}
+                                    </Box>
+                                )}
+                                sx={{
+                                    backgroundColor: '#fff',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.7)',
+                                    },
+                                }}
+                            >
+                                {impactOptions.map((option) => (
+                                    <MenuItem key={option.value} value={option.value}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                <Box
+                                                    sx={{
+                                                        width: 12,
+                                                        height: 12,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: option.color,
+                                                        mr: 1
+                                                    }}
+                                                />
+                                                <span>{option.label}</span>
+                                            </Box>
+                                            {selectedImpacts.includes(option.value) && (
+                                                <Chip 
+                                                    size="small" 
+                                                    label="Selected" 
+                                                    sx={{ 
+                                                        ml: 1,
+                                                        backgroundColor: option.color,
+                                                        color: '#fff'
+                                                    }}
+                                                />
+                                            )}
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
                 </Box>
             </Box>
 
@@ -420,11 +528,12 @@ function EventsPage() {
                                     </Box>
                                     <Chip 
                                         label={event.impact}
-                                        color={getImpactColor(event.impact) as any}
                                         size="small"
                                         sx={{ 
                                             fontWeight: 'medium',
-                                            minWidth: '80px'
+                                            minWidth: '80px',
+                                            backgroundColor: getImpactColor(event.impact),
+                                            color: '#fff'
                                         }}
                                     />
                                 </Box>

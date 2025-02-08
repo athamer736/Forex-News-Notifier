@@ -100,14 +100,15 @@ def convert_to_user_timezone(event: Dict, user_tz: pytz.timezone) -> Dict:
         logger.exception(e)
         return event
 
-def get_filtered_events(time_range: str, user_timezone: str, selected_currencies: List[str] = None) -> List[Dict]:
+def get_filtered_events(time_range: str, user_timezone: str, selected_currencies: List[str] = None, selected_impacts: List[str] = None) -> List[Dict]:
     """
-    Filter stored events based on time range, user's timezone, and selected currencies
+    Filter stored events based on time range, user's timezone, currencies, and impact levels
     
     Args:
         time_range: One of '24h', 'today', 'tomorrow', 'week', 'remaining_week'
         user_timezone: User's timezone (e.g., 'America/New_York')
         selected_currencies: List of currency codes to filter by (e.g., ['USD', 'GBP'])
+        selected_impacts: List of impact levels to filter by (e.g., ['High', 'Medium'])
     """
     if not event_store['events']:
         logger.warning("No events in store")
@@ -167,6 +168,20 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
                     if selected_currencies and event_currency not in selected_currencies:
                         logger.debug(f"Excluding event due to currency filter: {event['event_title']} ({event_currency})")
                         continue
+                        
+                    # Filter by impact if specified
+                    event_impact = event['impact'].lower()
+                    if selected_impacts:
+                        if 'non-economic' in [imp.lower() for imp in selected_impacts]:
+                            # Include both non-economic events and events matching other selected impacts
+                            if event_impact not in ['high', 'medium', 'low'] and event_impact != 'non-economic':
+                                event_impact = 'non-economic'
+                            if event_impact not in [imp.lower() for imp in selected_impacts]:
+                                logger.debug(f"Excluding event due to impact filter: {event['event_title']} ({event_impact})")
+                                continue
+                        elif event_impact not in [imp.lower() for imp in selected_impacts]:
+                            logger.debug(f"Excluding event due to impact filter: {event['event_title']} ({event_impact})")
+                            continue
                         
                     # Convert to user's timezone for display
                     converted_event = convert_to_user_timezone(event, user_tz)
