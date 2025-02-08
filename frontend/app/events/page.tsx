@@ -1,7 +1,8 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl } from '@mui/material';
 
 interface ForexEvent {
     time: string;
@@ -28,11 +29,10 @@ const timeRangeOptions: TimeRangeOption[] = [
     { value: 'week', label: 'Next 7 Days' },
 ];
 
-export default function EventsPage() {
+function EventsPage() {
     const [events, setEvents] = useState<ForexEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [mounted, setMounted] = useState(false);
     const [timeRange, setTimeRange] = useState<string>('24h');
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
 
@@ -85,20 +85,15 @@ export default function EventsPage() {
     }, [retryTimer]);
 
     useEffect(() => {
-        setMounted(true);
-        const userId = localStorage.getItem('userId') || 'default';
-        const storedTimezone = localStorage.getItem('timezone');
-        
         const setUserTimezone = async () => {
             try {
+                const userId = localStorage.getItem('userId') || 'default';
                 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
                 const offset = new Date().getTimezoneOffset();
                 
                 console.log('Current timezone:', timezone);
                 console.log('Current offset:', offset);
-                console.log('Stored timezone:', storedTimezone);
                 
-                // Always update timezone to ensure it's current
                 const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
                     ? 'http://localhost:5000'
                     : 'http://141.95.123.145:5000';
@@ -128,16 +123,16 @@ export default function EventsPage() {
             }
         };
 
-        // Always set timezone before fetching events
+        // Set timezone and fetch events
         setUserTimezone().then(fetchEvents);
 
         // Set up interval for fetching events
         const interval = setInterval(() => {
             setUserTimezone().then(fetchEvents);
-        }, 5 * 60 * 1000);
+        }, 5 * 60 * 1000);  // Refresh every 5 minutes
         
         return () => clearInterval(interval);
-    }, [timeRange]);  // Add timeRange to dependencies
+    }, [timeRange]);
 
     const getImpactColor = (impact: string) => {
         switch (impact.toLowerCase()) {
@@ -152,9 +147,6 @@ export default function EventsPage() {
         }
     };
 
-    // Don't render anything until client-side hydration is complete
-    if (!mounted) return null;
-
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -163,9 +155,9 @@ export default function EventsPage() {
         );
     }
 
-    if (error) {
-        return (
-            <Container maxWidth="lg" sx={{ py: 4 }}>
+    return (
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+            {error && (
                 <Box mb={4}>
                     <Alert 
                         severity={error.includes('Rate limit') ? "info" : "error"}
@@ -179,12 +171,8 @@ export default function EventsPage() {
                         )}
                     </Alert>
                 </Box>
-            </Container>
-        );
-    }
+            )}
 
-    return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
             <Box mb={6} textAlign="center">
                 <Typography 
                     variant="h3" 
@@ -192,7 +180,7 @@ export default function EventsPage() {
                     gutterBottom
                     sx={{
                         fontWeight: 'bold',
-                        color: '#666666',  // Light grey color
+                        color: '#666666',
                         transition: 'color 0.3s ease'
                     }}
                 >
@@ -309,13 +297,9 @@ export default function EventsPage() {
                                             textAlign: 'center',
                                             p: 2,
                                             borderRadius: 2,
-                                            bgcolor: (theme) => theme.palette.mode === 'dark' 
-                                                ? 'rgba(255, 255, 255, 0.05)'
-                                                : 'rgba(0, 0, 0, 0.02)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.05)',
                                             border: '1px solid',
-                                            borderColor: (theme) => theme.palette.mode === 'dark'
-                                                ? 'rgba(255, 255, 255, 0.1)'
-                                                : 'rgba(0, 0, 0, 0.1)',
+                                            borderColor: 'rgba(255, 255, 255, 0.1)',
                                         }
                                     }}
                                 >
@@ -352,3 +336,7 @@ export default function EventsPage() {
         </Container>
     );
 }
+
+export default dynamic(() => Promise.resolve(EventsPage), {
+    ssr: false
+});

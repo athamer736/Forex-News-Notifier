@@ -14,13 +14,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
-        {children}
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-screen bg-[#0a0a0a] text-white">
+        <main className="flex min-h-screen flex-col">
+          {children}
+        </main>
       </body>
     </html>
   );
