@@ -108,11 +108,25 @@ function EventsPage() {
     useEffect(() => {
         const storedTimezone = localStorage.getItem('timezone');
         const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const defaultTimezone = storedTimezone || browserTimezone;
         
-        // Check if the timezone is in our options list
-        const isValidTimezone = timezoneOptions.some(option => option.value === defaultTimezone);
-        setSelectedTimezone(isValidTimezone ? defaultTimezone : 'UTC');
+        // If there's no stored timezone, use the browser's timezone
+        if (!storedTimezone) {
+            // Find the closest matching timezone from our options
+            const matchingTimezone = timezoneOptions.find(option => {
+                // Exact match
+                if (option.value === browserTimezone) return true;
+                // Partial match (e.g., America/New_York matches America/*)
+                if (browserTimezone.startsWith(option.value.split('/')[0])) return true;
+                return false;
+            });
+            
+            setSelectedTimezone(matchingTimezone ? matchingTimezone.value : 'UTC');
+            return;
+        }
+        
+        // If there is a stored timezone, validate it against our options
+        const isValidTimezone = timezoneOptions.some(option => option.value === storedTimezone);
+        setSelectedTimezone(isValidTimezone ? storedTimezone : browserTimezone);
     }, []);
 
     const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
