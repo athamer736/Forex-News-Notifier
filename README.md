@@ -20,7 +20,7 @@ Currently scanning for news from ForexFactory and displays it here.
 - AI use to predict outcome of news
 - Phone App with notifications there
 
-## Disclaimer
+# Disclaimer
 
 This is a personal solo project, not a business venture currently, so any bugs or features you would like to see please email athamer736@gmail.com to contact me. 
                     
