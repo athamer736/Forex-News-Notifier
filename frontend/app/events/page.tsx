@@ -108,59 +108,73 @@ function EventsPage() {
     useEffect(() => {
         const storedTimezone = localStorage.getItem('timezone');
         const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        console.log('Browser timezone:', browserTimezone); // Debug log
+        console.log('Browser timezone:', browserTimezone);
+        console.log('Stored timezone:', storedTimezone);
+        
+        // Get browser's offset in minutes
+        const browserOffset = new Date().getTimezoneOffset();
+        console.log('Browser offset (minutes):', browserOffset);
         
         // Function to find the best matching timezone
         const findBestMatchingTimezone = (browserTz: string) => {
+            console.log('Finding best matching timezone for:', browserTz);
+            
             // First try exact match
             const exactMatch = timezoneOptions.find(opt => opt.value === browserTz);
-            if (exactMatch) return exactMatch.value;
-
-            // If no exact match, try to match by region
+            if (exactMatch) {
+                console.log('Found exact match:', exactMatch.value);
+                return exactMatch.value;
+            }
+            
+            // Try to match by region (e.g., America/*)
             const [region] = browserTz.split('/');
+            console.log('Trying to match by region:', region);
             const regionMatch = timezoneOptions.find(opt => {
                 const [optRegion] = opt.value.split('/');
                 return optRegion === region;
             });
-            if (regionMatch) return regionMatch.value;
-
+            if (regionMatch) {
+                console.log('Found region match:', regionMatch.value);
+                return regionMatch.value;
+            }
+            
             // If still no match, try to match by offset
-            const browserOffset = new Date().getTimezoneOffset();
+            console.log('Trying to match by offset...');
             const now = new Date();
             
-            // Find timezone with closest offset
-            const closestMatch = timezoneOptions.reduce((closest, current) => {
-                if (current.value === 'UTC') return closest;
+            let closestMatch = timezoneOptions[0];
+            let smallestDiff = Infinity;
+            
+            timezoneOptions.forEach(option => {
+                if (option.value === 'UTC') return;
                 
                 try {
-                    const tzOffset = new Date(now.toLocaleString('en-US', { timeZone: current.value })).getTimezoneOffset();
+                    const tzOffset = new Date(now.toLocaleString('en-US', { timeZone: option.value })).getTimezoneOffset();
                     const currentDiff = Math.abs(browserOffset - tzOffset);
-                    const closestDiff = Math.abs(browserOffset - new Date(now.toLocaleString('en-US', { timeZone: closest.value })).getTimezoneOffset());
+                    console.log(`Checking ${option.value}: offset=${tzOffset}, diff=${currentDiff}`);
                     
-                    return currentDiff < closestDiff ? current : closest;
+                    if (currentDiff < smallestDiff) {
+                        smallestDiff = currentDiff;
+                        closestMatch = option;
+                    }
                 } catch (e) {
-                    return closest;
+                    console.error(`Error checking timezone ${option.value}:`, e);
                 }
-            }, timezoneOptions[0]);
-
+            });
+            
+            console.log('Best match by offset:', closestMatch.value);
             return closestMatch.value;
         };
 
-        // If no stored timezone, find the best match from browser timezone
-        if (!storedTimezone) {
+        // If no stored timezone or stored timezone is invalid, find the best match
+        if (!storedTimezone || !timezoneOptions.some(opt => opt.value === storedTimezone)) {
+            console.log('No valid stored timezone, finding best match...');
             const bestMatch = findBestMatchingTimezone(browserTimezone);
-            console.log('Best matching timezone:', bestMatch); // Debug log
+            console.log('Setting timezone to best match:', bestMatch);
             setSelectedTimezone(bestMatch);
-            return;
-        }
-
-        // If there is a stored timezone, validate it
-        const isValidTimezone = timezoneOptions.some(option => option.value === storedTimezone);
-        if (!isValidTimezone) {
-            // If stored timezone is invalid, find best match
-            const bestMatch = findBestMatchingTimezone(browserTimezone);
-            setSelectedTimezone(bestMatch);
+            localStorage.setItem('timezone', bestMatch);
         } else {
+            console.log('Using stored timezone:', storedTimezone);
             setSelectedTimezone(storedTimezone);
         }
     }, []);
