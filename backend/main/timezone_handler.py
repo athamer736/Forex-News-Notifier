@@ -1,57 +1,69 @@
 from datetime import datetime
 import pytz
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
+import json
+import os
 
 logger = logging.getLogger(__name__)
 
-# Store user timezone preferences (in a real app, this would be in a database)
-user_preferences = {}
+# Directory for storing user preferences
+PREFERENCES_DIR = 'user_preferences'
 
-def set_user_timezone(timezone: str, offset: int, user_id: str = 'default') -> dict:
-    """
-    Set timezone preferences for a user
-    
-    Args:
-        timezone (str): The timezone name (e.g., 'America/New_York')
-        offset (int): The timezone offset in minutes
-        user_id (str): The user identifier
-        
-    Returns:
-        dict: The updated user preferences
-    """
+def set_user_timezone(timezone: str, offset: int, user_id: str) -> Dict:
+    """Set and store a user's timezone preference"""
     try:
-        if timezone and offset is not None:
-            user_preferences[user_id] = {
-                'timezone': timezone,
-                'offset': offset,
-                'last_updated': datetime.now(pytz.UTC).isoformat()
-            }
-            logger.info(f"Timezone set for user {user_id}: {timezone} (offset: {offset})")
-            logger.debug(f"Current user_preferences: {user_preferences}")
-            return user_preferences[user_id]
-        raise ValueError("Invalid timezone data")
+        # Validate timezone
+        if timezone not in pytz.all_timezones:
+            raise ValueError(f"Invalid timezone: {timezone}")
+
+        # Create preferences directory if it doesn't exist
+        os.makedirs(PREFERENCES_DIR, exist_ok=True)
+
+        # Load existing preferences or create new
+        preferences = load_user_preferences(user_id)
+        preferences['timezone'] = timezone
+        preferences['offset'] = offset
+
+        # Save updated preferences
+        save_user_preferences(user_id, preferences)
+        logger.info(f"Timezone preference saved for user {user_id}: {timezone}")
+        
+        return preferences
     except Exception as e:
-        logger.exception("Error setting timezone")
+        logger.error(f"Error setting timezone for user {user_id}: {str(e)}")
         raise
 
-def get_user_timezone(user_id: str = 'default') -> str:
-    """
-    Get the timezone for a user
-    
-    Args:
-        user_id (str): The user identifier
-        
-    Returns:
-        str: The user's timezone name, defaults to 'UTC'
-    """
+def get_user_timezone(user_id: str) -> Optional[str]:
+    """Get a user's timezone preference"""
     try:
-        timezone = user_preferences.get(user_id, {}).get('timezone', 'UTC')
-        logger.debug(f"Getting timezone for user {user_id}: {timezone}")
-        return timezone
+        preferences = load_user_preferences(user_id)
+        return preferences.get('timezone')
     except Exception as e:
         logger.error(f"Error getting timezone for user {user_id}: {str(e)}")
-        return 'UTC'
+        return None
+
+def load_user_preferences(user_id: str) -> Dict:
+    """Load user preferences from file"""
+    try:
+        filepath = os.path.join(PREFERENCES_DIR, f"{user_id}.json")
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        logger.error(f"Error loading preferences for user {user_id}: {str(e)}")
+        return {}
+
+def save_user_preferences(user_id: str, preferences: Dict) -> None:
+    """Save user preferences to file"""
+    try:
+        filepath = os.path.join(PREFERENCES_DIR, f"{user_id}.json")
+        with open(filepath, 'w') as f:
+            json.dump(preferences, f)
+    except Exception as e:
+        logger.error(f"Error saving preferences for user {user_id}: {str(e)}")
+        raise
 
 def convert_to_local_time(events: List[Dict], user_id: str = 'default') -> List[Dict]:
     """

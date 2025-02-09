@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import time
 import logging
 import pytz
-from event_store import store_events, event_store
+from .event_store import store_events, event_store
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
