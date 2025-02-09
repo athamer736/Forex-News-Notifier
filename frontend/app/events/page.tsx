@@ -97,10 +97,33 @@ function EventsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [timeRange, setTimeRange] = useState<string>('24h');
-    const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
-    const [selectedImpacts, setSelectedImpacts] = useState<string[]>([]);
+    const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('selectedCurrencies');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.error('Error loading saved currencies:', error);
+            return [];
+        }
+    });
+    const [selectedImpacts, setSelectedImpacts] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('selectedImpacts');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.error('Error loading saved impacts:', error);
+            return [];
+        }
+    });
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+        try {
+            return (localStorage.getItem('viewMode') as 'grid' | 'table') || 'table';
+        } catch (error) {
+            console.error('Error loading saved view mode:', error);
+            return 'table';
+        }
+    });
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
-    const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
     const [selectedTimezone, setSelectedTimezone] = useState<string>('');
     const [isUpdating, setIsUpdating] = useState<boolean>(false);
     const [initialLoad, setInitialLoad] = useState(true);
@@ -108,6 +131,22 @@ function EventsPage() {
     const [dateError, setDateError] = useState<string>('');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
+
+    // Remove the loading of saved filters from this useEffect since we're now doing it in the initial state
+    useEffect(() => {
+        try {
+            // Load saved view mode if not already set
+            if (!viewMode) {
+                const savedViewMode = localStorage.getItem('viewMode') as 'grid' | 'table';
+                if (savedViewMode) {
+                    setViewMode(savedViewMode);
+                    console.log('Loaded saved view mode:', savedViewMode);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading saved filters:', error);
+        }
+    }, []); // Empty dependency array to run only once on mount
 
     // Initialize timezone on component mount
     useEffect(() => {
@@ -391,24 +430,50 @@ function EventsPage() {
 
     const handleCurrencyChange = (event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
-        setSelectedCurrencies(typeof value === 'string' ? value.split(',') : value);
-        // Don't close the dropdown
+        const newCurrencies = typeof value === 'string' ? value.split(',') : value;
+        setSelectedCurrencies(newCurrencies);
+        try {
+            localStorage.setItem('selectedCurrencies', JSON.stringify(newCurrencies));
+            console.log('Saved currencies:', newCurrencies);
+        } catch (error) {
+            console.error('Error saving currencies:', error);
+        }
         event.stopPropagation();
     };
 
     const handleRemoveCurrency = (currencyToRemove: string) => {
-        setSelectedCurrencies(prev => prev.filter(currency => currency !== currencyToRemove));
+        const newCurrencies = selectedCurrencies.filter(currency => currency !== currencyToRemove);
+        setSelectedCurrencies(newCurrencies);
+        try {
+            localStorage.setItem('selectedCurrencies', JSON.stringify(newCurrencies));
+            console.log('Saved currencies after removal:', newCurrencies);
+        } catch (error) {
+            console.error('Error saving currencies:', error);
+        }
     };
 
     const handleImpactChange = (event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
-        setSelectedImpacts(typeof value === 'string' ? value.split(',') : value);
-        // Don't close the dropdown
+        const newImpacts = typeof value === 'string' ? value.split(',') : value;
+        setSelectedImpacts(newImpacts);
+        try {
+            localStorage.setItem('selectedImpacts', JSON.stringify(newImpacts));
+            console.log('Saved impact levels:', newImpacts);
+        } catch (error) {
+            console.error('Error saving impact levels:', error);
+        }
         event.stopPropagation();
     };
 
     const handleRemoveImpact = (impactToRemove: string) => {
-        setSelectedImpacts(prev => prev.filter(impact => impact !== impactToRemove));
+        const newImpacts = selectedImpacts.filter(impact => impact !== impactToRemove);
+        setSelectedImpacts(newImpacts);
+        try {
+            localStorage.setItem('selectedImpacts', JSON.stringify(newImpacts));
+            console.log('Saved impact levels after removal:', newImpacts);
+        } catch (error) {
+            console.error('Error saving impact levels:', error);
+        }
     };
 
     // Add handler for opening/closing the menu
