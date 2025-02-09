@@ -6,7 +6,7 @@ import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, 
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
 import Image from 'next/image';
-import { GB, US, FR, DE, JP, CN, SG, AU } from 'country-flag-icons/react/3x2';
+import { GB, US, FR, DE, JP, CN, SG, AU, BR, AE, NZ } from 'country-flag-icons/react/3x2';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
 interface ForexEvent {
@@ -67,17 +67,22 @@ const currencyOptions: CurrencyOption[] = [
 ];
 
 const timezoneOptions: TimezoneOption[] = [
-    { value: 'UTC', label: 'UTC' },
-    { value: 'America/New_York', label: 'New York (EST/EDT)', FlagComponent: US },
-    { value: 'America/Chicago', label: 'Chicago (CST/CDT)', FlagComponent: US },
-    { value: 'America/Los_Angeles', label: 'Los Angeles (PST/PDT)', FlagComponent: US },
-    { value: 'Europe/London', label: 'London (GMT/BST)', FlagComponent: GB },
-    { value: 'Europe/Paris', label: 'Paris (CET/CEST)', FlagComponent: FR },
-    { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)', FlagComponent: DE },
-    { value: 'Asia/Tokyo', label: 'Tokyo (JST)', FlagComponent: JP },
-    { value: 'Asia/Shanghai', label: 'Shanghai (CST)', FlagComponent: CN },
-    { value: 'Asia/Singapore', label: 'Singapore (SGT)', FlagComponent: SG },
-    { value: 'Australia/Sydney', label: 'Sydney (AEST/AEDT)', FlagComponent: AU }
+    { value: 'auto', label: 'Local Time (System Timezone)' },
+    { value: 'UTC', label: 'UTC - Coordinated Universal Time' },
+    { value: 'Europe/London', label: 'London/Dublin/Edinburgh (GMT/BST)', FlagComponent: GB },
+    { value: 'Europe/Paris', label: 'Paris/Berlin/Rome/Madrid (CET)', FlagComponent: FR },
+    { value: 'Europe/Moscow', label: 'Moscow/Kiev/Bucharest (EET)', FlagComponent: GB },
+    { value: 'America/New_York', label: 'New York/Toronto/Miami (EST)', FlagComponent: US },
+    { value: 'America/Chicago', label: 'Chicago/Dallas/Mexico City (CST)', FlagComponent: US },
+    { value: 'America/Denver', label: 'Denver/Phoenix/Salt Lake City (MST)', FlagComponent: US },
+    { value: 'America/Los_Angeles', label: 'Los Angeles/Seattle/Vancouver (PST)', FlagComponent: US },
+    { value: 'America/Sao_Paulo', label: 'São Paulo/Buenos Aires/Santiago (BRT)', FlagComponent: BR },
+    { value: 'Asia/Dubai', label: 'Dubai/Abu Dhabi/Muscat (GST)', FlagComponent: AE },
+    { value: 'Asia/Singapore', label: 'Singapore/Kuala Lumpur/Manila (SGT)', FlagComponent: SG },
+    { value: 'Asia/Shanghai', label: 'Shanghai/Beijing/Hong Kong (CST)', FlagComponent: CN },
+    { value: 'Asia/Tokyo', label: 'Tokyo/Seoul/Osaka (JST)', FlagComponent: JP },
+    { value: 'Australia/Sydney', label: 'Sydney/Melbourne/Brisbane (AEST)', FlagComponent: AU },
+    { value: 'Pacific/Auckland', label: 'Auckland/Wellington (NZST)', FlagComponent: NZ }
 ];
 
 const impactOptions = [
@@ -106,28 +111,50 @@ function EventsPage() {
 
     // Initialize timezone on component mount
     useEffect(() => {
-        const storedTimezone = localStorage.getItem('timezone');
         const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        console.log('Browser timezone:', browserTimezone);
         
-        // If there's no stored timezone, use the browser's timezone
-        if (!storedTimezone) {
-            // Find the closest matching timezone from our options
-            const matchingTimezone = timezoneOptions.find(option => {
-                // Exact match
-                if (option.value === browserTimezone) return true;
-                // Partial match (e.g., America/New_York matches America/*)
-                if (browserTimezone.startsWith(option.value.split('/')[0])) return true;
-                return false;
-            });
-            
-            setSelectedTimezone(matchingTimezone ? matchingTimezone.value : 'UTC');
+        // Get the current stored timezone for reference
+        const storedTimezone = localStorage.getItem('timezone');
+        console.log('Current stored timezone:', storedTimezone);
+
+        // First try exact match
+        const exactMatch = timezoneOptions.find(opt => opt.value === browserTimezone);
+        if (exactMatch) {
+            console.log('Found exact timezone match:', exactMatch.value);
+            // Update stored timezone and selected timezone with exact match
+            localStorage.setItem('timezone', exactMatch.value);
+            setSelectedTimezone(exactMatch.value);
+            console.log('Updated stored timezone to:', exactMatch.value);
+            console.log('Updated selected timezone to:', exactMatch.value);
             return;
         }
         
-        // If there is a stored timezone, validate it against our options
-        const isValidTimezone = timezoneOptions.some(option => option.value === storedTimezone);
-        setSelectedTimezone(isValidTimezone ? storedTimezone : browserTimezone);
-    }, []);
+        // If no exact match, try to match by region
+        const browserRegion = browserTimezone.split('/')[0];
+        const regionMatch = timezoneOptions.find(opt => 
+            opt.value !== 'auto' && 
+            opt.value !== 'UTC' && 
+            opt.value.startsWith(browserRegion + '/')
+        );
+        
+        if (regionMatch) {
+            console.log('Found region timezone match:', regionMatch.value);
+            // Update stored timezone and selected timezone with region match
+            localStorage.setItem('timezone', regionMatch.value);
+            setSelectedTimezone(regionMatch.value);
+            console.log('Updated stored timezone to:', regionMatch.value);
+            console.log('Updated selected timezone to:', regionMatch.value);
+            return;
+        }
+        
+        // If no match found at all, default to auto
+        console.log('No timezone match found, defaulting to auto');
+        localStorage.setItem('timezone', 'auto');
+        setSelectedTimezone('auto');
+        console.log('Updated stored timezone to: auto');
+        console.log('Updated selected timezone to: auto');
+    }, []); // Empty dependency array to run only once on mount
 
     const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = event.target.value;
@@ -249,10 +276,26 @@ function EventsPage() {
         const setUserTimezone = async () => {
             try {
                 const userId = localStorage.getItem('userId') || 'default';
-                const timezone = selectedTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-                const offset = new Date().getTimezoneOffset();
+                const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                let timezone;
+                let displayTimezone;
                 
-                console.log('Current timezone:', timezone);
+                // Get the actual timezone to use
+                if (!selectedTimezone || selectedTimezone === 'auto') {
+                    // If auto is selected, use browser timezone directly
+                    timezone = browserTimezone;
+                    displayTimezone = selectedTimezone || 'auto';
+                } else {
+                    // Use the selected timezone
+                    timezone = selectedTimezone;
+                    displayTimezone = selectedTimezone;
+                }
+                
+                console.log('Selected timezone:', selectedTimezone);
+                console.log('Display timezone:', displayTimezone);
+                console.log('Actual timezone to use:', timezone);
+                
+                const offset = new Date().getTimezoneOffset();
                 console.log('Current offset:', offset);
                 
                 // Determine the base URL based on hostname
@@ -266,7 +309,7 @@ function EventsPage() {
                         baseUrl = 'http://141.95.123.145:5000';
                     }
                 } else {
-                    baseUrl = 'http://141.95.123.145:5000'; // Default to server
+                    baseUrl = 'http://141.95.123.145:5000';
                 }
                 
                 console.log('Using base URL:', baseUrl);
@@ -287,28 +330,45 @@ function EventsPage() {
                     }),
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Timezone set response:', data);
-                    localStorage.setItem('timezone', timezone);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Failed to set timezone: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Timezone set response:', data);
+                
+                try {
+                    localStorage.setItem('timezone', displayTimezone);
                     localStorage.setItem('userId', userId);
-                    if (!selectedTimezone) {
-                        setSelectedTimezone(timezone);
-                    }
-                } else {
-                    console.error('Failed to set timezone:', await response.text());
+                } catch (storageError) {
+                    console.error('Error storing in localStorage:', storageError);
                 }
             } catch (error) {
-                console.error('Error setting timezone:', error);
+                console.error('Error in setUserTimezone:', error);
+                const defaultTimezone = 'Europe/London';
+                setSelectedTimezone(defaultTimezone);
             }
         };
 
         // Set timezone and fetch events
-        setUserTimezone().then(fetchEvents);
+        setUserTimezone().then(() => {
+            try {
+                fetchEvents();
+            } catch (error) {
+                console.error('Error fetching events:', error);
+            }
+        });
 
         // Set up interval for fetching events
         const interval = setInterval(() => {
-            setUserTimezone().then(fetchEvents);
+            setUserTimezone().then(() => {
+                try {
+                    fetchEvents();
+                } catch (error) {
+                    console.error('Error in interval fetch:', error);
+                }
+            });
         }, 5 * 60 * 1000);  // Refresh every 5 minutes
         
         return () => clearInterval(interval);
@@ -844,12 +904,11 @@ function EventsPage() {
                                     const option = timezoneOptions.find(opt => opt.value === value);
                                     return (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {option?.FlagComponent && (
+                                            {option?.FlagComponent ? (
                                                 <Box sx={{ width: 24, height: 16 }}>
                                                     <option.FlagComponent title={option.label} />
                                                 </Box>
-                                            )}
-                                            {!option?.FlagComponent && (
+                                            ) : (
                                                 <Box 
                                                     sx={{ 
                                                         width: 24, 
