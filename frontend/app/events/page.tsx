@@ -2,11 +2,12 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent } from '@mui/material';
+import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
 import Image from 'next/image';
 import { GB, US, FR, DE, JP, CN, SG, AU } from 'country-flag-icons/react/3x2';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
 interface ForexEvent {
     time: string;
@@ -37,9 +38,12 @@ interface TimezoneOption {
 const timeRangeOptions: TimeRangeOption[] = [
     { value: '24h', label: 'Next 24 Hours' },
     { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
     { value: 'tomorrow', label: 'Tomorrow' },
+    { value: 'previous_week', label: 'Previous Week' },
     { value: 'week', label: 'Current Week' },
-    { value: 'remaining_week', label: 'Remaining Week' }
+    { value: 'next_week', label: 'Next Week' },
+    { value: 'specific_date', label: 'Specific Date' }
 ];
 
 const currencyOptions: CurrencyOption[] = [
@@ -87,6 +91,10 @@ function EventsPage() {
     const [selectedTimezone, setSelectedTimezone] = useState<string>('');
     const [isUpdating, setIsUpdating] = useState<boolean>(false);
     const [initialLoad, setInitialLoad] = useState(true);
+    const [selectedDate, setSelectedDate] = useState<string>('');
+    const [dateError, setDateError] = useState<string>('');
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const open = Boolean(anchorEl);
 
     // Initialize timezone on component mount
     useEffect(() => {
@@ -99,13 +107,38 @@ function EventsPage() {
         setSelectedTimezone(isValidTimezone ? defaultTimezone : 'UTC');
     }, []);
 
+    const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = event.target.value;
+        
+        // Clear error if the selected date is after or equal to Feb 2, 2025
+        const selectedDateTime = new Date(newDate);
+        const cutoffDate = new Date('2025-02-02');
+        if (selectedDateTime >= cutoffDate) {
+            setError(null);
+        }
+        
+        setSelectedDate(newDate);
+        setTimeRange('specific_date');
+        handleClose();
+    };
+
     const fetchEvents = async () => {
         try {
             setIsUpdating(true);
             setError(null);
-            if (initialLoad) {
-                setLoading(true);
+            
+            // Check date validity before making the request
+            if (timeRange === 'specific_date' && selectedDate) {
+                const selectedDateTime = new Date(selectedDate);
+                const cutoffDate = new Date('2025-02-02');
+                if (selectedDateTime < cutoffDate) {
+                    setError('Sorry, we do not have data from before February 2, 2025');
+                    setEvents([]);
+                    setIsUpdating(false);
+                    return;
+                }
             }
+
             const userId = localStorage.getItem('userId') || 'default';
             
             // Determine the base URL based on hostname
@@ -121,15 +154,13 @@ function EventsPage() {
             } else {
                 baseUrl = 'http://141.95.123.145:5000'; // Default to server
             }
-            
-            console.log('Using base URL:', baseUrl);
-            console.log('Fetching events for user:', userId);
 
-            // Add currencies and impacts to the query parameters if any are selected
+            // Add selected date to query parameters if applicable
+            const dateParam = timeRange === 'specific_date' ? `&date=${selectedDate}` : '';
             const currencyParam = selectedCurrencies.length > 0 ? `&currencies=${selectedCurrencies.join(',')}` : '';
             const impactParam = selectedImpacts.length > 0 ? `&impacts=${selectedImpacts.join(',')}` : '';
             
-            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}${currencyParam}${impactParam}`, {
+            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}${dateParam}${currencyParam}${impactParam}`, {
                 mode: 'cors',
                 credentials: 'include',
                 headers: {
@@ -154,7 +185,6 @@ function EventsPage() {
             }
             
             const data = await response.json();
-            console.log('Received events:', data);
             setEvents(prev => {
                 // Fade out old events that are not in the new data
                 const oldEventIds = new Set(prev.map((e: ForexEvent) => `${e.time}-${e.event_title}`));
@@ -167,7 +197,11 @@ function EventsPage() {
             });
         } catch (error) {
             console.error('Error fetching events:', error);
-            setError(error instanceof Error ? error.message : 'Failed to fetch events');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch events';
+            setError(errorMessage);
+            if (!errorMessage.includes('before February 2, 2025')) {
+                setEvents([]);
+            }
         } finally {
             setLoading(false);
             setInitialLoad(false);
@@ -256,7 +290,7 @@ function EventsPage() {
         }, 5 * 60 * 1000);  // Refresh every 5 minutes
         
         return () => clearInterval(interval);
-    }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone]);
+    }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone, selectedDate]);
 
     const getImpactColor = (impact: string) => {
         switch (impact.toLowerCase()) {
@@ -293,6 +327,24 @@ function EventsPage() {
 
     const handleRemoveImpact = (impactToRemove: string) => {
         setSelectedImpacts(prev => prev.filter(impact => impact !== impactToRemove));
+    };
+
+    // Add handler for opening/closing the menu
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    // Function to get display text for current time range
+    const getTimeRangeDisplayText = () => {
+        if (timeRange === 'specific_date' && selectedDate) {
+            return `Date: ${selectedDate}`;
+        }
+        const option = timeRangeOptions.find(opt => opt.value === timeRange);
+        return option ? option.label : 'Select Time Range';
     };
 
     const TableView = () => (
@@ -714,7 +766,7 @@ function EventsPage() {
                         </FormControl>
                     </Box>
 
-                    {/* Time Range Filter */}
+                    {/* Time Range Button and Menu */}
                     <Box sx={{ minWidth: '200px', pb: 3 }}>
                         <Typography 
                             variant="h6" 
@@ -729,30 +781,105 @@ function EventsPage() {
                         >
                             Time Range
                         </Typography>
-                        <FormControl fullWidth>
-                            <Select
-                                value={timeRange}
-                                onChange={(e) => setTimeRange(e.target.value)}
-                                sx={{
-                                    backgroundColor: '#fff',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.7)',
-                                    },
-                                }}
-                            >
+                        <Button
+                            id="time-range-button"
+                            aria-controls={open ? 'time-range-menu' : undefined}
+                            aria-haspopup="true"
+                            aria-expanded={open ? 'true' : undefined}
+                            onClick={handleClick}
+                            startIcon={<CalendarTodayIcon />}
+                            sx={{
+                                width: '100%',
+                                backgroundColor: '#fff',
+                                color: '#000',
+                                textTransform: 'none',
+                                justifyContent: 'flex-start',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                },
+                                padding: '8px 14px',
+                                height: '56px', // Match height with other inputs
+                            }}
+                        >
+                            {getTimeRangeDisplayText()}
+                        </Button>
+                        <Popover
+                            id="time-range-menu"
+                            anchorEl={anchorEl}
+                            open={open}
+                            onClose={handleClose}
+                            anchorOrigin={{
+                                vertical: 'bottom',
+                                horizontal: 'left',
+                            }}
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'left',
+                            }}
+                            PaperProps={{
+                                sx: {
+                                    mt: 1,
+                                    width: '300px',
+                                    p: 2,
+                                }
+                            }}
+                        >
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                    Select Date
+                                </Typography>
+                                <TextField
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={handleDateChange}
+                                    fullWidth
+                                    size="small"
+                                    inputProps={{
+                                        min: '2025-02-02'
+                                    }}
+                                    sx={{ 
+                                        mb: 2,
+                                        '& input::-webkit-calendar-picker-indicator': {
+                                            opacity: 1
+                                        },
+                                        '& input[type="date"]::-webkit-datetime-edit-day-field:disabled, & input[type="date"]::-webkit-datetime-edit-month-field:disabled, & input[type="date"]::-webkit-datetime-edit-year-field:disabled': {
+                                            color: 'rgba(0, 0, 0, 0.38)'
+                                        }
+                                    }}
+                                />
+                            </Box>
+                            <Box>
+                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                    Quick Ranges
+                                </Typography>
                                 {timeRangeOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
+                                    <MenuItem 
+                                        key={option.value} 
+                                        value={option.value}
+                                        onClick={() => {
+                                            setTimeRange(option.value);
+                                            if (option.value !== 'specific_date') {
+                                                setSelectedDate('');
+                                            }
+                                            handleClose();
+                                        }}
+                                        selected={timeRange === option.value}
+                                        sx={{
+                                            borderRadius: '4px',
+                                            mb: 0.5,
+                                            '&.Mui-selected': {
+                                                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                            },
+                                            '&.Mui-selected:hover': {
+                                                backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                                            },
+                                        }}
+                                    >
                                         {option.label}
                                     </MenuItem>
                                 ))}
-                            </Select>
-                        </FormControl>
+                            </Box>
+                        </Popover>
                     </Box>
 
                     {/* Currency Filter */}
