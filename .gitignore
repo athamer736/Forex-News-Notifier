@@ -18,3 +18,7 @@ venv/
 
 # Add this line to your .gitignore file
    venv/
+
+# Application specific
+
+cache/
