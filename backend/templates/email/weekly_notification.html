@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #eee;
+        }
+        .day-section {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .day-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+            color: #2196f3;
+        }
+        .event {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .time {
+            font-weight: bold;
+            color: #666;
+        }
+        .currency {
+            display: inline-block;
+            padding: 2px 8px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .impact {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .impact-high {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+        .impact-medium {
+            background-color: #fff3e0;
+            color: #ed6c02;
+        }
+        .impact-low {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .event-details {
+            margin-top: 8px;
+        }
+        .forecast-previous {
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .no-events {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Weekly Forex Economic Calendar</h1>
+        <h2>Week of {{ week_start }}</h2>
+    </div>
+
+    {% for day, day_data in grouped_events.items() %}
+        <div class="day-section">
+            <h3 class="day-header">{{ day_data.date }}</h3>
+            {% for event in day_data.events %}
+                <div class="event">
+                    <div>
+                        <span class="time">{{ event.formatted_time }}</span>
+                        <span class="currency">{{ event.currency }}</span>
+                        <span class="impact impact-{{ event.impact|lower }}">{{ event.impact }}</span>
+                    </div>
+                    <div class="event-details">
+                        <strong>{{ event.event_title }}</strong>
+                        <div class="forecast-previous">
+                            {% if event.forecast %}
+                                <span>Forecast: {{ event.forecast }}</span>
+                            {% endif %}
+                            {% if event.previous %}
+                                <span>Previous: {{ event.previous }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    {% if not grouped_events %}
+        <div class="no-events">
+            <p>No significant economic events scheduled for this week.</p>
+        </div>
+    {% endif %}
+</body>
+</html> 

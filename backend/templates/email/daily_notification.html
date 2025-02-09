@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #eee;
+        }
+        .impact-section {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .high-impact {
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+        }
+        .medium-impact {
+            background-color: #fff3e0;
+            border-left: 4px solid #ed6c02;
+        }
+        .low-impact {
+            background-color: #e8f5e9;
+            border-left: 4px solid #2e7d32;
+        }
+        .event {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .time {
+            font-weight: bold;
+            color: #666;
+        }
+        .currency {
+            display: inline-block;
+            padding: 2px 8px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .no-events {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Forex Economic Calendar</h1>
+        <h2>{{ date }}</h2>
+    </div>
+
+    {% for impact, events in grouped_events.items() %}
+        {% if events %}
+            <div class="impact-section {% if impact == 'High' %}high-impact{% elif impact == 'Medium' %}medium-impact{% else %}low-impact{% endif %}">
+                <h3>{{ impact }} Impact Events</h3>
+                {% for event in events %}
+                    <div class="event">
+                        <span class="time">{{ event.formatted_time }}</span>
+                        <span class="currency">{{ event.currency }}</span>
+                        <p>{{ event.event_title }}</p>
+                        {% if event.forecast %}
+                            <small>Forecast: {{ event.forecast }}</small>
+                        {% endif %}
+                        {% if event.previous %}
+                            <small>Previous: {{ event.previous }}</small>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if not grouped_events.High and not grouped_events.Medium and not grouped_events.Low %}
+        <div class="no-events">
+            <p>No significant economic events scheduled for today.</p>
+        </div>
+    {% endif %}
+</body>
+</html> 
