@@ -571,8 +571,6 @@ function EventsPage() {
                         <Box 
                             sx={{ 
                                 display: 'grid',
-                                opacity: isUpdating ? 0.7 : 1,
-                                transition: 'opacity 0.3s ease-in-out',
                                 gridTemplateColumns: groupedEvents[dateKey].events.length === 1 
                                     ? 'minmax(450px, 1fr)'
                                     : groupedEvents[dateKey].events.length === 2 
@@ -605,21 +603,28 @@ function EventsPage() {
                             {groupedEvents[dateKey].events.map((event, index) => (
                                 <Card 
                                     key={`${event.time}-${event.event_title}-${index}`}
+                                    elevation={3}
                                     sx={{ 
                                         height: '100%',
                                         minHeight: '200px',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        transition: 'all 0.3s ease-in-out',
-                                        transform: event.isNew ? 'scale(0.98)' : 'scale(1)',
-                                        opacity: event.isNew ? 0.7 : 1,
+                                        backgroundColor: '#ffffff',
+                                        transition: 'transform 0.2s ease-in-out',
                                         '&:hover': {
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: 3,
+                                            transform: 'translateY(-4px)',
                                         }
                                     }}
                                 >
-                                    <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <CardContent 
+                                        sx={{ 
+                                            p: 3, 
+                                            flex: 1, 
+                                            display: 'flex', 
+                                            flexDirection: 'column',
+                                            backgroundColor: '#ffffff'
+                                        }}
+                                    >
                                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                                             <Typography 
                                                 variant="subtitle1" 
@@ -670,9 +675,9 @@ function EventsPage() {
                                                     textAlign: 'center',
                                                     p: 1,
                                                     borderRadius: 1,
-                                                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                                    bgcolor: 'rgba(0, 0, 0, 0.02)',
                                                     border: '1px solid',
-                                                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                                                    borderColor: 'rgba(0, 0, 0, 0.1)',
                                                 }
                                             }}
                                         >
