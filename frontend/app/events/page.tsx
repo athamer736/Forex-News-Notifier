@@ -108,25 +108,61 @@ function EventsPage() {
     useEffect(() => {
         const storedTimezone = localStorage.getItem('timezone');
         const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        console.log('Browser timezone:', browserTimezone); // Debug log
         
-        // If there's no stored timezone, use the browser's timezone
-        if (!storedTimezone) {
-            // Find the closest matching timezone from our options
-            const matchingTimezone = timezoneOptions.find(option => {
-                // Exact match
-                if (option.value === browserTimezone) return true;
-                // Partial match (e.g., America/New_York matches America/*)
-                if (browserTimezone.startsWith(option.value.split('/')[0])) return true;
-                return false;
+        // Function to find the best matching timezone
+        const findBestMatchingTimezone = (browserTz: string) => {
+            // First try exact match
+            const exactMatch = timezoneOptions.find(opt => opt.value === browserTz);
+            if (exactMatch) return exactMatch.value;
+
+            // If no exact match, try to match by region
+            const [region] = browserTz.split('/');
+            const regionMatch = timezoneOptions.find(opt => {
+                const [optRegion] = opt.value.split('/');
+                return optRegion === region;
             });
+            if (regionMatch) return regionMatch.value;
+
+            // If still no match, try to match by offset
+            const browserOffset = new Date().getTimezoneOffset();
+            const now = new Date();
             
-            setSelectedTimezone(matchingTimezone ? matchingTimezone.value : 'UTC');
+            // Find timezone with closest offset
+            const closestMatch = timezoneOptions.reduce((closest, current) => {
+                if (current.value === 'UTC') return closest;
+                
+                try {
+                    const tzOffset = new Date(now.toLocaleString('en-US', { timeZone: current.value })).getTimezoneOffset();
+                    const currentDiff = Math.abs(browserOffset - tzOffset);
+                    const closestDiff = Math.abs(browserOffset - new Date(now.toLocaleString('en-US', { timeZone: closest.value })).getTimezoneOffset());
+                    
+                    return currentDiff < closestDiff ? current : closest;
+                } catch (e) {
+                    return closest;
+                }
+            }, timezoneOptions[0]);
+
+            return closestMatch.value;
+        };
+
+        // If no stored timezone, find the best match from browser timezone
+        if (!storedTimezone) {
+            const bestMatch = findBestMatchingTimezone(browserTimezone);
+            console.log('Best matching timezone:', bestMatch); // Debug log
+            setSelectedTimezone(bestMatch);
             return;
         }
-        
-        // If there is a stored timezone, validate it against our options
+
+        // If there is a stored timezone, validate it
         const isValidTimezone = timezoneOptions.some(option => option.value === storedTimezone);
-        setSelectedTimezone(isValidTimezone ? storedTimezone : browserTimezone);
+        if (!isValidTimezone) {
+            // If stored timezone is invalid, find best match
+            const bestMatch = findBestMatchingTimezone(browserTimezone);
+            setSelectedTimezone(bestMatch);
+        } else {
+            setSelectedTimezone(storedTimezone);
+        }
     }, []);
 
     const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
