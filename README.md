@@ -22,5 +22,5 @@ Currently scanning for news from ForexFactory and displays it here.
 
 ## Disclaimer
 
-This is a personal solo project, not a business venture currently, so any bugs or features you would like to see please email (athamer736@gmail.com)[Url] to contact me. 
+This is a personal solo project, not a business venture currently, so any bugs or features you would like to see please email athamer736@gmail.com to contact me. 
                     
