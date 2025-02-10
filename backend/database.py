@@ -8,46 +8,56 @@ import pytz
 import logging
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from the project root
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(project_root, '.env')
+load_dotenv(env_path)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database configuration
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = os.getenv('DB_PORT', '3306')
-DB_NAME = os.getenv('DB_NAME', 'forex_news')
-DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+DB_HOST = "141.95.123.145"  # Server IP
+DB_PORT = int(os.getenv('DB_PORT', '3306'))
+DB_NAME = "forex_db"
+DB_USER = "forex_user"
+DB_PASSWORD = "UltraFX#736"
 
 # Create database URL using PyMySQL
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Create engine with PyMySQL
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=30,
-    pool_recycle=1800
-)
+# Log the connection details (without password)
+logger.info(f"Connecting to database at {DB_HOST}:{DB_PORT}/{DB_NAME} as {DB_USER}")
 
-# Create database if it doesn't exist
-if not database_exists(engine.url):
-    create_database(engine.url)
-    logger.info(f"Created database: {DB_NAME}")
+try:
+    # Create engine with PyMySQL
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=5,
+        max_overflow=10,
+        pool_timeout=30,
+        pool_recycle=1800
+    )
+    
+    # Create database if it doesn't exist
+    if not database_exists(engine.url):
+        create_database(engine.url)
+        logger.info(f"Created database: {DB_NAME}")
+    
+    # Create session factory
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    # Create scoped session
+    db_session = scoped_session(SessionLocal)
+    
+    # Create base class for models
+    Base = declarative_base()
+    Base.query = db_session.query_property()
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create scoped session
-db_session = scoped_session(SessionLocal)
-
-# Create base class for models
-Base = declarative_base()
-Base.query = db_session.query_property()
+except Exception as e:
+    logger.error(f"Error configuring database: {str(e)}")
+    raise
 
 def get_filtered_events(
     start_time: Optional[datetime] = None,
