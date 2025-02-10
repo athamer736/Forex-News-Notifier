@@ -1,10 +1,12 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Union
 from flask import jsonify, request
+import pytz
 
 from .timezone_handler import set_user_timezone as set_tz, get_user_timezone
-from ..events import get_filtered_events, get_cache_status, fetch_events
+from ..database import get_filtered_events as db_get_filtered_events
+from ..events import get_cache_status, fetch_events
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,10 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             if not specific_date:
                 return {'error': 'Date parameter is required for specific_date time range'}, 400
             try:
-                datetime.strptime(specific_date, '%Y-%m-%d')
+                date_obj = datetime.strptime(specific_date, '%Y-%m-%d')
+                # Check if date is before Feb 2, 2025
+                if date_obj < datetime(2025, 2, 2):
+                    return {'error': 'Sorry, we do not have data from before February 2, 2025'}, 400
             except ValueError:
                 return {'error': 'Invalid date format. Use YYYY-MM-DD'}, 400
 
@@ -62,20 +67,53 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             logger.warning(f"No timezone found for user {user_id}, defaulting to UTC")
             user_timezone = 'UTC'
 
-        # Fetch fresh events if needed
-        try:
-            fetch_events()
-        except Exception as e:
-            logger.error(f"Error fetching events: {str(e)}")
+        # Calculate time range for database query
+        now = datetime.now(pytz.UTC)
+        start_time = None
+        end_time = None
 
-        # Get filtered events based on user's preferences
-        filtered_events = get_filtered_events(
-            time_range, 
-            user_timezone, 
-            selected_currencies, 
-            selected_impacts,
-            specific_date
+        if time_range == '24h':
+            start_time = now
+            end_time = now + timedelta(days=1)
+        elif time_range == 'today':
+            start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = start_time + timedelta(days=1)
+        elif time_range == 'yesterday':
+            start_time = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = start_time + timedelta(days=1)
+        elif time_range == 'tomorrow':
+            start_time = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = start_time + timedelta(days=1)
+        elif time_range == 'week':
+            start_time = now
+            end_time = now + timedelta(days=7)
+        elif time_range == 'previous_week':
+            start_time = (now - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = now
+        elif time_range == 'next_week':
+            start_time = (now + timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = start_time + timedelta(days=7)
+        elif time_range == 'specific_date':
+            start_time = datetime.strptime(specific_date, '%Y-%m-%d').replace(tzinfo=pytz.UTC)
+            end_time = start_time + timedelta(days=1)
+
+        # Get filtered events from database
+        filtered_events = db_get_filtered_events(
+            start_time=start_time,
+            end_time=end_time,
+            currencies=selected_currencies if selected_currencies else None,
+            impact_levels=selected_impacts if selected_impacts else None
         )
+
+        # Convert times to user's timezone
+        user_tz = pytz.timezone(user_timezone)
+        for event in filtered_events:
+            event_time = datetime.fromisoformat(event['time'])
+            if event_time.tzinfo is None:
+                event_time = pytz.UTC.localize(event_time)
+            local_time = event_time.astimezone(user_tz)
+            event['time'] = local_time.strftime('%Y-%m-%d %H:%M')
+
         return filtered_events, 200
             
     except ValueError as e:
