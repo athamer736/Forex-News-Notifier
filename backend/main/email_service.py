@@ -19,36 +19,66 @@ def get_smtp_settings():
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     env_path = os.path.join(project_root, '.env')
     
-    # Load environment variables
-    load_dotenv(env_path)
+    # Force reload environment variables
+    load_dotenv(env_path, override=True)
     
-    # Get settings and log them (masking the password)
+    # Get settings directly from environment
     settings = {
-        'host': os.getenv('SMTP_HOST', 'smtp.gmail.com'),
-        'port': int(os.getenv('SMTP_PORT', 587)),
-        'username': os.getenv('SMTP_USER'),
-        'password': os.getenv('SMTP_PASSWORD')
+        'host': os.environ.get('SMTP_HOST', 'smtp.gmail.com'),
+        'port': int(os.environ.get('SMTP_PORT', 587)),
+        'username': os.environ.get('SMTP_USER'),
+        'password': os.environ.get('SMTP_PASSWORD')
     }
     
-    # Log the settings (without exposing the password)
-    logger.info(f"SMTP Host: {settings['host']}")
-    logger.info(f"SMTP Port: {settings['port']}")
-    logger.info(f"SMTP Username: {settings['username']}")
-    logger.info(f"SMTP Password length: {len(settings['password']) if settings['password'] else 0}")
+    # Log settings (without exposing full password)
+    logger.info("Loaded SMTP settings:")
+    logger.info(f"Host: {settings['host']}")
+    logger.info(f"Port: {settings['port']}")
+    logger.info(f"Username: {settings['username']}")
+    if settings['password']:
+        logger.info(f"Password length: {len(settings['password'])}")
+        logger.info(f"Password first/last char: {settings['password'][:1]}...{settings['password'][-1]}")
+    else:
+        logger.error("No password found in environment variables!")
     
     return settings
 
 def create_smtp_connection():
     """Create and return an SMTP connection."""
-    settings = get_smtp_settings()
-    
-    if not all([settings['host'], settings['username'], settings['password']]):
-        raise ValueError("Missing SMTP configuration")
-    
-    server = smtplib.SMTP(settings['host'], settings['port'])
-    server.starttls()
-    server.login(settings['username'], settings['password'])
-    return server
+    try:
+        settings = get_smtp_settings()
+        
+        # Log exact values being used (masking password)
+        logger.info("Attempting SMTP connection with settings:")
+        logger.info(f"Host: {settings['host']}")
+        logger.info(f"Port: {settings['port']}")
+        logger.info(f"Username: {settings['username']}")
+        logger.info(f"Password first/last char: {settings['password'][:1]}...{settings['password'][-1]}")
+        
+        if not all([settings['host'], settings['username'], settings['password']]):
+            raise ValueError("Missing SMTP configuration")
+        
+        # Create server with extended timeout
+        server = smtplib.SMTP(settings['host'], settings['port'], timeout=30)
+        
+        # Enable debug output
+        server.set_debuglevel(1)
+        
+        # Start TLS
+        logger.info("Starting TLS...")
+        server.starttls()
+        
+        # Attempt login
+        logger.info("Attempting login...")
+        server.login(settings['username'], settings['password'])
+        logger.info("SMTP login successful")
+        
+        return server
+        
+    except Exception as e:
+        logger.error(f"SMTP Connection Error: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        raise
 
 def send_email(to_email: str, subject: str, html_content: str):
     """Send an email using SMTP."""
