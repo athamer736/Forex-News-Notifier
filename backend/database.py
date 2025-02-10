@@ -1,27 +1,31 @@
 import os
 from sqlalchemy import create_engine, and_, or_
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session, declarative_base
 from sqlalchemy_utils import database_exists, create_database
 from datetime import datetime, timedelta
 from typing import List, Optional
 import pytz
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database configuration
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '3306')
-DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'DBPASSWORD')  # Default to placeholder password
 DB_NAME = os.getenv('DB_NAME', 'forex_news')
+DB_USER = os.getenv('DB_USER', 'root')
+DB_PASSWORD = os.getenv('DB_PASSWORD', '')
 
-# Create database URL
+# Create database URL using PyMySQL
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Create engine
+# Create engine with PyMySQL
 engine = create_engine(
     DATABASE_URL,
     pool_size=5,
@@ -31,10 +35,9 @@ engine = create_engine(
 )
 
 # Create database if it doesn't exist
-def init_db():
-    if not database_exists(engine.url):
-        create_database(engine.url)
-    Base.metadata.create_all(bind=engine)
+if not database_exists(engine.url):
+    create_database(engine.url)
+    logger.info(f"Created database: {DB_NAME}")
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -169,4 +172,21 @@ def get_currency_events(
         end_time=end_time,
         currencies=[currency],
         impact_levels=impact_levels
-    ) 
+    )
+
+def get_db():
+    """
+    Get database session.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def init_db():
+    """
+    Initialize database tables.
+    """
+    Base.metadata.create_all(bind=engine)
+    logger.info("Initialized database tables") 

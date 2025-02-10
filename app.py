@@ -5,7 +5,7 @@ from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 import logging
 import redis
-from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 import os
 
 from backend.main import (
@@ -28,20 +28,21 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Try to use Redis for rate limiting, fall back to memory if Redis is not available
+storage_uri = "memory://"  # Default to memory storage
 try:
-    redis_client = redis.Redis(
-        host=os.getenv('REDIS_HOST', 'localhost'),
-        port=int(os.getenv('REDIS_PORT', 6379)),
-        db=0,
-        socket_timeout=2,
-        decode_responses=True
-    )
-    redis_client.ping()  # Test connection
-    storage_uri = f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0"
-    logger.info("Using Redis for rate limiting")
-except (RedisConnectionError, ConnectionRefusedError) as e:
-    logger.warning(f"Redis not available, falling back to memory storage: {str(e)}")
-    storage_uri = "memory://"
+    if os.getenv('USE_REDIS', 'false').lower() == 'true':
+        redis_client = redis.Redis(
+            host=os.getenv('REDIS_HOST', 'localhost'),
+            port=int(os.getenv('REDIS_PORT', 6379)),
+            db=0,
+            socket_timeout=2,
+            decode_responses=True
+        )
+        redis_client.ping()  # Test connection
+        storage_uri = f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0"
+        logger.info("Using Redis for rate limiting")
+except (RedisConnectionError, RedisTimeoutError, ConnectionRefusedError) as e:
+    logger.warning(f"Redis not available, using memory storage: {str(e)}")
 
 # Rate Limiting
 limiter = Limiter(
@@ -49,7 +50,7 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
     storage_uri=storage_uri,
-    strategy="fixed-window"  # or "moving-window" if using Redis
+    strategy="fixed-window"
 )
 
 # Security Headers with Talisman
@@ -64,7 +65,7 @@ csp = {
 }
 
 Talisman(app,
-    force_https=True,
+    force_https=False,  # Disable HTTPS redirect for local development
     strict_transport_security=True,
     session_cookie_secure=True,
     session_cookie_http_only=True,
@@ -88,11 +89,14 @@ ALLOWED_ORIGINS = build_allowed_origins(LOCAL_IPS, SERVER_IP)
 CORS(app, 
     resources={r"/*": {
         "origins": ALLOWED_ORIGINS,
-        "methods": ["GET", "POST", "OPTIONS", "HEAD"],
+        "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
         "expose_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True,
-        "max_age": 600
+        "max_age": 600,
+        "send_wildcard": False,
+        "automatic_options": True,
+        "vary_header": True
     }},
     supports_credentials=True
 )
@@ -106,6 +110,16 @@ def add_security_headers(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
+    
+    # Add CORS headers for all responses
+    origin = request.headers.get('Origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
+        response.headers['Access-Control-Max-Age'] = '600'
+    
     return response
 
 @app.before_request
@@ -114,17 +128,18 @@ def handle_preflight():
     if request.method == "OPTIONS":
         response = app.make_default_options_response()
         origin = request.headers.get('Origin')
-        appropriate_origin = get_appropriate_origin(origin, request.remote_addr, LOCAL_IPS, ALLOWED_ORIGINS, SERVER_IP)
         
-        if appropriate_origin:
-            headers = get_cors_headers(appropriate_origin)
-            for key, value in headers.items():
-                response.headers[key] = value
-            logger.debug(f"Preflight approved for: {appropriate_origin}")
+        if origin in ALLOWED_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
+            response.headers['Access-Control-Max-Age'] = '600'
+            logger.debug(f"Preflight approved for: {origin}")
+            return response
         else:
             logger.warning(f"Preflight denied for: {origin}")
-            
-        return response
+            return response, 403
 
 @app.before_request
 def initialize_app():
