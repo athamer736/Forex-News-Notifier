@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification - Forex News Notifier</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+            color: #fff;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+            margin: 20px;
+        }
+        
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .success .icon::before {
+            content: '✓';
+            color: #4caf50;
+        }
+        
+        .error .icon::before {
+            content: '✕';
+            color: #f44336;
+        }
+        
+        h1 {
+            margin: 0 0 1rem 0;
+            font-size: 2rem;
+        }
+        
+        p {
+            margin: 1rem 0;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        
+        .button:hover {
+            background-color: #45a049;
+        }
+        
+        .error .button {
+            background-color: #f44336;
+        }
+        
+        .error .button:hover {
+            background-color: #da190b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container {% if success %}success{% else %}error{% endif %}">
+        <div class="icon"></div>
+        {% if success %}
+            <h1>Email Verified Successfully!</h1>
+            <p>Thank you for verifying your email address. You will now receive forex news updates according to your preferences.</p>
+            <p>You can close this window and continue using the Forex News Notifier.</p>
+            <a href="http://141.95.123.145:3000/events" class="button">View Forex Events</a>
+        {% else %}
+            <h1>Verification Failed</h1>
+            <p>{{ error }}</p>
+            <p>Please try subscribing again or contact support if the problem persists.</p>
+            <a href="http://141.95.123.145:3000/subscribe" class="button">Try Again</a>
+        {% endif %}
+    </div>
+</body>
+</html> 
