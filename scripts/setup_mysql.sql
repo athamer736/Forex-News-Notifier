@@ -1,12 +1,24 @@
--- Create the database
-CREATE DATABASE IF NOT EXISTS forex_db
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
+-- Drop user if exists to avoid conflicts
+DROP USER IF EXISTS 'forex_user'@'localhost';
+DROP USER IF EXISTS 'forex_user'@'%';
 
--- Create the user and grant privileges for specific IP
-CREATE USER IF NOT EXISTS 'forex_user'@'80.6.45.113' IDENTIFIED BY 'UltraFX#736';
-GRANT ALL PRIVILEGES ON forex_db.* TO 'forex_user'@'80.6.45.113';
+-- Create user with proper password
+CREATE USER 'forex_user'@'localhost' IDENTIFIED BY 'DBPASSWORD';
+CREATE USER 'forex_user'@'%' IDENTIFIED BY 'DBPASSWORD';
+
+-- Create database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS forex_db;
+
+-- Grant privileges to the user
+GRANT ALL PRIVILEGES ON forex_db.* TO 'forex_user'@'localhost';
+GRANT ALL PRIVILEGES ON forex_db.* TO 'forex_user'@'%';
+
+-- Flush privileges to apply changes
 FLUSH PRIVILEGES;
+
+-- Show the created user and their privileges
+SELECT user, host FROM mysql.user WHERE user = 'forex_user';
+SHOW GRANTS FOR 'forex_user'@'localhost';
 
 -- Switch to the forex database
 USE forex_db;
