@@ -36,9 +36,14 @@ Currently scanning for news from ForexFactory and displays it here.
        - Set up the Python virtual environment
        - Install all Python dependencies
        - Install frontend dependencies
-       - Start all server components
-       - Monitor and auto-restart on crashes
-       - Display colored status messages
+       - Start all server components in separate windows:
+         - Flask Server (Blue window)
+         - Event Scheduler (Green window)
+         - Email Scheduler (Yellow window)
+         - Frontend Server (Purple window)
+       - Each window can be monitored independently
+       - Close individual windows to stop specific components
+       - All windows will stay open if one component crashes
 
    - **Option 2 (Manual Setup)**:
      ```powershell
@@ -55,8 +60,18 @@ Currently scanning for news from ForexFactory and displays it here.
      npm install
      cd ..
      
-     # Start the server
-     python scripts\start_server.py
+     # Start each component in separate terminals:
+     # Terminal 1 - Flask Server
+     python app.py
+     
+     # Terminal 2 - Event Scheduler
+     python scripts\run_scheduler.py
+     
+     # Terminal 3 - Email Scheduler
+     python scripts\email_scheduler.py
+     
+     # Terminal 4 - Frontend
+     cd frontend && npm run dev
      ```
 
 The application will be available at:
@@ -214,31 +229,46 @@ Simply double-click `start_server.bat` in the project root directory. The batch 
 1. Check for required dependencies (Python, Node.js)
 2. Set up the Python virtual environment
 3. Install all required packages
-4. Start all server components
-5. Monitor the server and auto-restart if needed
-6. Display colored status messages for easy troubleshooting
+4. Start each component in a separate colored window:
+   - **Flask Server** (Blue window) - Main backend server
+   - **Event Scheduler** (Green window) - Handles forex event updates
+   - **Email Scheduler** (Yellow window) - Manages email notifications
+   - **Frontend** (Purple window) - Next.js web interface
+
+**Managing the Components:**
+- Each component runs in its own window for easy monitoring
+- View real-time logs and status messages in each window
+- Close individual windows to stop specific components
+- Windows stay open if errors occur, making debugging easier
+- Main manager window can be closed without affecting other components
 
 If you encounter any issues:
-- Check the logs in the `logs` directory
+- Check each window for specific error messages
+- Look in the `logs` directory for detailed logs
 - Make sure you have Python 3.10+ and Node.js installed
 - Ensure you're running from the project root directory
 - Run the batch file as administrator if needed
 
 ### Method 2: Running Components Separately
 
-If you prefer manual control or are not using Windows:
+If you prefer manual control or are not using Windows, open four separate terminal windows:
 
-1. Start the Flask backend:
+1. **Terminal 1** - Flask Backend:
 ```bash
 python app.py
 ```
 
-2. Start the scheduler:
+2. **Terminal 2** - Event Scheduler:
 ```bash
 python scripts/run_scheduler.py
 ```
 
-3. Start the frontend development server:
+3. **Terminal 3** - Email Scheduler:
+```bash
+python scripts/email_scheduler.py
+```
+
+4. **Terminal 4** - Frontend:
 ```bash
 cd frontend
 npm run dev

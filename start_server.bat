@@ -106,22 +106,64 @@ echo.
 echo %GREEN%All dependencies installed successfully!%RESET%
 echo.
 
-:: Start the server
-echo %YELLOW%Starting server...%RESET%
-echo %BLUE%Press Ctrl+C to stop the server%RESET%
+:: Create individual batch files for each component
+echo %YELLOW%Creating component runners...%RESET%
+
+:: Create Flask server runner
+echo @echo off > run_flask.bat
+echo title Forex News Notifier - Flask Server >> run_flask.bat
+echo color 0B >> run_flask.bat
+echo call venv\Scripts\activate >> run_flask.bat
+echo python app.py >> run_flask.bat
+echo pause >> run_flask.bat
+
+:: Create event scheduler runner
+echo @echo off > run_event_scheduler.bat
+echo title Forex News Notifier - Event Scheduler >> run_event_scheduler.bat
+echo color 0A >> run_event_scheduler.bat
+echo call venv\Scripts\activate >> run_event_scheduler.bat
+echo python scripts\run_scheduler.py >> run_event_scheduler.bat
+echo pause >> run_event_scheduler.bat
+
+:: Create email scheduler runner
+echo @echo off > run_email_scheduler.bat
+echo title Forex News Notifier - Email Scheduler >> run_email_scheduler.bat
+echo color 0E >> run_email_scheduler.bat
+echo call venv\Scripts\activate >> run_email_scheduler.bat
+echo python scripts\email_scheduler.py >> run_email_scheduler.bat
+echo pause >> run_email_scheduler.bat
+
+:: Create frontend runner
+echo @echo off > run_frontend.bat
+echo title Forex News Notifier - Frontend >> run_frontend.bat
+echo color 0D >> run_frontend.bat
+echo cd frontend >> run_frontend.bat
+echo npm run dev >> run_frontend.bat
+echo pause >> run_frontend.bat
+
+:: Start all components in separate windows
+echo %YELLOW%Starting all components...%RESET%
+echo %BLUE%Each component will open in its own window%RESET%
 echo.
 
-:: Start the server with error handling
-:start_server
-python scripts\start_server.py
-if %errorlevel% neq 0 (
-    echo %RED%Server crashed or stopped unexpectedly%RESET%
-    echo %YELLOW%Restarting in 5 seconds...%RESET%
-    timeout /t 5 /nobreak > nul
-    goto start_server
-)
+start "Flask Server" run_flask.bat
+timeout /t 2 > nul
+start "Event Scheduler" run_event_scheduler.bat
+timeout /t 2 > nul
+start "Email Scheduler" run_email_scheduler.bat
+timeout /t 2 > nul
+start "Frontend" run_frontend.bat
 
-:: Deactivate virtual environment before exit
-call venv\Scripts\deactivate.bat
-
-pause 
+echo %GREEN%All components started!%RESET%
+echo.
+echo %BLUE%Component Status:%RESET%
+echo - Flask Server: Running in separate window
+echo - Event Scheduler: Running in separate window
+echo - Email Scheduler: Running in separate window
+echo - Frontend: Running in separate window
+echo.
+echo %YELLOW%To stop all components, close their respective windows%RESET%
+echo %YELLOW%You can also close this window - the other processes will continue running%RESET%
+echo.
+echo %BLUE%Press any key to exit this window...%RESET%
+pause > nul 
