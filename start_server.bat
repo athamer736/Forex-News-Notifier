@@ -106,6 +106,17 @@ echo.
 echo %GREEN%All dependencies installed successfully!%RESET%
 echo.
 
+:: Initialize database
+echo %YELLOW%Initializing database...%RESET%
+python scripts\init_db.py > logs\db_init.log 2>&1
+if %errorlevel% neq 0 (
+    echo %RED%Error initializing database. Check logs\db_init.log for details%RESET%
+    pause
+    exit /b 1
+)
+echo %GREEN%Database initialized successfully!%RESET%
+echo.
+
 :: Create individual batch files for each component
 echo %YELLOW%Creating component runners...%RESET%
 
