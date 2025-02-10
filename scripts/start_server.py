@@ -5,6 +5,7 @@ import time
 import signal
 import logging
 import venv
+import threading
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
@@ -12,16 +13,74 @@ from datetime import datetime
 log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
 os.makedirs(log_dir, exist_ok=True)
 
-log_file = os.path.join(log_dir, 'server.log')
+# Create separate log files for each component
+server_log = os.path.join(log_dir, 'server.log')
+flask_log = os.path.join(log_dir, 'flask.log')
+frontend_log = os.path.join(log_dir, 'frontend.log')
+event_scheduler_log = os.path.join(log_dir, 'event_scheduler.log')
+email_scheduler_log = os.path.join(log_dir, 'email_scheduler.log')
+
+# Configure main logger
 logger = logging.getLogger('ServerManager')
-handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler = RotatingFileHandler(server_log, maxBytes=10*1024*1024, backupCount=5)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+# Add console handler
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
+
+# Configure component loggers
+def setup_logger(name, log_file):
+    component_logger = logging.getLogger(name)
+    handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
+    handler.setFormatter(formatter)
+    component_logger.addHandler(handler)
+    component_logger.addHandler(console_handler)
+    component_logger.setLevel(logging.INFO)
+    return component_logger
+
+flask_logger = setup_logger('Flask', flask_log)
+frontend_logger = setup_logger('Frontend', frontend_log)
+event_scheduler_logger = setup_logger('EventScheduler', event_scheduler_log)
+email_scheduler_logger = setup_logger('EmailScheduler', email_scheduler_log)
 
 # Store process handles
 processes = []
+
+def log_output(process, logger_name, prefix=''):
+    """Log output from a process in real-time"""
+    component_logger = logging.getLogger(logger_name)
+    
+    def log_stream(stream, level):
+        for line in iter(stream.readline, ''):
+            line = line.strip()
+            if line:
+                if level == logging.ERROR:
+                    component_logger.error(f"{prefix}{line}")
+                else:
+                    component_logger.info(f"{prefix}{line}")
+    
+    # Start threads to monitor stdout and stderr
+    stdout_thread = threading.Thread(
+        target=log_stream, 
+        args=(process.stdout, logging.INFO),
+        daemon=True
+    )
+    stderr_thread = threading.Thread(
+        target=log_stream, 
+        args=(process.stderr, logging.ERROR),
+        daemon=True
+    )
+    
+    stdout_thread.start()
+    stderr_thread.start()
+    
+    return stdout_thread, stderr_thread
 
 def setup_virtual_environment():
     """Set up and configure virtual environment"""
@@ -46,14 +105,28 @@ def setup_virtual_environment():
         
         # Install or upgrade pip
         logger.info("Upgrading pip...")
-        subprocess.run([python_path, '-m', 'pip', 'install', '--upgrade', 'pip'], 
-                      check=True, capture_output=True)
+        result = subprocess.run(
+            [python_path, '-m', 'pip', 'install', '--upgrade', 'pip'],
+            capture_output=True,
+            text=True
+        )
+        if result.stdout:
+            logger.info(result.stdout)
+        if result.stderr:
+            logger.error(result.stderr)
         
         # Install requirements
         logger.info("Installing requirements...")
-        requirements_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'requirements.txt')
-        subprocess.run([pip_path, 'install', '-r', requirements_path], 
-                      check=True, capture_output=True)
+        result = subprocess.run(
+            [pip_path, 'install', '-r', 'requirements.txt'],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(os.path.dirname(__file__))
+        )
+        if result.stdout:
+            logger.info(result.stdout)
+        if result.stderr:
+            logger.error(result.stderr)
         
         logger.info("Virtual environment setup completed successfully")
         return python_path
@@ -70,10 +143,16 @@ def setup_frontend():
             raise Exception("Frontend directory not found")
 
         logger.info("Installing frontend dependencies...")
-        subprocess.run(['npm', 'install'], 
-                      check=True, 
-                      capture_output=True,
-                      cwd=frontend_dir)
+        result = subprocess.run(
+            ['npm', 'install'],
+            capture_output=True,
+            text=True,
+            cwd=frontend_dir
+        )
+        if result.stdout:
+            frontend_logger.info(result.stdout)
+        if result.stderr:
+            frontend_logger.error(result.stderr)
 
         logger.info("Starting frontend development server...")
         frontend_process = subprocess.Popen(
@@ -81,9 +160,14 @@ def setup_frontend():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-            cwd=frontend_dir
+            cwd=frontend_dir,
+            bufsize=1
         )
         processes.append(frontend_process)
+        
+        # Set up real-time logging
+        log_output(frontend_process, 'Frontend', '[Frontend] ')
+        
         logger.info(f"Frontend server started with PID {frontend_process.pid}")
         return frontend_process
 
@@ -121,9 +205,14 @@ def start_flask_server(python_path):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-            cwd=os.path.dirname(os.path.dirname(__file__))  # Set working directory to project root
+            cwd=os.path.dirname(os.path.dirname(__file__)),
+            bufsize=1
         )
         processes.append(flask_process)
+        
+        # Set up real-time logging
+        log_output(flask_process, 'Flask', '[Flask] ')
+        
         logger.info(f"Flask server started with PID {flask_process.pid}")
         return flask_process
     except Exception as e:
@@ -139,9 +228,14 @@ def start_scheduler(python_path):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-            cwd=os.path.dirname(os.path.dirname(__file__))  # Set working directory to project root
+            cwd=os.path.dirname(os.path.dirname(__file__)),
+            bufsize=1
         )
         processes.append(scheduler_process)
+        
+        # Set up real-time logging
+        log_output(scheduler_process, 'EventScheduler', '[EventScheduler] ')
+        
         logger.info(f"Event scheduler started with PID {scheduler_process.pid}")
         return scheduler_process
     except Exception as e:
@@ -157,9 +251,14 @@ def start_email_scheduler(python_path):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-            cwd=os.path.dirname(os.path.dirname(__file__))
+            cwd=os.path.dirname(os.path.dirname(__file__)),
+            bufsize=1
         )
         processes.append(email_scheduler_process)
+        
+        # Set up real-time logging
+        log_output(email_scheduler_process, 'EmailScheduler', '[EmailScheduler] ')
+        
         logger.info(f"Email scheduler started with PID {email_scheduler_process.pid}")
         return email_scheduler_process
     except Exception as e:

@@ -20,15 +20,7 @@ Currently scanning for news from ForexFactory and displays it here.
    icacls "C:\Projects\forex_news_notifier" /grant YourUsername:F /T
    ```
 
-3. **Create Virtual Environment**:
-   ```powershell
-   python -m venv venv
-   .\venv\Scripts\activate
-   python -m pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
-
-4. **Set Up Database**:
+3. **Configure Environment**:
    ```powershell
    # Copy environment file
    Copy-Item .env.example .env
@@ -38,10 +30,34 @@ Currently scanning for news from ForexFactory and displays it here.
    # DB_PASSWORD=your_password
    ```
 
-5. **Start the Application**:
-   ```powershell
-   python scripts/start_server.py
-   ```
+4. **Start the Application**:
+   - **Option 1 (Recommended)**: Double-click `start_server.bat`
+     - This will automatically:
+       - Set up the Python virtual environment
+       - Install all Python dependencies
+       - Install frontend dependencies
+       - Start all server components
+       - Monitor and auto-restart on crashes
+       - Display colored status messages
+
+   - **Option 2 (Manual Setup)**:
+     ```powershell
+     # Create and activate virtual environment
+     python -m venv venv
+     .\venv\Scripts\activate
+     
+     # Install dependencies
+     python -m pip install --upgrade pip
+     pip install -r requirements.txt
+     
+     # Install frontend dependencies
+     cd frontend
+     npm install
+     cd ..
+     
+     # Start the server
+     python scripts\start_server.py
+     ```
 
 The application will be available at:
 - Frontend: http://localhost:3000
@@ -192,13 +208,25 @@ HIGH_IMPACT_ONLY=true  # Set to false to receive all events
 
 ## Running the Application
 
-### Method 1: Using the Server Manager (Recommended)
+### Method 1: Using the Batch File (Recommended for Windows)
 
-```bash
-python scripts/start_server.py
-```
+Simply double-click `start_server.bat` in the project root directory. The batch file will:
+1. Check for required dependencies (Python, Node.js)
+2. Set up the Python virtual environment
+3. Install all required packages
+4. Start all server components
+5. Monitor the server and auto-restart if needed
+6. Display colored status messages for easy troubleshooting
+
+If you encounter any issues:
+- Check the logs in the `logs` directory
+- Make sure you have Python 3.10+ and Node.js installed
+- Ensure you're running from the project root directory
+- Run the batch file as administrator if needed
 
 ### Method 2: Running Components Separately
+
+If you prefer manual control or are not using Windows:
 
 1. Start the Flask backend:
 ```bash
