@@ -3,6 +3,50 @@
 Simple Forex News Notifier webpage that scans across multiple pages and highlights key upcoming news events to be displayed in one website.
 Currently scanning for news from ForexFactory and displays it here.
 
+## Quick Setup (Windows)
+
+1. **Set Up Directory**:
+   ```powershell
+   # Open PowerShell as Administrator and run:
+   cd C:\Projects  # or your preferred location
+   git clone <repository-url> forex_news_notifier
+   cd forex_news_notifier
+   ```
+
+2. **Fix Permissions** (if needed):
+   ```powershell
+   # In PowerShell as Administrator:
+   takeown /F "C:\Projects\forex_news_notifier" /R /D Y
+   icacls "C:\Projects\forex_news_notifier" /grant YourUsername:F /T
+   ```
+
+3. **Create Virtual Environment**:
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\activate
+   python -m pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+4. **Set Up Database**:
+   ```powershell
+   # Copy environment file
+   Copy-Item .env.example .env
+   
+   # Update .env with your database settings:
+   # DB_USER=forex_user
+   # DB_PASSWORD=your_password
+   ```
+
+5. **Start the Application**:
+   ```powershell
+   python scripts/start_server.py
+   ```
+
+The application will be available at:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
+
 ## Features
 
 ### Current Features
