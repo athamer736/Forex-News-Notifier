@@ -2,7 +2,7 @@ import logging
 import secrets
 from datetime import datetime
 from typing import Dict, Tuple
-from flask import jsonify, request
+from flask import jsonify, request, render_template
 import pytz
 from sqlalchemy.exc import IntegrityError
 
@@ -84,18 +84,26 @@ def handle_verification_request(token: str) -> Tuple[Dict, int]:
         ).first()
         
         if not subscription:
-            return {'error': 'Invalid or expired verification token'}, 400
+            return render_template('verify.html', 
+                success=False, 
+                error='Invalid or expired verification token'
+            ), 400
         
         subscription.is_verified = True
         subscription.verification_token = None
         db_session.commit()
         
-        return {'message': 'Email subscription verified successfully'}, 200
+        return render_template('verify.html', 
+            success=True
+        ), 200
         
     except Exception as e:
         logger.exception("Error verifying subscription")
         db_session.rollback()
-        return {'error': str(e)}, 500
+        return render_template('verify.html', 
+            success=False, 
+            error='An error occurred while verifying your subscription'
+        ), 500
 
 def handle_unsubscribe_request(token: str) -> Tuple[Dict, int]:
     """Handle unsubscribe requests."""
@@ -105,14 +113,22 @@ def handle_unsubscribe_request(token: str) -> Tuple[Dict, int]:
         ).first()
         
         if not subscription:
-            return {'error': 'Invalid unsubscribe token'}, 400
+            return render_template('unsubscribe.html', 
+                success=False, 
+                error='Invalid unsubscribe token'
+            ), 400
         
         db_session.delete(subscription)
         db_session.commit()
         
-        return {'message': 'Successfully unsubscribed'}, 200
+        return render_template('unsubscribe.html', 
+            success=True
+        ), 200
         
     except Exception as e:
         logger.exception("Error handling unsubscribe request")
         db_session.rollback()
-        return {'error': str(e)}, 500 
+        return render_template('unsubscribe.html', 
+            success=False, 
+            error='An error occurred while processing your unsubscribe request'
+        ), 500 
