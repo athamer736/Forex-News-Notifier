@@ -8,7 +8,7 @@ from typing import List, Dict
 import pytz
 from dotenv import load_dotenv
 
-from ..database import get_filtered_events
+from ..database import db_session, get_filtered_events
 from models.email_subscription import EmailSubscription
 
 logger = logging.getLogger(__name__)

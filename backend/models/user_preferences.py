@@ -1,6 +1,9 @@
 from sqlalchemy import Column, Integer, String, Boolean, Time, JSON, ForeignKey
 from sqlalchemy.orm import relationship
-from .base import Base
+from datetime import datetime
+import pytz
+
+from backend.database import Base
 
 class UserEmailPreferences(Base):
     __tablename__ = 'user_email_preferences'
