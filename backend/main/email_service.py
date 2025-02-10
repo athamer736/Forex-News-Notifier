@@ -6,6 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import List, Dict
 import pytz
+from dotenv import load_dotenv
 
 from ..database import get_filtered_events
 from models.email_subscription import EmailSubscription
@@ -14,12 +15,28 @@ logger = logging.getLogger(__name__)
 
 def get_smtp_settings():
     """Get SMTP settings from environment variables."""
-    return {
+    # Get the absolute path of the project root
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    env_path = os.path.join(project_root, '.env')
+    
+    # Load environment variables
+    load_dotenv(env_path)
+    
+    # Get settings and log them (masking the password)
+    settings = {
         'host': os.getenv('SMTP_HOST', 'smtp.gmail.com'),
         'port': int(os.getenv('SMTP_PORT', 587)),
         'username': os.getenv('SMTP_USER'),
         'password': os.getenv('SMTP_PASSWORD')
     }
+    
+    # Log the settings (without exposing the password)
+    logger.info(f"SMTP Host: {settings['host']}")
+    logger.info(f"SMTP Port: {settings['port']}")
+    logger.info(f"SMTP Username: {settings['username']}")
+    logger.info(f"SMTP Password length: {len(settings['password']) if settings['password'] else 0}")
+    
+    return settings
 
 def create_smtp_connection():
     """Create and return an SMTP connection."""

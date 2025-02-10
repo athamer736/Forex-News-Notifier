@@ -109,11 +109,11 @@ def start_email_scheduler():
     try:
         scheduler = BackgroundScheduler()
         
-        # Schedule daily updates to run every minute
+        # Schedule daily updates to run every 30 minutes
         # (The function will check if it's the right time for each user)
         scheduler.add_job(
             send_daily_updates,
-            trigger=CronTrigger(minute='*'),  # Every minute
+            trigger=CronTrigger(minute='*/30'),  # Every 30 minutes
             id='daily_updates',
             name='Send daily forex updates',
             replace_existing=True
