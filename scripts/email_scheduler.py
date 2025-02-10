@@ -1,9 +1,15 @@
+import sys
+from pathlib import Path
 import logging
 from datetime import datetime, timedelta
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import os
+
+# Add the project root directory to Python path
+project_root = str(Path(__file__).parent.parent)
+sys.path.append(project_root)
 
 from backend.database import db_session
 from models.email_subscription import EmailSubscription

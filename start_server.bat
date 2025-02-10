@@ -113,6 +113,7 @@ echo %YELLOW%Creating component runners...%RESET%
 echo @echo off > run_flask.bat
 echo title Forex News Notifier - Flask Server >> run_flask.bat
 echo color 0B >> run_flask.bat
+echo set PYTHONPATH=%cd% >> run_flask.bat
 echo call venv\Scripts\activate >> run_flask.bat
 echo python app.py >> run_flask.bat
 echo pause >> run_flask.bat
@@ -121,6 +122,7 @@ echo pause >> run_flask.bat
 echo @echo off > run_event_scheduler.bat
 echo title Forex News Notifier - Event Scheduler >> run_event_scheduler.bat
 echo color 0A >> run_event_scheduler.bat
+echo set PYTHONPATH=%cd% >> run_event_scheduler.bat
 echo call venv\Scripts\activate >> run_event_scheduler.bat
 echo python scripts\run_scheduler.py >> run_event_scheduler.bat
 echo pause >> run_event_scheduler.bat
@@ -129,6 +131,7 @@ echo pause >> run_event_scheduler.bat
 echo @echo off > run_email_scheduler.bat
 echo title Forex News Notifier - Email Scheduler >> run_email_scheduler.bat
 echo color 0E >> run_email_scheduler.bat
+echo set PYTHONPATH=%cd% >> run_email_scheduler.bat
 echo call venv\Scripts\activate >> run_email_scheduler.bat
 echo python scripts\email_scheduler.py >> run_email_scheduler.bat
 echo pause >> run_email_scheduler.bat
