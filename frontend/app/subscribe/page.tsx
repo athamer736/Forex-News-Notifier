@@ -44,7 +44,8 @@ const currencyOptions = [
 const impactOptions = [
     { value: 'High', label: 'High Impact', color: '#d32f2f' },
     { value: 'Medium', label: 'Medium Impact', color: '#ed6c02' },
-    { value: 'Low', label: 'Low Impact', color: '#2e7d32' }
+    { value: 'Low', label: 'Low Impact', color: '#2e7d32' },
+    { value: 'Non-Economic', label: 'Non-Economic', color: '#424242' }
 ];
 
 const weekDays = [
