@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 import time
 import logging
+import os
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -11,16 +12,32 @@ project_root = str(Path(__file__).parent.parent)
 sys.path.append(project_root)
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/scheduler.log'),
-        logging.StreamHandler()
-    ]
-)
+log_dir = os.path.join(project_root, 'logs')
+os.makedirs(log_dir, exist_ok=True)
 
-logger = logging.getLogger(__name__)
+log_file = os.path.join(log_dir, 'event_scheduler.log')
+logger = logging.getLogger('EventScheduler')
+
+# Create file handler
+file_handler = logging.FileHandler(log_file)
+file_handler.setLevel(logging.INFO)
+
+# Create console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+
+# Add formatter to handlers
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add handlers to logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+logger.setLevel(logging.INFO)
 
 def run_update():
     """Run the update_events.py script."""

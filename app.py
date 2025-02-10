@@ -18,12 +18,39 @@ from backend.main import (
     handle_timezone_request,
     handle_events_request,
     handle_cache_status_request,
-    handle_cache_refresh_request
+    handle_cache_refresh_request,
+    handle_subscription_request,
+    handle_verification_request,
+    handle_unsubscribe_request
 )
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+os.makedirs(log_dir, exist_ok=True)
+
+log_file = os.path.join(log_dir, 'app.log')
+logger = logging.getLogger('FlaskApp')
+
+# Create file handler
+file_handler = logging.FileHandler(log_file)
+file_handler.setLevel(logging.INFO)
+
+# Create console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+
+# Add formatter to handlers
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add handlers to logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+logger.setLevel(logging.INFO)
 
 app = Flask(__name__)
 
@@ -183,6 +210,27 @@ def cache_status():
 def refresh_cache():
     """Force a refresh of the event cache"""
     response, status_code = handle_cache_refresh_request()
+    return response, status_code
+
+@app.route("/subscribe", methods=["POST", "OPTIONS"])
+@limiter.limit("10 per hour")  # Strict rate limit for subscriptions
+def subscribe():
+    """Handle email subscription requests"""
+    if request.method == "OPTIONS":
+        return "", 204
+    response, status_code = handle_subscription_request()
+    return response, status_code
+
+@app.route("/verify/<token>")
+def verify_subscription(token):
+    """Handle subscription verification"""
+    response, status_code = handle_verification_request(token)
+    return response, status_code
+
+@app.route("/unsubscribe/<token>")
+def unsubscribe(token):
+    """Handle unsubscribe requests"""
+    response, status_code = handle_unsubscribe_request(token)
     return response, status_code
 
 # Error handlers
