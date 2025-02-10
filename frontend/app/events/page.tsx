@@ -262,11 +262,15 @@ function EventsPage() {
                 const errorData = await response.json();
                 const errorMessage = errorData.error || 'Failed to fetch events';
                 
-                // Check if it's a rate limit error with retry information
-                if (errorMessage.includes('Rate limit exceeded') && errorMessage.includes('Retrying in')) {
+                // Handle specific error cases
+                if (errorMessage.includes('database')) {
+                    throw new Error('Database connection error. Please try again later.');
+                } else if (errorMessage.includes('Rate limit exceeded')) {
                     const seconds = parseInt(errorMessage.match(/\d+/)[0]);
                     setRetryTimer(seconds);
                     throw new Error(`Rate limit exceeded. Retrying in ${seconds} seconds...`);
+                } else if (errorMessage.includes('before February 2, 2025')) {
+                    throw new Error('Sorry, we do not have data from before February 2, 2025');
                 }
                 
                 throw new Error(errorMessage);
