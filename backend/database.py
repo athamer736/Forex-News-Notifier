@@ -21,12 +21,13 @@ logger = logging.getLogger(__name__)
 # Determine if we're running on the server
 def is_running_on_server():
     try:
-        # Get the machine's hostname
+        # Get all network interfaces
         hostname = socket.gethostname()
-        # Get the IP address
-        ip_address = socket.gethostbyname(hostname)
-        return ip_address == '141.95.123.145'
-    except:
+        ip_addresses = socket.gethostbyname_ex(hostname)[2]
+        # Check if the server IP is in any of our network interfaces
+        return '141.95.123.145' in ip_addresses
+    except Exception as e:
+        logger.error(f"Error detecting server status: {str(e)}")
         return False
 
 # Database configuration
