@@ -50,3 +50,9 @@ venv/
 
 cache/
 weekly_events/
+
+# Startup files from start_server.bat
+start_backend.bat
+start_frontend.bat
+start_scheduler.bat
+start_summary_generator.bat
