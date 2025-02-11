@@ -10,11 +10,11 @@ import pymysql
 
 # Database configuration
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
+    'host': os.getenv('DB_HOST', '141.95.123.145'),  # Always use IP address
     'port': int(os.getenv('DB_PORT', 3306)),
     'user': os.getenv('DB_USER', 'forex_user'),
-    'password': os.getenv('DB_PASSWORD', 'DBPASSWORD'),  # Use placeholder if not in env
-    'database': os.getenv('DB_NAME', 'forex_news')
+    'password': os.getenv('DB_PASSWORD', 'UltraFX#736'),
+    'database': os.getenv('DB_NAME', 'forex_db')
 }
 
 # Create database URL using PyMySQL
@@ -33,7 +33,6 @@ engine = create_engine(
     pool_recycle=1800,  # Recycle connections after 30 minutes
     pool_pre_ping=True,  # Enable automatic reconnection
     connect_args={
-        'ssl': {'ssl-mode': 'REQUIRED'},  # Enable SSL/TLS
         'connect_timeout': 10,  # Connection timeout in seconds
     },
     echo=False,  # Disable SQL query logging in production
