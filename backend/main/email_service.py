@@ -133,6 +133,15 @@ def format_event_summary(event: Dict) -> str:
         'Low': '#2e7d32'
     }
     
+    # Get event title from event_title field (not title)
+    event_title = event.get('event_title', 'No Title')
+    event_time = event.get('time', '')
+    if isinstance(event_time, str):
+        try:
+            event_time = datetime.fromisoformat(event_time)
+        except ValueError:
+            event_time = datetime.now()
+    
     return f"""
     <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
         <div style="margin-bottom: 10px;">
@@ -141,7 +150,7 @@ def format_event_summary(event: Dict) -> str:
                        padding: 3px 8px; 
                        border-radius: 12px; 
                        font-size: 12px;">
-                {event['impact']}
+                {event.get('impact', 'Unknown')}
             </span>
             <span style="background-color: #e3f2fd; 
                        color: #1976d2; 
@@ -149,11 +158,11 @@ def format_event_summary(event: Dict) -> str:
                        border-radius: 12px; 
                        font-size: 12px;
                        margin-left: 8px;">
-                {event['currency']}
+                {event.get('currency', 'Unknown')}
             </span>
         </div>
         <div style="font-weight: bold; margin-bottom: 5px;">
-            {event['time'].strftime('%I:%M %p')} - {event['title']}
+            {event_time.strftime('%I:%M %p') if isinstance(event_time, datetime) else 'Time N/A'} - {event_title}
         </div>
         <div style="color: #666; font-size: 14px;">
             <span style="margin-right: 15px;">Forecast: {event.get('forecast', 'N/A')}</span>
