@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 
 from ..database import db_session, get_filtered_events
 from models.email_subscription import EmailSubscription
+from backend.services.ai_summary_service import AISummaryService
+from models.forex_event import ForexEvent
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +132,8 @@ def format_event_summary(event: Dict) -> str:
     impact_colors = {
         'High': '#d32f2f',
         'Medium': '#ed6c02',
-        'Low': '#2e7d32'
+        'Low': '#2e7d32',
+        'Non-Economic': '#424242'
     }
     
     # Get event title from event_title field (not title)
@@ -147,39 +150,58 @@ def format_event_summary(event: Dict) -> str:
     summary_section = ""
     if ai_summary:
         summary_section = f"""
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-            <div style="font-size: 14px; color: #333; line-height: 1.5;">
+        <div style="margin: 15px 0; padding: 20px; background: linear-gradient(145deg, #1a237e05 0%, #0d47a110 100%); border: 1px solid #1a237e20; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="margin-bottom: 10px; font-weight: 600; color: #1a237e; font-size: 14px;">
+                🤖 AI Market Analysis
+            </div>
+            <div style="font-size: 14px; color: #333; line-height: 1.6; white-space: pre-line;">
                 {ai_summary}
             </div>
         </div>
         """
     
     return f"""
-    <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-        <div style="margin-bottom: 10px;">
-            <span style="background-color: {impact_colors.get(event['impact'], '#424242')}; 
-                       color: white; 
-                       padding: 3px 8px; 
-                       border-radius: 12px; 
-                       font-size: 12px;">
-                {event.get('impact', 'Unknown')}
-            </span>
-            <span style="background-color: #e3f2fd; 
-                       color: #1976d2; 
-                       padding: 3px 8px; 
-                       border-radius: 12px; 
-                       font-size: 12px;
-                       margin-left: 8px;">
-                {event.get('currency', 'Unknown')}
-            </span>
+    <div style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
+        <div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="background-color: {impact_colors.get(event['impact'], '#424242')}; 
+                           color: white; 
+                           padding: 4px 12px; 
+                           border-radius: 20px; 
+                           font-size: 12px;
+                           display: inline-block;
+                           margin-right: 8px;">
+                    {event.get('impact', 'Unknown')}
+                </span>
+                <span style="background-color: #e3f2fd; 
+                           color: #1976d2; 
+                           padding: 4px 12px; 
+                           border-radius: 20px; 
+                           font-size: 12px;
+                           display: inline-block;">
+                    {event.get('currency', 'Unknown')}
+                </span>
+            </div>
+            <div style="color: #666; font-size: 14px;">
+                {event_time.strftime('%I:%M %p') if isinstance(event_time, datetime) else 'Time N/A'}
+            </div>
         </div>
-        <div style="font-weight: bold; margin-bottom: 5px;">
-            {event_time.strftime('%I:%M %p') if isinstance(event_time, datetime) else 'Time N/A'} - {event_title}
+        
+        <div style="font-weight: 600; font-size: 16px; margin-bottom: 12px; color: #333;">
+            {event_title}
         </div>
-        <div style="color: #666; font-size: 14px;">
-            <span style="margin-right: 15px;">Forecast: {event.get('forecast', 'N/A')}</span>
-            <span>Previous: {event.get('previous', 'N/A')}</span>
+        
+        <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+            <div style="flex: 1; padding: 8px; background: #f5f5f5; border-radius: 8px;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Forecast</div>
+                <div style="font-size: 14px; color: #333;">{event.get('forecast', 'N/A')}</div>
+            </div>
+            <div style="flex: 1; padding: 8px; background: #f5f5f5; border-radius: 8px;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Previous</div>
+                <div style="font-size: 14px; color: #333;">{event.get('previous', 'N/A')}</div>
+            </div>
         </div>
+        
         {summary_section}
     </div>
     """
@@ -199,6 +221,26 @@ def send_daily_update(subscription: EmailSubscription):
         if not events:
             logger.info(f"No events to send for {subscription.email}")
             return
+        
+        # Ensure AI summaries are generated for high-impact USD/GBP events
+        ai_service = AISummaryService()
+        
+        for event in events:
+            if (event['impact'] == 'High' and 
+                event['currency'] in ['USD', 'GBP'] and 
+                not event.get('ai_summary')):
+                try:
+                    summary = ai_service.generate_event_summary(event)
+                    if summary:
+                        event['ai_summary'] = summary
+                        # Update the database
+                        db_event = ForexEvent.query.get(event['id'])
+                        if db_event:
+                            db_event.ai_summary = summary
+                            db_event.summary_generated_at = now
+                            db_session.commit()
+                except Exception as e:
+                    logger.error(f"Error generating AI summary for event {event['event_title']}: {str(e)}")
         
         # Convert events to user's timezone
         user_tz = pytz.timezone(subscription.timezone)

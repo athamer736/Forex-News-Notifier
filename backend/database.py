@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, and_, or_
+from sqlalchemy import create_engine, and_, or_, text
 from sqlalchemy.orm import sessionmaker, scoped_session, declarative_base
 from sqlalchemy_utils import database_exists, create_database
 from datetime import datetime, timedelta
@@ -18,11 +18,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database configuration
-DB_HOST = "141.95.123.145"  # Server IP
+DB_HOST = os.getenv('DB_HOST', '141.95.123.145')  # Default to server IP if not in env
 DB_PORT = int(os.getenv('DB_PORT', '3306'))
-DB_NAME = "forex_db"
-DB_USER = "forex_user"
-DB_PASSWORD = "UltraFX#736"
+DB_NAME = os.getenv('DB_NAME', 'forex_db')
+DB_USER = os.getenv('DB_USER', 'forex_user')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'UltraFX#736')
 
 # Create database URL using PyMySQL
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -31,14 +31,20 @@ DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB
 logger.info(f"Connecting to database at {DB_HOST}:{DB_PORT}/{DB_NAME} as {DB_USER}")
 
 try:
-    # Create engine with PyMySQL
+    # Create engine with PyMySQL and additional settings
     engine = create_engine(
         DATABASE_URL,
         pool_size=5,
         max_overflow=10,
         pool_timeout=30,
-        pool_recycle=1800
+        pool_recycle=1800,
+        pool_pre_ping=True  # Enable automatic reconnection
     )
+    
+    # Test connection
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+        logger.info("Database connection test successful")
     
     # Create database if it doesn't exist
     if not database_exists(engine.url):
@@ -57,6 +63,7 @@ try:
 
 except Exception as e:
     logger.error(f"Error configuring database: {str(e)}")
+    logger.error(f"Database URL (without password): mysql+pymysql://{DB_USER}:***@{DB_HOST}:{DB_PORT}/{DB_NAME}")
     raise
 
 def get_filtered_events(
