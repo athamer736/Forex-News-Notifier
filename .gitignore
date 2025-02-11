@@ -29,6 +29,8 @@ node_modules/
 .next/
 out/
 .DS_Store
+package-lock.json
+frontend/package-lock.json
 
 # Your virtual environment directory (adjust name if yours is different)
 venv/
@@ -56,3 +58,8 @@ start_backend.bat
 start_frontend.bat
 start_scheduler.bat
 start_summary_generator.bat
+
+# Log files
+logs/
+*.log
+logs/*.log

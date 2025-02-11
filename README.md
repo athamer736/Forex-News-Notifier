@@ -113,7 +113,7 @@ The application will be available at:
 ## System Requirements
 
 - Python 3.10 or higher
-- Node.js 18.x or higher
+- Node.js v20.x (LTS) - Using package-lock.json for dependency management, but it's gitignored for solo development
 - MySQL 8.0 or higher
 - Redis (optional, falls back to memory storage if not available)
 
