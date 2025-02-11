@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover } from '@mui/material';
@@ -8,6 +9,12 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import Image from 'next/image';
 import { GB, US, FR, DE, JP, CN, SG, AU, BR, AE, NZ } from 'country-flag-icons/react/3x2';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import InfoIcon from '@mui/icons-material/Info';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Grid } from '@mui/material';
+import { Collapse } from '@mui/material';
+import { CardActions } from '@mui/material';
 
 interface ForexEvent {
     time: string;
@@ -16,6 +23,8 @@ interface ForexEvent {
     event_title: string;
     forecast: string;
     previous: string;
+    actual: string;
+    ai_summary?: string;
     isNew: boolean;
 }
 
@@ -131,6 +140,7 @@ function EventsPage() {
     const [dateError, setDateError] = useState<string>('');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
+    const [expanded, setExpanded] = useState<number | null>(null);
 
     // Remove the loading of saved filters from this useEffect since we're now doing it in the initial state
     useEffect(() => {
@@ -532,138 +542,106 @@ function EventsPage() {
         const sortedDates = Object.keys(groupedEvents).sort();
 
         return (
-            <Box>
-                {events.length === 0 ? (
-                    <TableContainer 
-                        component={Paper} 
-                        sx={{ 
-                            maxWidth: '1600px', 
-                            margin: '0 auto', 
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            opacity: isUpdating ? 0.7 : 1,
-                            transition: 'opacity 0.3s ease-in-out',
-                            minHeight: '200px'
-                        }}
-                    >
-                        <Table>
-                            <TableBody>
+            <TableContainer component={Paper} sx={{ mt: 2 }}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Time</TableCell>
+                            <TableCell>Currency</TableCell>
+                            <TableCell>Impact</TableCell>
+                            <TableCell>Event</TableCell>
+                            <TableCell>Forecast</TableCell>
+                            <TableCell>Previous</TableCell>
+                            <TableCell>Actions</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {Object.values(groupedEvents).map(group => (
+                            <React.Fragment key={group.displayDate}>
                                 <TableRow>
-                                    <TableCell colSpan={6} sx={{ border: 'none' }}>
-                                        <Box sx={{ 
-                                            display: 'flex', 
-                                            justifyContent: 'center', 
-                                            alignItems: 'center',
-                                            minHeight: '200px',
-                                            color: 'rgba(0, 0, 0, 0.6)',
-                                            fontSize: '1.1rem',
-                                            fontWeight: 500
-                                        }}>
-                                            No news available to display
-                                        </Box>
+                                    <TableCell
+                                        colSpan={7}
+                                        sx={{
+                                            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        {group.displayDate}
                                     </TableCell>
                                 </TableRow>
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                ) : (
-                    sortedDates.map((dateKey) => (
-                        <Box key={dateKey} sx={{ mb: 4 }}>
-                            <Typography 
-                                variant="h5" 
-                                sx={{ 
-                                    mb: 2, 
-                                    color: '#fff',
-                                    fontWeight: 600,
-                                    textAlign: 'left',
-                                    pl: 2
-                                }}
-                            >
-                                {groupedEvents[dateKey].displayDate}
-                            </Typography>
-                            <TableContainer 
-                                component={Paper} 
-                                sx={{ 
-                                    maxWidth: '1600px', 
-                                    margin: '0 auto', 
-                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                    opacity: isUpdating ? 0.7 : 1,
-                                    transition: 'opacity 0.3s ease-in-out'
-                                }}
-                            >
-                                <Table sx={{ minWidth: 650 }}>
-                                    <TableHead>
-                                        <TableRow sx={{ 
-                                            '& th': { 
-                                                color: '#000', 
-                                                fontWeight: 600,
-                                                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                                                borderBottom: '2px solid rgba(0, 0, 0, 0.1)'
-                                            } 
-                                        }}>
-                                            <TableCell>Time</TableCell>
-                                            <TableCell>Currency</TableCell>
-                                            <TableCell>Impact</TableCell>
-                                            <TableCell>Event</TableCell>
-                                            <TableCell align="right">Forecast</TableCell>
-                                            <TableCell align="right">Previous</TableCell>
+                                {group.events.map((event, index) => (
+                                    <React.Fragment key={`${group.displayDate}-${index}`}>
+                                        <TableRow
+                                            sx={{
+                                                backgroundColor: event.isNew ? 'rgba(25, 118, 210, 0.08)' : 'inherit',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                                }
+                                            }}
+                                        >
+                                            <TableCell>
+                                                {new Date(event.time).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={event.currency}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: '#1976d2',
+                                                        color: '#fff'
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={event.impact}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: getImpactColor(event.impact),
+                                                        color: '#fff'
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            <TableCell>{event.event_title}</TableCell>
+                                            <TableCell>{event.forecast || 'N/A'}</TableCell>
+                                            <TableCell>{event.previous || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                {event.ai_summary && (
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleExpandClick(index)}
+                                                        aria-expanded={expanded === index}
+                                                        aria-label="show more"
+                                                    >
+                                                        <InfoIcon />
+                                                    </IconButton>
+                                                )}
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {groupedEvents[dateKey].events.map((event, index) => (
-                                            <TableRow
-                                                key={`${event.time}-${event.event_title}-${index}`}
-                                                sx={{ 
-                                                    '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.02)' },
-                                                    '&:nth-of-type(even)': { backgroundColor: 'rgba(255, 255, 255, 1)' },
-                                                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-                                                    '& td': { 
-                                                        color: '#000',
-                                                        borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
-                                                    }
-                                                }}
-                                            >
-                                                <TableCell>
-                                                    {new Date(event.time).toLocaleTimeString('en-US', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                        hour12: true
-                                                    })}
+                                        {event.ai_summary && expanded === index && (
+                                            <TableRow>
+                                                <TableCell colSpan={7}>
+                                                    <Box sx={{ p: 2, backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
+                                                        <Typography variant="subtitle1" gutterBottom>
+                                                            AI Analysis
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                                            {event.ai_summary}
+                                                        </Typography>
+                                                    </Box>
                                                 </TableCell>
-                                                <TableCell>
-                                                    <Chip 
-                                                        label={event.currency}
-                                                        size="small"
-                                                        sx={{ 
-                                                            fontWeight: 'bold',
-                                                            backgroundColor: '#e3f2fd',
-                                                            color: '#1976d2'
-                                                        }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Chip 
-                                                        label={event.impact}
-                                                        size="small"
-                                                        sx={{ 
-                                                            fontWeight: 'medium',
-                                                            minWidth: '80px',
-                                                            backgroundColor: getImpactColor(event.impact),
-                                                            color: '#fff'
-                                                        }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>{event.event_title}</TableCell>
-                                                <TableCell align="right">{event.forecast || 'N/A'}</TableCell>
-                                                <TableCell align="right">{event.previous || 'N/A'}</TableCell>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Box>
-                    ))
-                )}
-            </Box>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </React.Fragment>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
         );
     };
 
@@ -696,167 +674,100 @@ function EventsPage() {
         }
 
         return (
-            <Box>
-                {sortedDates.map((dateKey) => (
-                    <Box key={dateKey} sx={{ mb: 6 }}>
-                        <Typography 
-                            variant="h5" 
-                            sx={{ 
-                                mb: 3, 
-                                color: '#fff',
-                                fontWeight: 600,
-                                textAlign: 'left',
-                                pl: 2
+            <Grid container spacing={2} sx={{ mt: 2 }}>
+                {Object.values(groupedEvents).map(group => (
+                    <Grid item xs={12} key={group.displayDate}>
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                mb: 2,
+                                pb: 1,
+                                borderBottom: '2px solid #1976d2'
                             }}
                         >
-                            {groupedEvents[dateKey].displayDate}
+                            {group.displayDate}
                         </Typography>
-                        <Box 
-                            sx={{ 
-                                display: 'grid',
-                                gridTemplateColumns: groupedEvents[dateKey].events.length === 1 
-                                    ? 'minmax(450px, 1fr)'
-                                    : groupedEvents[dateKey].events.length === 2 
-                                        ? 'repeat(2, minmax(450px, 1fr))'
-                                        : 'repeat(3, minmax(450px, 1fr))',
-                                gap: 3,
-                                maxWidth: groupedEvents[dateKey].events.length <= 1 
-                                    ? '600px' 
-                                    : groupedEvents[dateKey].events.length === 2 
-                                        ? '1200px' 
-                                        : '1600px',
-                                margin: '0 auto',
-                                padding: '0 16px',
-                                justifyContent: 'center',
-                                '@media (max-width: 1500px)': {
-                                    gridTemplateColumns: 'repeat(2, minmax(450px, 1fr))',
-                                    maxWidth: '1200px'
-                                },
-                                '@media (max-width: 1000px)': {
-                                    gridTemplateColumns: '1fr',
-                                    maxWidth: '600px'
-                                },
-                                '& > *': {
-                                    justifySelf: 'center',
-                                    width: '100%',
-                                    maxWidth: '500px'
-                                }
-                            }}
-                        >
-                            {groupedEvents[dateKey].events.map((event, index) => (
-                                <Card 
-                                    key={`${event.time}-${event.event_title}-${index}`}
-                                    elevation={3}
-                                    sx={{ 
-                                        height: '100%',
-                                        minHeight: '200px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        backgroundColor: '#ffffff',
-                                        transition: 'transform 0.2s ease-in-out',
-                                        '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                        }
-                                    }}
-                                >
-                                    <CardContent 
-                                        sx={{ 
-                                            p: 3, 
-                                            flex: 1, 
-                                            display: 'flex', 
+                        <Grid container spacing={2}>
+                            {group.events.map((event, index) => (
+                                <Grid item xs={12} sm={6} md={4} key={`${group.displayDate}-${index}`}>
+                                    <Card
+                                        sx={{
+                                            height: '100%',
+                                            display: 'flex',
                                             flexDirection: 'column',
-                                            backgroundColor: '#ffffff'
+                                            backgroundColor: event.isNew ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
                                         }}
                                     >
-                                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                                            <Typography 
-                                                variant="subtitle1" 
-                                                component="div" 
-                                                sx={{ fontWeight: 500 }}
-                                            >
-                                                {new Date(event.time).toLocaleTimeString('en-US', {
+                                        <CardContent sx={{ flexGrow: 1 }}>
+                                            <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                                                <Chip
+                                                    label={event.currency}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: '#1976d2',
+                                                        color: '#fff'
+                                                    }}
+                                                />
+                                                <Chip
+                                                    label={event.impact}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: getImpactColor(event.impact),
+                                                        color: '#fff'
+                                                    }}
+                                                />
+                                            </Box>
+                                            <Typography variant="subtitle1" gutterBottom>
+                                                {new Date(event.time).toLocaleTimeString([], {
                                                     hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    hour12: true
+                                                    minute: '2-digit'
                                                 })}
                                             </Typography>
-                                            <Chip 
-                                                label={event.impact}
-                                                size="small"
-                                                sx={{ 
-                                                    fontWeight: 'medium',
-                                                    minWidth: '80px',
-                                                    backgroundColor: getImpactColor(event.impact),
-                                                    color: '#fff'
-                                                }}
-                                            />
-                                        </Box>
-                                        
-                                        <Box mb={2}>
-                                            <Chip 
-                                                label={event.currency}
-                                                size="small"
-                                                sx={{ 
-                                                    mb: 1,
-                                                    fontWeight: 'bold',
-                                                    backgroundColor: '#e3f2fd',
-                                                    color: '#1976d2'
-                                                }}
-                                            />
-                                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                            <Typography variant="body1" gutterBottom>
                                                 {event.event_title}
                                             </Typography>
-                                        </Box>
-                                        
-                                        <Box 
-                                            display="flex" 
-                                            gap={2} 
-                                            mt="auto"
-                                            sx={{
-                                                '& > div': {
-                                                    flex: 1,
-                                                    textAlign: 'center',
-                                                    p: 1,
-                                                    borderRadius: 1,
-                                                    bgcolor: 'rgba(0, 0, 0, 0.02)',
-                                                    border: '1px solid',
-                                                    borderColor: 'rgba(0, 0, 0, 0.1)',
-                                                }
-                                            }}
-                                        >
-                                            <div>
-                                                <Typography 
-                                                    variant="caption" 
-                                                    color="text.secondary"
-                                                    display="block"
+                                            <Box sx={{ mt: 1 }}>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Forecast: {event.forecast || 'N/A'}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Previous: {event.previous || 'N/A'}
+                                                </Typography>
+                                            </Box>
+                                        </CardContent>
+                                        {event.ai_summary && (
+                                            <CardActions>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => handleExpandClick(index)}
+                                                    endIcon={expanded === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                                 >
-                                                    Forecast
+                                                    {expanded === index ? 'Hide Analysis' : 'Show Analysis'}
+                                                </Button>
+                                            </CardActions>
+                                        )}
+                                        <Collapse in={expanded === index}>
+                                            <CardContent>
+                                                <Typography variant="subtitle1" gutterBottom>
+                                                    AI Analysis
                                                 </Typography>
-                                                <Typography variant="body2" fontWeight="500">
-                                                    {event.forecast || 'N/A'}
+                                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                                    {event.ai_summary}
                                                 </Typography>
-                                            </div>
-                                            <div>
-                                                <Typography 
-                                                    variant="caption" 
-                                                    color="text.secondary"
-                                                    display="block"
-                                                >
-                                                    Previous
-                                                </Typography>
-                                                <Typography variant="body2" fontWeight="500">
-                                                    {event.previous || 'N/A'}
-                                                </Typography>
-                                            </div>
-                                        </Box>
-                                    </CardContent>
-                                </Card>
+                                            </CardContent>
+                                        </Collapse>
+                                    </Card>
+                                </Grid>
                             ))}
-                        </Box>
-                    </Box>
+                        </Grid>
+                    </Grid>
                 ))}
-            </Box>
+            </Grid>
         );
+    };
+
+    const handleExpandClick = (index: number) => {
+        setExpanded(expanded === index ? null : index);
     };
 
     if (loading && initialLoad) {

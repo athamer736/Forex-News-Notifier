@@ -95,15 +95,19 @@ The application will be available at:
 - Automatic hourly updates from ForexFactory
 - Process monitoring and auto-restart
 - Comprehensive logging system
+- AI-Enhanced Market Analysis:
+  - Automated market predictions for US Futures (NQ, ES, YM)
+  - Forex pair analysis (GBPUSD, EURUSD, DXY)
+  - Scenario-based predictions (better/worse than expected)
+  - Volatility expectations and key price levels
+  - Updated every 4 hours for high-impact USD/GBP events
+  - Weekly refreshes to maintain accuracy
 
 ### Planned Features
 - Email Notifications:
   - Customizable news selection
   - Flexible notification schedules (weekly/daily)
   - Local time-based notifications (e.g., 07:30 AM daily)
-- AI-Enhanced Features:
-  - Brief AI-generated descriptions for news events
-  - AI-powered outcome predictions
 - Mobile Application with push notifications
 
 ## System Requirements
@@ -221,6 +225,25 @@ NOTIFICATION_TIMEZONE=UTC  # Your preferred timezone
 HIGH_IMPACT_ONLY=true  # Set to false to receive all events
 ```
 
+### 7. OpenAI Configuration
+
+1. Get an API key from OpenAI:
+   - Go to https://platform.openai.com/account/api-keys
+   - Create a new API key
+   - Add it to your `.env` file as `OPENAI_API_KEY`
+
+2. The system will automatically:
+   - Generate analysis for high-impact USD/GBP events
+   - Update predictions every 4 hours
+   - Refresh existing analysis weekly
+
+3. Analysis includes:
+   - Impact on US Futures (NQ, ES, YM)
+   - Forex pair predictions (GBPUSD, EURUSD, DXY)
+   - Scenario analysis for market outcomes
+   - Volatility expectations
+   - Key price levels and trading timeframes
+
 ## Running the Application
 
 ### Method 1: Using the Batch File (Recommended for Windows)
@@ -305,7 +328,31 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-specific-password
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key  # Required for AI market analysis
 ```
+
+### AI Market Analysis Setup
+
+The system uses OpenAI's GPT-4 to provide detailed market analysis for high-impact USD and GBP events. To enable this feature:
+
+1. Get an API key from OpenAI:
+   - Go to https://platform.openai.com/account/api-keys
+   - Create a new API key
+   - Add it to your `.env` file as `OPENAI_API_KEY`
+
+2. The system will automatically:
+   - Generate analysis for high-impact USD/GBP events
+   - Update predictions every 4 hours
+   - Refresh existing analysis weekly
+
+3. Analysis includes:
+   - Impact on US Futures (NQ, ES, YM)
+   - Forex pair predictions (GBPUSD, EURUSD, DXY)
+   - Scenario analysis for market outcomes
+   - Volatility expectations
+   - Key price levels and trading timeframes
 
 ## API Endpoints
 

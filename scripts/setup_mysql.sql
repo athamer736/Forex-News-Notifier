@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS forex_events (
     actual VARCHAR(50),
     url VARCHAR(255),
     source VARCHAR(50),
+    ai_summary TEXT,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
     is_updated BOOLEAN DEFAULT FALSE,

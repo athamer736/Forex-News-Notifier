@@ -1,0 +1,63 @@
+2025-02-11 21:20:40 - AISummary - INFO - Found 10 events needing summaries
+2025-02-11 21:20:40 - AISummary - WARNING - Failed to generate summary for event: Core CPI m/m
+2025-02-11 21:20:40 - AISummary - WARNING - Failed to generate summary for event: CPI m/m
+2025-02-11 21:20:40 - AISummary - WARNING - Failed to generate summary for event: CPI y/y
+2025-02-11 21:20:40 - AISummary - WARNING - Failed to generate summary for event: Fed Chair Powell Testifies
+2025-02-11 21:20:41 - AISummary - WARNING - Failed to generate summary for event: GDP m/m
+2025-02-11 21:20:41 - AISummary - WARNING - Failed to generate summary for event: Core PPI m/m
+2025-02-11 21:20:41 - AISummary - WARNING - Failed to generate summary for event: PPI m/m
+2025-02-11 21:20:41 - AISummary - WARNING - Failed to generate summary for event: Unemployment Claims
+2025-02-11 21:20:41 - AISummary - WARNING - Failed to generate summary for event: Core Retail Sales m/m
+2025-02-11 21:20:42 - AISummary - WARNING - Failed to generate summary for event: Retail Sales m/m
+2025-02-11 21:20:42 - AISummary - INFO - Completed summary generation
+2025-02-11 21:20:42 - AISummary - INFO - Found 0 events needing summary refresh
+2025-02-11 21:20:42 - AISummary - INFO - Completed summary refresh
+2025-02-11 21:21:27 - AISummary - INFO - Found 10 events needing summaries
+2025-02-11 21:21:28 - AISummary - WARNING - Failed to generate summary for event: Core CPI m/m
+2025-02-11 21:21:28 - AISummary - WARNING - Failed to generate summary for event: CPI m/m
+2025-02-11 21:21:28 - AISummary - WARNING - Failed to generate summary for event: CPI y/y
+2025-02-11 21:21:28 - AISummary - WARNING - Failed to generate summary for event: Fed Chair Powell Testifies
+2025-02-11 21:21:28 - AISummary - WARNING - Failed to generate summary for event: GDP m/m
+2025-02-11 21:21:29 - AISummary - WARNING - Failed to generate summary for event: Core PPI m/m
+2025-02-11 21:21:29 - AISummary - WARNING - Failed to generate summary for event: PPI m/m
+2025-02-11 21:21:29 - AISummary - WARNING - Failed to generate summary for event: Unemployment Claims
+2025-02-11 21:21:29 - AISummary - WARNING - Failed to generate summary for event: Core Retail Sales m/m
+2025-02-11 21:21:29 - AISummary - WARNING - Failed to generate summary for event: Retail Sales m/m
+2025-02-11 21:21:29 - AISummary - INFO - Completed summary generation
+2025-02-11 21:21:29 - AISummary - INFO - Found 0 events needing summary refresh
+2025-02-11 21:21:29 - AISummary - INFO - Completed summary refresh
+2025-02-11 21:22:24 - AISummary - INFO - Found 10 events needing summaries
+2025-02-11 21:22:25 - AISummary - WARNING - Failed to generate summary for event: Core CPI m/m
+2025-02-11 21:22:25 - AISummary - WARNING - Failed to generate summary for event: CPI m/m
+2025-02-11 21:22:25 - AISummary - WARNING - Failed to generate summary for event: CPI y/y
+2025-02-11 21:22:25 - AISummary - WARNING - Failed to generate summary for event: Fed Chair Powell Testifies
+2025-02-11 21:22:25 - AISummary - WARNING - Failed to generate summary for event: GDP m/m
+2025-02-11 21:22:26 - AISummary - WARNING - Failed to generate summary for event: Core PPI m/m
+2025-02-11 21:22:26 - AISummary - WARNING - Failed to generate summary for event: PPI m/m
+2025-02-11 21:22:26 - AISummary - WARNING - Failed to generate summary for event: Unemployment Claims
+2025-02-11 21:22:26 - AISummary - WARNING - Failed to generate summary for event: Core Retail Sales m/m
+2025-02-11 21:22:26 - AISummary - WARNING - Failed to generate summary for event: Retail Sales m/m
+2025-02-11 21:22:26 - AISummary - INFO - Completed summary generation
+2025-02-11 21:22:26 - AISummary - INFO - Found 0 events needing summary refresh
+2025-02-11 21:22:26 - AISummary - INFO - Completed summary refresh
+2025-02-11 21:23:05 - AISummary - INFO - Found 10 events needing summaries
+2025-02-11 21:23:23 - AISummary - INFO - Generated summary for USD event: Core CPI m/m
+2025-02-11 21:23:36 - AISummary - INFO - Generated summary for USD event: CPI m/m
+2025-02-11 21:23:49 - AISummary - INFO - Generated summary for USD event: CPI y/y
+2025-02-11 21:24:00 - AISummary - INFO - Generated summary for USD event: Fed Chair Powell Testifies
+2025-02-11 21:24:16 - AISummary - INFO - Generated summary for GBP event: GDP m/m
+2025-02-11 21:24:27 - AISummary - INFO - Generated summary for USD event: Core PPI m/m
+2025-02-11 21:24:41 - AISummary - INFO - Generated summary for USD event: PPI m/m
+2025-02-11 21:24:51 - AISummary - INFO - Generated summary for USD event: Unemployment Claims
+2025-02-11 21:25:05 - AISummary - INFO - Generated summary for USD event: Core Retail Sales m/m
+2025-02-11 21:25:21 - AISummary - INFO - Generated summary for USD event: Retail Sales m/m
+2025-02-11 21:25:21 - AISummary - INFO - Completed summary generation
+2025-02-11 21:25:21 - AISummary - INFO - Found 0 events needing summary refresh
+2025-02-11 21:25:21 - AISummary - INFO - Completed summary refresh
+2025-02-11 21:29:08 - AISummary - INFO - Found 3 events needing summaries
+2025-02-11 21:29:37 - AISummary - INFO - Generated summary for USD event: CPI m/m
+2025-02-11 21:29:55 - AISummary - INFO - Generated summary for USD event: CPI y/y
+2025-02-11 21:30:19 - AISummary - INFO - Generated summary for USD event: Fed Chair Powell Testifies
+2025-02-11 21:30:19 - AISummary - INFO - Completed summary generation
+2025-02-11 21:30:19 - AISummary - INFO - Found 0 events needing summary refresh
+2025-02-11 21:30:19 - AISummary - INFO - Completed summary refresh

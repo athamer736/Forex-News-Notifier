@@ -142,6 +142,18 @@ def format_event_summary(event: Dict) -> str:
         except ValueError:
             event_time = datetime.now()
     
+    # Format AI summary if available
+    ai_summary = event.get('ai_summary')
+    summary_section = ""
+    if ai_summary:
+        summary_section = f"""
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+            <div style="font-size: 14px; color: #333; line-height: 1.5;">
+                {ai_summary}
+            </div>
+        </div>
+        """
+    
     return f"""
     <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
         <div style="margin-bottom: 10px;">
@@ -168,6 +180,7 @@ def format_event_summary(event: Dict) -> str:
             <span style="margin-right: 15px;">Forecast: {event.get('forecast', 'N/A')}</span>
             <span>Previous: {event.get('previous', 'N/A')}</span>
         </div>
+        {summary_section}
     </div>
     """
 
