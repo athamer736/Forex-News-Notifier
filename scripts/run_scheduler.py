@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+import pymysql
 
 # Add the project root directory to Python path
 project_root = str(Path(__file__).parent.parent)
@@ -39,10 +40,50 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
 
+def test_db_connection():
+    """Test the database connection before starting the scheduler."""
+    try:
+        # Connection parameters
+        host = '141.95.123.145'
+        port = 3306
+        user = 'forex_user'
+        password = 'UltraFX#736'
+        database = 'forex_db'
+        
+        logger.info(f"Testing database connection to {host}:{port} as {user}")
+        
+        # Try to connect
+        connection = pymysql.connect(
+            host=host,
+            port=port,
+            user=user,
+            password=password,
+            database=database,
+            connect_timeout=10
+        )
+        
+        # Test the connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT VERSION()")
+            version = cursor.fetchone()
+            logger.info(f"Successfully connected to MySQL version: {version[0]}")
+        
+        connection.close()
+        return True
+        
+    except Exception as e:
+        logger.error(f"Database connection test failed: {str(e)}")
+        return False
+
 def run_update():
     """Run the update_events.py script."""
     try:
         logger.info("Starting scheduled forex events update")
+        
+        # Test database connection first
+        if not test_db_connection():
+            logger.error("Skipping update due to database connection failure")
+            return
         
         # Import and run the update script
         from scripts.update_events import main
@@ -55,6 +96,11 @@ def run_update():
 def main():
     try:
         logger.info("Starting the forex events scheduler")
+        
+        # Test database connection before starting
+        if not test_db_connection():
+            logger.error("Failed to connect to database. Exiting...")
+            return
         
         # Create and configure the scheduler
         scheduler = BackgroundScheduler()

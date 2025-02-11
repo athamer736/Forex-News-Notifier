@@ -99,25 +99,22 @@ def compare_and_update_events(events_data, filepath):
                         updated = True
                     
                     if updated:
-                        existing_event.updated_at = datetime.utcnow()
-                        existing_event.is_updated = True
+                        existing_event.updated_at = datetime.now(pytz.UTC)
                         update_count += 1
                         logger.info(f"Updated event: {event_data['title']} at {event_time}")
                         
                 else:
                     # Create new event
                     new_event = ForexEvent(
-                        time=event_time,
+                        event_title=event_data['title'],
                         currency=event_data['country'],
                         impact=event_data['impact'],
-                        event_title=event_data['title'],
+                        time=event_time,
                         forecast=event_data.get('forecast', ''),
                         previous=event_data.get('previous', ''),
                         actual=event_data.get('actual', ''),
                         url=event_data.get('url', ''),
-                        source='forexfactory',
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
+                        source='forexfactory'
                     )
                     db_session.add(new_event)
                     new_count += 1

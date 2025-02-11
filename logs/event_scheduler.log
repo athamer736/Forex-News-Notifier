@@ -28,3 +28,21 @@
 2025-02-11 22:01:48 - EventScheduler - INFO - Scheduler started successfully
 2025-02-11 22:01:48 - EventScheduler - INFO - Starting scheduled forex events update
 2025-02-11 22:01:54 - EventScheduler - INFO - Completed scheduled forex events update
+2025-02-11 23:12:15 - EventScheduler - INFO - Starting the forex events scheduler
+2025-02-11 23:12:15 - EventScheduler - INFO - Testing database connection to 141.95.123.145:3306 as forex_user
+2025-02-11 23:12:15 - EventScheduler - INFO - Successfully connected to MySQL version: 8.0.41
+2025-02-11 23:12:15 - EventScheduler - INFO - Scheduler started successfully
+2025-02-11 23:12:15 - EventScheduler - INFO - Starting scheduled forex events update
+2025-02-11 23:12:15 - EventScheduler - INFO - Testing database connection to 141.95.123.145:3306 as forex_user
+2025-02-11 23:12:15 - EventScheduler - INFO - Successfully connected to MySQL version: 8.0.41
+2025-02-11 23:12:20 - EventScheduler - INFO - Completed scheduled forex events update
+2025-02-11 23:12:32 - EventScheduler - INFO - Shutting down scheduler...
+2025-02-11 23:13:06 - EventScheduler - INFO - Starting the forex events scheduler
+2025-02-11 23:13:06 - EventScheduler - INFO - Testing database connection to 141.95.123.145:3306 as forex_user
+2025-02-11 23:13:06 - EventScheduler - INFO - Successfully connected to MySQL version: 8.0.41
+2025-02-11 23:13:06 - EventScheduler - INFO - Scheduler started successfully
+2025-02-11 23:13:06 - EventScheduler - INFO - Starting scheduled forex events update
+2025-02-11 23:13:06 - EventScheduler - INFO - Testing database connection to 141.95.123.145:3306 as forex_user
+2025-02-11 23:13:07 - EventScheduler - INFO - Successfully connected to MySQL version: 8.0.41
+2025-02-11 23:13:11 - EventScheduler - INFO - Completed scheduled forex events update
+2025-02-11 23:13:23 - EventScheduler - INFO - Shutting down scheduler...
