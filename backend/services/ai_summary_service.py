@@ -35,7 +35,7 @@ class AISummaryService:
 
             # Construct the prompt
             prompt = f"""
-            Please provide a comprehensive market analysis and prediction for this {event['currency']} forex economic event:
+            Please provide a comprehensive market analysis and prediction for this {event['currency']} forex economic event using smart money concepts and quarterly theory:
             
             Event: {event['event_title']}
             Currency: {event['currency']}
@@ -43,43 +43,52 @@ class AISummaryService:
             Forecast: {event.get('forecast', 'N/A')}
             Previous: {event.get('previous', 'N/A')}
             
-            Please structure the response in these sections:
-            1. Brief explanation of what this event measures and why it's important (2-3 sentences)
+            Please structure your response in these sections:
+            1. Event Context:
+               - Brief explanation of what this event measures and its importance
+               - Historical impact on the {event['currency']}
+               - Typical market reaction patterns
             
-            2. Market Impact Analysis:
-               - Potential impact on US Futures (NQ, ES, YM)
-               - Potential impact on Forex pairs (GBPUSD, EURUSD, DXY)
-               - Expected directional bias (Bullish/Bearish) for each market
-               - Key price levels or zones to watch
+            2. Technical Analysis:
+               - Key quarterly levels for {event['currency']} pairs
+               - Important SMC (Smart Money Concepts) levels
+               - Potential liquidity areas and institutional interest zones
+               - Order block identification on 4H timeframe
             
             3. Scenario Analysis:
                If Better Than Expected:
-               - Likely market reaction for futures and forex
-               - Key resistance levels to watch
+               - Likely price behavior based on quarterly theory
+               - Key SMC resistance levels and breaker blocks
+               - Potential liquidity grabs and stop runs
                
                If Worse Than Expected:
-               - Likely market reaction for futures and forex
-               - Key support levels to watch
+               - Likely price behavior based on quarterly theory
+               - Key SMC support levels and breaker blocks
+               - Potential liquidity grabs and stop runs
             
-            4. Volatility Expectation:
-               - Typical pip range movement for forex pairs
-               - Typical point range for futures markets
-               - Best timeframe to trade this event
+            4. Trading Strategy:
+               - Key entry zones based on order blocks
+               - Risk management using quarterly levels
+               - Best timeframes for execution (focus on 4H)
+               - Correlated pairs to monitor
             
-            Keep the analysis concise and focused on actionable trading insights. Include specific price levels where possible.
+            Focus on institutional order flow concepts and quarterly market structure.
+            Identify key SMC levels and potential manipulation zones.
+
+            Please write your response in one paragraph and make it easy to read and understand, max words of 250-300. Don't put it in a list or bullet points, just write it out.
             """
             
             # Call GPT-4 API
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4",  # Using standard GPT-4 model
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are an expert market analyst specializing in futures and forex markets. You provide detailed, practical analysis with specific price levels and directional bias. Your analysis is data-driven and considers intermarket relationships between futures and forex markets."
+                        "content": "You are an expert market analyst specializing in Smart Money Concepts (SMC) and quarterly theory. Your analysis focuses on institutional order flow, market structure, and manipulation concepts like liquidity grabs, breaker blocks, and order blocks. Provide detailed technical analysis with specific price zones and market structure levels."
                     },
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=600,  # Increased for more detailed analysis
+                max_tokens=1000,
                 temperature=0.7
             )
             

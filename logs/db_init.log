@@ -1,0 +1,9 @@
+INFO:backend.database:Connecting to database at 141.95.123.145:3306/forex_db as forex_user
+INFO:backend.database:Database connection test successful
+2025-02-11 22:01:46 - DatabaseInit - INFO - Starting database initialization...
+INFO:DatabaseInit:Starting database initialization...
+2025-02-11 22:01:46 - DatabaseInit - INFO - Successfully created all database tables
+INFO:DatabaseInit:Successfully created all database tables
+INFO:backend.database:Initialized database tables
+2025-02-11 22:01:46 - DatabaseInit - INFO - Database initialization completed successfully
+INFO:DatabaseInit:Database initialization completed successfully

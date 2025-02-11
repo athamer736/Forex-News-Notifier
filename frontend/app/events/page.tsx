@@ -29,11 +29,8 @@ interface ForexEvent {
 }
 
 interface GroupedEvents {
-    [key: string]: {
-        date: Date;
-        displayDate: string;
-        events: ForexEvent[];
-    }
+    displayDate: string;
+    events: ForexEvent[];
 }
 
 interface TimeRangeOption {
@@ -140,7 +137,25 @@ function EventsPage() {
     const [dateError, setDateError] = useState<string>('');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
-    const [expanded, setExpanded] = useState<number | null>(null);
+    const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+    const handleExpandClick = (index: number) => {
+        setExpanded(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
+
+    const handleInfoButtonClick = (e: React.MouseEvent<HTMLButtonElement>, index: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleExpandClick(index);
+    };
 
     // Remove the loading of saved filters from this useEffect since we're now doing it in the initial state
     useEffect(() => {
@@ -509,36 +524,29 @@ function EventsPage() {
     };
 
     // Add this utility function to group events by date
-    const groupEventsByDate = (events: ForexEvent[]): GroupedEvents => {
-        return events.reduce((groups: GroupedEvents, event) => {
-            // Extract date from the time string (assuming format like "2025-02-09 14:30:00")
-            const eventDate = new Date(event.time);
-            const dateKey = eventDate.toISOString().split('T')[0];
-            
-            if (!groups[dateKey]) {
-                // Format the date as "Monday 9th February"
-                const options: Intl.DateTimeFormatOptions = { 
-                    weekday: 'long', 
-                    day: 'numeric', 
-                    month: 'long',
-                    year: 'numeric'
-                };
-                const displayDate = eventDate.toLocaleDateString('en-US', options);
-                
-                groups[dateKey] = {
-                    date: eventDate,
-                    displayDate: displayDate,
+    const groupEventsByDate = (events: ForexEvent[]): Record<string, GroupedEvents> => {
+        const grouped = events.reduce((acc: Record<string, GroupedEvents>, event) => {
+            const date = new Date(event.time);
+            const displayDate = date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            if (!acc[displayDate]) {
+                acc[displayDate] = {
+                    displayDate,
                     events: []
                 };
             }
-            
-            groups[dateKey].events.push(event);
-            return groups;
+            acc[displayDate].events.push(event);
+            return acc;
         }, {});
+        return grouped;
     };
 
     const TableView = () => {
-        const groupedEvents = groupEventsByDate(events);
+        const groupedEvents: Record<string, GroupedEvents> = groupEventsByDate(events);
         const sortedDates = Object.keys(groupedEvents).sort();
 
         return (
@@ -556,7 +564,7 @@ function EventsPage() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {Object.values(groupedEvents).map(group => (
+                        {Object.values(groupedEvents).map((group: GroupedEvents) => (
                             <React.Fragment key={group.displayDate}>
                                 <TableRow>
                                     <TableCell
@@ -569,7 +577,7 @@ function EventsPage() {
                                         {group.displayDate}
                                     </TableCell>
                                 </TableRow>
-                                {group.events.map((event, index) => (
+                                {group.events.map((event: ForexEvent, index: number) => (
                                     <React.Fragment key={`${group.displayDate}-${index}`}>
                                         <TableRow
                                             sx={{
@@ -612,8 +620,8 @@ function EventsPage() {
                                                 {event.ai_summary && (
                                                     <IconButton
                                                         size="small"
-                                                        onClick={() => handleExpandClick(index)}
-                                                        aria-expanded={expanded === index}
+                                                        onClick={(e) => handleInfoButtonClick(e, index)}
+                                                        aria-expanded={expanded.has(index)}
                                                         aria-label="show more"
                                                     >
                                                         <InfoIcon />
@@ -621,17 +629,64 @@ function EventsPage() {
                                                 )}
                                             </TableCell>
                                         </TableRow>
-                                        {event.ai_summary && expanded === index && (
+                                        {event.ai_summary && (
                                             <TableRow>
-                                                <TableCell colSpan={7}>
-                                                    <Box sx={{ p: 2, backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
-                                                        <Typography variant="subtitle1" gutterBottom>
-                                                            AI Analysis
-                                                        </Typography>
-                                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                                                            {event.ai_summary}
-                                                        </Typography>
-                                                    </Box>
+                                                <TableCell colSpan={7} sx={{ p: 0 }}>
+                                                    <Collapse 
+                                                        in={expanded.has(index)} 
+                                                        timeout={500}
+                                                        unmountOnExit
+                                                        sx={{
+                                                            '& .MuiCollapse-wrapper': {
+                                                                willChange: 'height, transform',
+                                                                transition: 'height 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            },
+                                                            '& .MuiCollapse-wrapperInner': {
+                                                                willChange: 'transform, opacity',
+                                                                transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)'
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Box 
+                                                            sx={{
+                                                                p: 3,
+                                                                backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                                                                transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-20px)',
+                                                                opacity: expanded.has(index) ? 1 : 0,
+                                                                transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                borderRadius: 1,
+                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                                                margin: 1,
+                                                                willChange: 'transform, opacity'
+                                                            }}
+                                                        >
+                                                            <Typography 
+                                                                variant="subtitle1" 
+                                                                gutterBottom
+                                                                sx={{ 
+                                                                    fontWeight: 500,
+                                                                    transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
+                                                                    opacity: expanded.has(index) ? 1 : 0,
+                                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms',
+                                                                    willChange: 'transform, opacity'
+                                                                }}
+                                                            >
+                                                                AI Analysis
+                                                            </Typography>
+                                                            <Typography 
+                                                                variant="body2" 
+                                                                sx={{ 
+                                                                    whiteSpace: 'pre-line',
+                                                                    transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
+                                                                    opacity: expanded.has(index) ? 1 : 0,
+                                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms',
+                                                                    willChange: 'transform, opacity'
+                                                                }}
+                                                            >
+                                                                {event.ai_summary}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Collapse>
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -739,22 +794,67 @@ function EventsPage() {
                                             <CardActions>
                                                 <Button
                                                     size="small"
-                                                    onClick={() => handleExpandClick(index)}
-                                                    endIcon={expanded === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                                    onClick={(e) => handleInfoButtonClick(e, index)}
+                                                    endIcon={expanded.has(index) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                                 >
-                                                    {expanded === index ? 'Hide Analysis' : 'Show Analysis'}
+                                                    {expanded.has(index) ? 'Hide Analysis' : 'Show Analysis'}
                                                 </Button>
                                             </CardActions>
                                         )}
-                                        <Collapse in={expanded === index}>
-                                            <CardContent>
-                                                <Typography variant="subtitle1" gutterBottom>
+                                        <Collapse 
+                                            in={expanded.has(index)} 
+                                            timeout={500}
+                                            unmountOnExit
+                                            sx={{
+                                                '& .MuiCollapse-wrapper': {
+                                                    willChange: 'height, transform',
+                                                    transition: 'height 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                                                },
+                                                '& .MuiCollapse-wrapperInner': {
+                                                    willChange: 'transform, opacity',
+                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)'
+                                                }
+                                            }}
+                                        >
+                                            <Box 
+                                                sx={{
+                                                    p: 3,
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                                                    transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-20px)',
+                                                    opacity: expanded.has(index) ? 1 : 0,
+                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    borderRadius: 1,
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                                    margin: 1,
+                                                    willChange: 'transform, opacity'
+                                                }}
+                                            >
+                                                <Typography 
+                                                    variant="subtitle1" 
+                                                    gutterBottom
+                                                    sx={{ 
+                                                        fontWeight: 500,
+                                                        transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
+                                                        opacity: expanded.has(index) ? 1 : 0,
+                                                        transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms',
+                                                        willChange: 'transform, opacity'
+                                                    }}
+                                                >
                                                     AI Analysis
                                                 </Typography>
-                                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                                <Typography 
+                                                    variant="body2" 
+                                                    sx={{ 
+                                                        whiteSpace: 'pre-line',
+                                                        transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
+                                                        opacity: expanded.has(index) ? 1 : 0,
+                                                        transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms',
+                                                        willChange: 'transform, opacity'
+                                                    }}
+                                                >
                                                     {event.ai_summary}
                                                 </Typography>
-                                            </CardContent>
+                                            </Box>
                                         </Collapse>
                                     </Card>
                                 </Grid>
@@ -764,10 +864,6 @@ function EventsPage() {
                 ))}
             </Grid>
         );
-    };
-
-    const handleExpandClick = (index: number) => {
-        setExpanded(expanded === index ? null : index);
     };
 
     if (loading && initialLoad) {
@@ -1144,7 +1240,7 @@ function EventsPage() {
                                                 <Chip 
                                                     size="small"
                                                     label="×"
-                                                    onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                                                    onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
                                                         handleRemoveCurrency(option.value);
@@ -1277,7 +1373,7 @@ function EventsPage() {
                                                 <Chip 
                                                     size="small"
                                                     label="×"
-                                                    onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                                                    onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
                                                         handleRemoveImpact(option.value);

@@ -13,3 +13,14 @@
 2025-02-10 00:02:09,213 - scripts.update_events - INFO - - Updated 0 existing events
 2025-02-10 00:02:09,213 - scripts.update_events - INFO - - Added 0 new events
 2025-02-10 00:02:09,214 - __main__ - INFO - Completed scheduled forex events update
+2025-02-11 21:46:22 - EmailScheduler - INFO - Email scheduler started successfully
+2025-02-11 21:48:57 - EmailScheduler - INFO - Email scheduler started successfully
+2025-02-11 21:52:15 - EmailScheduler - INFO - Email scheduler started successfully
+2025-02-11 21:53:53 - EmailScheduler - INFO - Email scheduler started successfully
+2025-02-11 21:57:31 - EmailScheduler - INFO - Email scheduler started successfully
+2025-02-11 21:59:42 - EmailScheduler - INFO - Email scheduler started successfully
+2025-02-11 22:00:00 - EmailScheduler - INFO - Starting daily email updates
+2025-02-11 22:00:00 - EmailScheduler - INFO - Completed daily email updates
+2025-02-11 22:01:52 - EmailScheduler - INFO - Email scheduler started successfully
+2025-02-11 22:30:00 - EmailScheduler - INFO - Starting daily email updates
+2025-02-11 22:30:00 - EmailScheduler - INFO - Completed daily email updates
