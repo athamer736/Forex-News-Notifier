@@ -46,11 +46,15 @@ venv/
 .DS_Store
 
 # Add this line to your .gitignore file
-   venv/
+venv/
+
+# Logs and cache
+logs/
+*.log
+cache/
 
 # Application specific
 
-cache/
 weekly_events/
 
 # Startup files from start_server.bat
@@ -58,8 +62,3 @@ start_backend.bat
 start_frontend.bat
 start_scheduler.bat
 start_summary_generator.bat
-
-# Log files
-logs/
-*.log
-logs/*.log
