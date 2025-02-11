@@ -7,6 +7,7 @@ from typing import List, Optional
 import pytz
 import logging
 from dotenv import load_dotenv
+import socket
 
 # Load environment variables from the project root
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,8 +18,27 @@ load_dotenv(env_path)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Determine if we're running on the server
+def is_running_on_server():
+    try:
+        # Get the machine's hostname
+        hostname = socket.gethostname()
+        # Get the IP address
+        ip_address = socket.gethostbyname(hostname)
+        return ip_address == '141.95.123.145'
+    except:
+        return False
+
 # Database configuration
-DB_HOST = os.getenv('DB_HOST', '141.95.123.145')  # Default to server IP if not in env
+if is_running_on_server():
+    # When running on the server, use localhost
+    DB_HOST = 'localhost'
+    logger.info("Running on server - using localhost for database connection")
+else:
+    # When running from another machine, use the server IP
+    DB_HOST = os.getenv('DB_HOST', '141.95.123.145')
+    logger.info("Running remotely - using server IP for database connection")
+
 DB_PORT = int(os.getenv('DB_PORT', '3306'))
 DB_NAME = os.getenv('DB_NAME', 'forex_db')
 DB_USER = os.getenv('DB_USER', 'forex_user')
