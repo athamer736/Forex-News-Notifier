@@ -31,14 +31,8 @@ def is_running_on_server():
         return False
 
 # Database configuration
-if is_running_on_server():
-    # When running on the server, use localhost
-    DB_HOST = 'localhost'
-    logger.info("Running on server - using localhost for database connection")
-else:
-    # When running from another machine, use the server IP
-    DB_HOST = os.getenv('DB_HOST', '141.95.123.145')
-    logger.info("Running remotely - using server IP for database connection")
+DB_HOST = '141.95.123.145'  # Always use the IP address
+logger.info(f"Using database host: {DB_HOST}")
 
 DB_PORT = int(os.getenv('DB_PORT', '3306'))
 DB_NAME = os.getenv('DB_NAME', 'forex_db')
