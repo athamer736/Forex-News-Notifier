@@ -4,7 +4,7 @@ from .ip_handler import is_local_request
 
 logger = logging.getLogger(__name__)
 
-def build_allowed_origins(local_ips: List[str], server_ip: str) -> List[str]:
+def build_allowed_origins(local_ips: List[str], server_ip: str, domain: str = None) -> List[str]:
     """Build list of allowed origins for CORS"""
     allowed_origins = [
         # Local development
@@ -26,8 +26,17 @@ def build_allowed_origins(local_ips: List[str], server_ip: str) -> List[str]:
     # Add server origins
     allowed_origins.extend([
         f"http://{server_ip}:3000",
-        f"http://{server_ip}:5000"
+        f"http://{server_ip}:5000",
+        f"https://{server_ip}:3000",
+        f"https://{server_ip}:5000"
     ])
+
+    # Add domain if provided
+    if domain:
+        allowed_origins.extend([
+            f"https://{domain}",
+            f"http://{domain}"
+        ])
 
     logger.info(f"Allowed origins: {allowed_origins}")
     return allowed_origins

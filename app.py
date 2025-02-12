@@ -117,7 +117,7 @@ ALLOWED_ORIGINS = build_allowed_origins(LOCAL_IPS, SERVER_IP, DOMAIN)
 # Enable CORS with security settings
 CORS(app, 
     resources={r"/*": {
-        "origins": [f"https://{DOMAIN}", *ALLOWED_ORIGINS],  # Add HTTPS domain explicitly
+        "origins": ALLOWED_ORIGINS,  # Use the complete list from build_allowed_origins
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
         "expose_headers": ["Content-Type", "Authorization"],
