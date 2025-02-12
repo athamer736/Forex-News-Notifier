@@ -7,6 +7,7 @@ import logging
 import redis
 from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 import os
+import sys
 
 from backend.main import (
     get_local_ip,
@@ -110,12 +111,13 @@ Talisman(app,
 # Get IP addresses and build allowed origins
 LOCAL_IPS = get_local_ip()
 SERVER_IP = get_server_ip() or "141.95.123.145"  # Fallback to known server IP
-ALLOWED_ORIGINS = build_allowed_origins(LOCAL_IPS, SERVER_IP)
+DOMAIN = "fxalert.co.uk"
+ALLOWED_ORIGINS = build_allowed_origins(LOCAL_IPS, SERVER_IP, DOMAIN)
 
 # Enable CORS with security settings
 CORS(app, 
     resources={r"/*": {
-        "origins": ALLOWED_ORIGINS,
+        "origins": [f"https://{DOMAIN}", *ALLOWED_ORIGINS],  # Add HTTPS domain explicitly
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
         "expose_headers": ["Content-Type", "Authorization"],
@@ -254,12 +256,29 @@ if __name__ == "__main__":
         r"C:\Certbot\live\fxalert.co.uk\privkey.pem"     # Private key file
     )
     
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=False,  # Disable debug mode in production
-        ssl_context=ssl_context
-    )
+    # Ensure the certificate files exist
+    if not all(os.path.exists(cert) for cert in ssl_context):
+        logger.error("SSL certificate files not found. Please check the paths.")
+        sys.exit(1)
+    
+    try:
+        app.run(
+            host="0.0.0.0",
+            port=443,  # Standard HTTPS port
+            debug=False,
+            ssl_context=ssl_context
+        )
+    except Exception as e:
+        logger.error(f"Failed to start server: {str(e)}")
+        # If permission denied on port 443, try fallback to 5000
+        if "Permission denied" in str(e):
+            logger.info("Attempting to start on port 5000...")
+            app.run(
+                host="0.0.0.0",
+                port=5000,
+                debug=False,
+                ssl_context=ssl_context
+            )
     
     
     
