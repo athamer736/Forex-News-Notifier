@@ -8,6 +8,8 @@ import pytz
 import logging
 from dotenv import load_dotenv
 import socket
+import time
+import pymysql
 
 # Load environment variables from the project root
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,28 +51,66 @@ try:
     # Create engine with PyMySQL and additional settings
     engine = create_engine(
         DATABASE_URL,
-        pool_size=5,
-        max_overflow=10,
-        pool_timeout=30,
-        pool_recycle=1800,
-        pool_pre_ping=True  # Enable automatic reconnection
+        pool_size=20,  # Larger pool size
+        max_overflow=30,  # Larger overflow
+        pool_timeout=60,  # Longer pool timeout
+        pool_recycle=300,  # Recycle connections every 5 minutes to stay fresh
+        pool_pre_ping=True,  # Enable automatic reconnection
+        connect_args={
+            'connect_timeout': 60,
+            'read_timeout': 3600,  # 1 hour read timeout
+            'write_timeout': 3600,  # 1 hour write timeout
+            'keepalive': True,
+            'keepalive_interval': 60,  # Send keepalive every 60 seconds
+            'init_command': 'SET SESSION wait_timeout=28800',  # 8 hour server-side timeout
+            'client_flag': pymysql.constants.CLIENT.MULTI_STATEMENTS | 
+                         pymysql.constants.CLIENT.REMEMBER_OPTIONS |
+                         pymysql.constants.CLIENT.CONNECT_WITH_DB,
+            'reconnect': True,  # Enable auto-reconnect
+            'autocommit': True,  # Enable autocommit for session
+            'charset': 'utf8mb4'
+        }
     )
     
-    # Test connection
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
-        logger.info("Database connection test successful")
+    # Test connection with retry logic
+    max_retries = 5
+    retry_delay = 5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                # Set session variables for this connection
+                conn.execute(text("SET SESSION wait_timeout=28800"))  # 8 hours
+                conn.execute(text("SET SESSION interactive_timeout=28800"))  # 8 hours
+                logger.info("Database connection test successful")
+                break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Connection attempt {attempt + 1} failed, retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                continue
+            else:
+                raise
     
     # Create database if it doesn't exist
     if not database_exists(engine.url):
         create_database(engine.url)
         logger.info(f"Created database: {DB_NAME}")
     
-    # Create session factory
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    # Create session factory with improved settings
+    SessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+        expire_on_commit=False
+    )
     
-    # Create scoped session
-    db_session = scoped_session(SessionLocal)
+    # Create scoped session with automatic cleanup
+    db_session = scoped_session(
+        SessionLocal,
+        scopefunc=None
+    )
     
     # Create base class for models
     Base = declarative_base()
