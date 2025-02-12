@@ -115,16 +115,14 @@ LOCAL_IPS = get_local_ip()
 SERVER_IP = get_server_ip() or "141.95.123.145"  # Fallback to known server IP
 DOMAIN = "fxalert.co.uk"
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5000",
-    "http://192.168.0.144:3000",
-    "http://192.168.0.144:5000",
+    "https://localhost:3000",
+    "https://localhost:5000",
+    "https://127.0.0.1:3000",
+    "https://127.0.0.1:5000",
+    "https://192.168.0.144:3000",
+    "https://192.168.0.144:5000",
     "https://fxalert.co.uk",
     "https://www.fxalert.co.uk",
-    "http://141.95.123.145:3000",
-    "http://141.95.123.145:5000",
     "https://141.95.123.145:3000",
     "https://141.95.123.145:5000"
 ]
@@ -173,14 +171,8 @@ def home():
     if 'fxalert.co.uk' in host:
         return redirect('https://fxalert.co.uk:3000')
     
-    # Local development redirects
-    server_port = request.environ.get('SERVER_PORT', '5000')
-    if server_port == '443':
-        # If backend is on 443, redirect to frontend on 3000
-        return redirect('https://localhost:3000')
-    else:
-        # If backend is on 5000, redirect to frontend on 3000
-        return redirect('http://localhost:3000')
+    # Local development redirects - always use HTTPS since we have SSL
+    return redirect('https://localhost:3000')
 
 @app.route("/timezone", methods=["POST", "OPTIONS"])
 @limiter.limit("30 per minute")  # Rate limit for timezone updates
