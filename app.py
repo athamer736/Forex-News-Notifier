@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -164,9 +164,16 @@ def initialize_app():
         app._got_first_request = True
 
 @app.route("/")
-@limiter.limit("60 per minute")  # Specific rate limit for home page
+@limiter.limit("60 per minute")
 def home():
-    return render_template("index.html")
+    """Redirect to frontend application"""
+    if request.headers.get('Host') == 'fxalert.co.uk':
+        return redirect('https://fxalert.co.uk:3000')
+    elif request.headers.get('Host') == 'www.fxalert.co.uk':
+        return redirect('https://www.fxalert.co.uk:3000')
+    else:
+        # For local development
+        return redirect('http://localhost:3000')
 
 @app.route("/timezone", methods=["POST", "OPTIONS"])
 @limiter.limit("30 per minute")  # Rate limit for timezone updates
