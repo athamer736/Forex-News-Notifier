@@ -51,7 +51,15 @@ venv/
 # Logs and cache
 logs/
 *.log
-cache/
+log/
+/logs/*
+/log/*
+*.log.*
+.log/
+__logs__/
+/backend/logs/
+/frontend/logs/
+/scripts/logs/
 
 # Application specific
 
@@ -62,3 +70,18 @@ start_backend.bat
 start_frontend.bat
 start_scheduler.bat
 start_summary_generator.bat
+
+# Cache directories and files
+cache/
+__pycache__/
+*.cache
+.cache/
+/cache/*
+**/*.cache
+**/cache/
+.cached/
+/backend/cache/
+/frontend/cache/
+/scripts/cache/
+/frontend/.next/cache/
+*.pyc
