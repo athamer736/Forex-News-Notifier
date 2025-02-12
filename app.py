@@ -167,12 +167,19 @@ def initialize_app():
 @limiter.limit("60 per minute")
 def home():
     """Redirect to frontend application"""
-    if request.headers.get('Host') == 'fxalert.co.uk':
+    host = request.headers.get('Host', '')
+    
+    # Production domain redirects
+    if 'fxalert.co.uk' in host:
         return redirect('https://fxalert.co.uk:3000')
-    elif request.headers.get('Host') == 'www.fxalert.co.uk':
-        return redirect('https://www.fxalert.co.uk:3000')
+    
+    # Local development redirects
+    server_port = request.environ.get('SERVER_PORT', '5000')
+    if server_port == '443':
+        # If backend is on 443, redirect to frontend on 3000
+        return redirect('https://localhost:3000')
     else:
-        # For local development
+        # If backend is on 5000, redirect to frontend on 3000
         return redirect('http://localhost:3000')
 
 @app.route("/timezone", methods=["POST", "OPTIONS"])
@@ -243,39 +250,51 @@ def not_found(e):
     return {"error": "Resource not found."}, 404
 
 if __name__ == "__main__":
-    # SSL certificate paths from Certbot (Windows paths)
     cert_path = r"C:\Certbot\live\fxalert.co.uk\fullchain.pem"
     key_path = r"C:\Certbot\live\fxalert.co.uk\privkey.pem"
     
-    if all(os.path.exists(path) for path in [cert_path, key_path]):
-        ssl_context = (cert_path, key_path)
-        logger.info("SSL certificates found, enabling HTTPS")
-    else:
-        logger.error("SSL certificates not found at expected paths!")
-        logger.error(f"Certificate path: {cert_path}")
-        logger.error(f"Private key path: {key_path}")
-        sys.exit(1)
-    
     try:
-        app.run(
-            host="0.0.0.0",
-            port=443,  # Standard HTTPS port
-            debug=False,
-            ssl_context=ssl_context
-        )
-    except Exception as e:
-        logger.error(f"Failed to start server: {str(e)}")
-        # If permission denied on port 443, try fallback to 5000
-        if "Permission denied" in str(e):
-            logger.info("Attempting to start on port 5000...")
+        # Check if certificate files exist and are readable
+        if not os.path.exists(cert_path):
+            logger.error(f"Certificate file not found: {cert_path}")
+            sys.exit(1)
+        if not os.path.exists(key_path):
+            logger.error(f"Private key file not found: {key_path}")
+            sys.exit(1)
+            
+        # Try to read the files to verify permissions
+        with open(cert_path, 'rb') as f:
+            f.read()
+        with open(key_path, 'rb') as f:
+            f.read()
+            
+        ssl_context = (cert_path, key_path)
+        logger.info("SSL certificates loaded successfully")
+        
+        # Try to start on port 443 first
+        try:
+            logger.info("Starting Flask backend on port 443 (HTTPS)...")
+            app.run(
+                host="0.0.0.0",
+                port=443,
+                debug=False,
+                ssl_context=ssl_context
+            )
+        except PermissionError:
+            # If permission denied on 443, try 5000
+            logger.info("Permission denied on port 443, falling back to port 5000...")
+            logger.info("Note: Frontend will still run on port 3000")
             app.run(
                 host="0.0.0.0",
                 port=5000,
                 debug=False,
                 ssl_context=ssl_context
             )
-        else:
-            sys.exit(1)
+            
+    except Exception as e:
+        logger.error(f"Failed to start server: {str(e)}")
+        logger.error("Error details:", exc_info=True)
+        sys.exit(1)
     
     
     
