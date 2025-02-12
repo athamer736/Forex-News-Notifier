@@ -1,32 +1,39 @@
 'use client';
 
-import { useState } from 'react';
-import {
-    Container,
-    Typography,
-    Box,
-    Paper,
-    TextField,
-    FormControl,
-    FormControlLabel,
-    FormGroup,
-    Checkbox,
-    Select,
-    MenuItem,
-    Button,
-    Alert,
-    Chip,
-    SelectChangeEvent,
-    FormHelperText
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  TextField, 
+  Button, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem, 
+  Chip, 
+  Alert, 
+  CircularProgress, 
+  FormHelperText, 
+  Grid,
+  SelectChangeEvent,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
+  Paper,
+  IconButton
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useRouter } from 'next/navigation';
 
 interface SubscriptionForm {
-    email: string;
-    frequency: 'daily' | 'weekly' | 'both';
-    currencies: string[];
-    impactLevels: string[];
-    dailyTime?: string;
-    weeklyDay?: string;
+  email: string;
+  currencies: string[];
+  impactLevels: string[];
+  frequency: 'daily' | 'weekly' | 'both';
+  dailyTime: string;
+  weeklyDay: string;
 }
 
 const currencyOptions = [
@@ -58,70 +65,55 @@ const weekDays = [
     { value: 'sunday', label: 'Sunday' }
 ];
 
-export default function SubscribePage() {
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.2
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+        y: 0,
+        opacity: 1,
+        transition: {
+            type: "spring",
+            stiffness: 100,
+            damping: 12
+        }
+    }
+};
+
+const formVariants = {
+    hidden: { scale: 0.95, opacity: 0 },
+    visible: {
+        scale: 1,
+        opacity: 1,
+        transition: {
+            type: "spring",
+            stiffness: 100,
+            damping: 12
+        }
+    }
+};
+
+function SubscribePage() {
+    const router = useRouter();
     const [form, setForm] = useState<SubscriptionForm>({
         email: '',
-        frequency: 'daily',
         currencies: [],
         impactLevels: [],
-        dailyTime: '07:00',
-        weeklyDay: 'sunday'
+        frequency: 'daily',
+        dailyTime: '09:00',
+        weeklyDay: 'monday'
     });
-    
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-        setSuccess(null);
-
-        try {
-            // Determine the base URL based on hostname
-            let baseUrl;
-            if (typeof window !== 'undefined') {
-                if (window.location.hostname === 'localhost') {
-                    baseUrl = 'http://localhost:5000';
-                } else if (window.location.hostname === '192.168.0.144') {
-                    baseUrl = 'http://192.168.0.144:5000';
-                } else {
-                    baseUrl = 'http://141.95.123.145:5000';
-                }
-            } else {
-                baseUrl = 'http://141.95.123.145:5000';
-            }
-
-            const response = await fetch(`${baseUrl}/subscribe`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(form),
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to subscribe');
-            }
-
-            setSuccess('Successfully subscribed! Please check your email to confirm your subscription.');
-            setForm({
-                email: '',
-                frequency: 'daily',
-                currencies: [],
-                impactLevels: [],
-                dailyTime: '07:00',
-                weeklyDay: 'sunday'
-            });
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleCurrencyChange = (event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
@@ -139,235 +131,325 @@ export default function SubscribePage() {
         }));
     };
 
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
+        setLoading(true);
+        setError(null);
+        setSuccess(null);
+
+        try {
+            const response = await fetch('/api/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(form),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to subscribe');
+            }
+
+            setSuccess('Successfully subscribed! Please check your email for confirmation.');
+            setForm(prev => ({
+                ...prev,
+                email: '',
+                currencies: [],
+                impactLevels: []
+            }));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <Container maxWidth="md" sx={{ py: 8 }}>
-            <Typography 
-                variant="h3" 
-                component="h1" 
-                gutterBottom 
-                sx={{ 
-                    textAlign: 'center',
-                    color: '#fff',
-                    mb: 6
-                }}
-            >
-                Email Notifications
-            </Typography>
-
-            <Paper 
-                elevation={3} 
-                sx={{ 
-                    p: 4,
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)'
-                }}
-            >
-                {error && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
-                        {error}
-                    </Alert>
-                )}
-                
-                {success && (
-                    <Alert severity="success" sx={{ mb: 3 }}>
-                        {success}
-                    </Alert>
-                )}
-
-                <form onSubmit={handleSubmit}>
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom>
-                            Email Address
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-                            required
-                            placeholder="Enter your email address"
-                        />
-                    </Box>
-
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom>
-                            Notification Frequency
-                        </Typography>
-                        <FormControl component="fieldset">
-                            <FormGroup>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={form.frequency === 'daily' || form.frequency === 'both'}
-                                            onChange={(e) => {
-                                                if (e.target.checked && form.frequency === 'weekly') {
-                                                    setForm(prev => ({ ...prev, frequency: 'both' }));
-                                                } else if (e.target.checked) {
-                                                    setForm(prev => ({ ...prev, frequency: 'daily' }));
-                                                } else if (form.frequency === 'both') {
-                                                    setForm(prev => ({ ...prev, frequency: 'weekly' }));
-                                                } else {
-                                                    setForm(prev => ({ ...prev, frequency: 'weekly' }));
-                                                }
-                                            }}
-                                        />
+        <Box
+            sx={{
+                minHeight: '100vh',
+                background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+                color: '#fff',
+                pt: 8,
+                pb: 12
+            }}
+        >
+            <Container maxWidth="md">
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                    <motion.div variants={itemVariants}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                            <IconButton
+                                onClick={() => router.push('/')}
+                                sx={{
+                                    color: '#fff',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
                                     }
-                                    label="Daily Morning Updates"
-                                />
-                                {(form.frequency === 'daily' || form.frequency === 'both') && (
-                                    <Box sx={{ ml: 4, mt: 1 }}>
-                                        <TextField
-                                            type="time"
-                                            value={form.dailyTime}
-                                            onChange={(e) => setForm(prev => ({ ...prev, dailyTime: e.target.value }))}
-                                            size="small"
-                                        />
-                                        <FormHelperText>Select time for daily updates (Your local time)</FormHelperText>
-                                    </Box>
-                                )}
-                                
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={form.frequency === 'weekly' || form.frequency === 'both'}
-                                            onChange={(e) => {
-                                                if (e.target.checked && form.frequency === 'daily') {
-                                                    setForm(prev => ({ ...prev, frequency: 'both' }));
-                                                } else if (e.target.checked) {
-                                                    setForm(prev => ({ ...prev, frequency: 'weekly' }));
-                                                } else if (form.frequency === 'both') {
-                                                    setForm(prev => ({ ...prev, frequency: 'daily' }));
-                                                } else {
-                                                    setForm(prev => ({ ...prev, frequency: 'daily' }));
-                                                }
-                                            }}
-                                        />
-                                    }
-                                    label="Weekly Summary"
-                                />
-                                {(form.frequency === 'weekly' || form.frequency === 'both') && (
-                                    <Box sx={{ ml: 4, mt: 1 }}>
-                                        <FormControl size="small">
-                                            <Select
-                                                value={form.weeklyDay}
-                                                onChange={(e) => setForm(prev => ({ ...prev, weeklyDay: e.target.value }))}
-                                            >
-                                                {weekDays.map(day => (
-                                                    <MenuItem key={day.value} value={day.value}>
-                                                        {day.label}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            <FormHelperText>Select day for weekly summary</FormHelperText>
-                                        </FormControl>
-                                    </Box>
-                                )}
-                            </FormGroup>
-                        </FormControl>
-                    </Box>
-
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom>
-                            Currencies of Interest
-                        </Typography>
-                        <FormControl fullWidth>
-                            <Select
-                                multiple
-                                value={form.currencies}
-                                onChange={handleCurrencyChange}
-                                renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {selected.map((value) => (
-                                            <Chip 
-                                                key={value} 
-                                                label={value}
-                                                sx={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: '#fff'
-                                                }}
-                                            />
-                                        ))}
-                                    </Box>
-                                )}
+                                }}
                             >
-                                {currencyOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
-                                        {option.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                            <FormHelperText>Select currencies you want to receive updates about</FormHelperText>
-                        </FormControl>
-                    </Box>
+                                <ArrowBackIcon />
+                            </IconButton>
+                        </Box>
+                    </motion.div>
 
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom>
-                            Impact Levels
+                    <motion.div variants={itemVariants}>
+                        <Typography
+                            variant="h1"
+                            sx={{
+                                fontSize: { xs: '2.5rem', md: '4rem' },
+                                fontWeight: 700,
+                                textAlign: 'center',
+                                mb: 2,
+                                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent'
+                            }}
+                        >
+                            Subscribe to Forex Updates
                         </Typography>
-                        <FormControl fullWidth>
-                            <Select
-                                multiple
-                                value={form.impactLevels}
-                                onChange={handleImpactChange}
-                                renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {selected.map((value) => {
-                                            const impact = impactOptions.find(opt => opt.value === value);
-                                            return (
-                                                <Chip 
-                                                    key={value} 
-                                                    label={value}
-                                                    sx={{
-                                                        backgroundColor: impact?.color,
-                                                        color: '#fff'
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </Box>
-                                )}
-                            >
-                                {impactOptions.map((option) => (
-                                    <MenuItem 
-                                        key={option.value} 
-                                        value={option.value}
+                    </motion.div>
+
+                    <motion.div variants={itemVariants}>
+                        <Typography
+                            variant="h2"
+                            sx={{
+                                fontSize: { xs: '1.2rem', md: '1.5rem' },
+                                textAlign: 'center',
+                                mb: 6,
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }}
+                        >
+                            Get real-time notifications for your selected currency pairs and impact levels
+                        </Typography>
+                    </motion.div>
+
+                    <motion.div variants={formVariants}>
+                        <Box
+                            component="form"
+                            onSubmit={handleSubmit}
+                            sx={{
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: 2,
+                                p: 4,
+                                mb: 4
+                            }}
+                        >
+                            <Grid container spacing={3}>
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth
+                                        label="Email"
+                                        type="email"
+                                        value={form.email}
+                                        onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
+                                        error={!!error}
+                                        helperText={error}
+                                        required
                                         sx={{
-                                            '&.Mui-selected': {
-                                                backgroundColor: `${option.color}15`
+                                            '& .MuiOutlinedInput-root': {
+                                                color: '#fff',
+                                                '& fieldset': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.3)'
+                                                },
+                                                '&:hover fieldset': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.5)'
+                                                },
+                                                '&.Mui-focused fieldset': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                color: 'rgba(255, 255, 255, 0.7)'
+                                            },
+                                            '& .MuiFormHelperText-root': {
+                                                color: '#f44336'
+                                            }
+                                        }}
+                                    />
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <FormControl 
+                                        fullWidth 
+                                        error={!!error}
+                                    >
+                                        <InputLabel 
+                                            id="currency-label"
+                                            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                        >
+                                            Currencies
+                                        </InputLabel>
+                                        <Select
+                                            labelId="currency-label"
+                                            multiple
+                                            value={form.currencies}
+                                            onChange={handleCurrencyChange}
+                                            renderValue={(selected) => (
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {selected.map((value) => (
+                                                        <Chip 
+                                                            key={value} 
+                                                            label={value}
+                                                            sx={{
+                                                                backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                                                                color: '#fff'
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            )}
+                                            sx={{
+                                                color: '#fff',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.3)'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.5)'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            }}
+                                        >
+                                            {currencyOptions.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                        {error && (
+                                            <FormHelperText>{error}</FormHelperText>
+                                        )}
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <FormControl 
+                                        fullWidth
+                                        error={!!error}
+                                    >
+                                        <InputLabel 
+                                            id="impact-label"
+                                            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                        >
+                                            Impact Levels
+                                        </InputLabel>
+                                        <Select
+                                            labelId="impact-label"
+                                            multiple
+                                            value={form.impactLevels}
+                                            onChange={handleImpactChange}
+                                            renderValue={(selected) => (
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {selected.map((value) => (
+                                                        <Chip 
+                                                            key={value} 
+                                                            label={value}
+                                                            sx={{
+                                                                backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                                                                color: '#fff'
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            )}
+                                            sx={{
+                                                color: '#fff',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.3)'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.5)'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            }}
+                                        >
+                                            {impactOptions.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                        {error && (
+                                            <FormHelperText>{error}</FormHelperText>
+                                        )}
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        fullWidth
+                                        disabled={loading}
+                                        sx={{
+                                            height: 56,
+                                            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                                            color: '#fff',
+                                            fontWeight: 600,
+                                            '&:hover': {
+                                                background: 'linear-gradient(45deg, #1976D2 30%, #00B4E5 90%)'
                                             }
                                         }}
                                     >
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Box
-                                                sx={{
-                                                    width: 12,
-                                                    height: 12,
-                                                    borderRadius: '50%',
-                                                    backgroundColor: option.color,
-                                                    mr: 1
-                                                }}
-                                            />
-                                            {option.label}
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                            <FormHelperText>Select which impact levels you want to be notified about</FormHelperText>
-                        </FormControl>
-                    </Box>
+                                        {loading ? (
+                                            <CircularProgress size={24} sx={{ color: '#fff' }} />
+                                        ) : (
+                                            'Subscribe'
+                                        )}
+                                    </Button>
+                                </Grid>
+                            </Grid>
 
-                    <Box sx={{ textAlign: 'center' }}>
-                        <Button 
-                            type="submit"
-                            variant="contained"
-                            size="large"
-                            disabled={loading || !form.email || (!form.currencies.length || !form.impactLevels.length)}
-                            sx={{ minWidth: 200 }}
-                        >
-                            {loading ? 'Subscribing...' : 'Subscribe'}
-                        </Button>
-                    </Box>
-                </form>
-            </Paper>
-        </Container>
+                            {error && (
+                                <Alert 
+                                    severity="error" 
+                                    sx={{ 
+                                        mt: 2,
+                                        backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                                        color: '#ff1744',
+                                        border: '1px solid rgba(211, 47, 47, 0.3)',
+                                        '& .MuiAlert-icon': {
+                                            color: '#ff1744'
+                                        }
+                                    }}
+                                >
+                                    {error}
+                                </Alert>
+                            )}
+
+                            {success && (
+                                <Alert 
+                                    severity="success"
+                                    sx={{ 
+                                        mt: 2,
+                                        backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                                        color: '#00e676',
+                                        border: '1px solid rgba(46, 125, 50, 0.3)',
+                                        '& .MuiAlert-icon': {
+                                            color: '#00e676'
+                                        }
+                                    }}
+                                >
+                                    {success}
+                                </Alert>
+                            )}
+                        </Box>
+                    </motion.div>
+                </motion.div>
+            </Container>
+        </Box>
     );
-} 
+}
+
+export default SubscribePage; 

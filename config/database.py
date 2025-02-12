@@ -38,14 +38,9 @@ engine = create_engine(
         'connect_timeout': 60,
         'read_timeout': 3600,  # 1 hour read timeout
         'write_timeout': 3600,  # 1 hour write timeout
-        'keepalive': True,
-        'keepalive_interval': 60,  # Send keepalive every 60 seconds
         'init_command': 'SET SESSION wait_timeout=28800',  # 8 hour server-side timeout
         'client_flag': pymysql.constants.CLIENT.MULTI_STATEMENTS | 
-                     pymysql.constants.CLIENT.REMEMBER_OPTIONS |
                      pymysql.constants.CLIENT.CONNECT_WITH_DB,
-        'reconnect': True,  # Enable auto-reconnect
-        'autocommit': True,  # Enable autocommit for session
         'charset': 'utf8mb4'
     },
     echo=False,
@@ -77,21 +72,33 @@ def init_db():
     
     for attempt in range(max_retries):
         try:
+            # Test connection first
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                print(f"Database connection test successful on attempt {attempt + 1}")
+
             if not database_exists(engine.url):
                 create_database(engine.url)
+                print(f"Created new database: {DB_CONFIG['database']}")
+            
             Base.metadata.create_all(bind=engine)
+            print("Database tables created successfully")
             
             # Set session variables for all new connections
             with engine.connect() as conn:
                 conn.execute(text("SET SESSION wait_timeout=28800"))  # 8 hours
                 conn.execute(text("SET SESSION interactive_timeout=28800"))  # 8 hours
+                print("Database session variables configured successfully")
             break
+            
         except Exception as e:
             if attempt < max_retries - 1:
-                print(f"Database initialization attempt {attempt + 1} failed, retrying in {retry_delay} seconds...")
+                print(f"Database initialization attempt {attempt + 1} failed: {str(e)}")
+                print(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
                 continue
             else:
+                print(f"All database initialization attempts failed. Last error: {str(e)}")
                 raise
 
 def get_filtered_events(

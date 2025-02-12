@@ -54,20 +54,15 @@ try:
         pool_size=20,  # Larger pool size
         max_overflow=30,  # Larger overflow
         pool_timeout=60,  # Longer pool timeout
-        pool_recycle=300,  # Recycle connections every 5 minutes to stay fresh
+        pool_recycle=300,  # Recycle connections every 5 minutes
         pool_pre_ping=True,  # Enable automatic reconnection
         connect_args={
             'connect_timeout': 60,
             'read_timeout': 3600,  # 1 hour read timeout
             'write_timeout': 3600,  # 1 hour write timeout
-            'keepalive': True,
-            'keepalive_interval': 60,  # Send keepalive every 60 seconds
             'init_command': 'SET SESSION wait_timeout=28800',  # 8 hour server-side timeout
-            'client_flag': pymysql.constants.CLIENT.MULTI_STATEMENTS | 
-                         pymysql.constants.CLIENT.REMEMBER_OPTIONS |
+            'client_flag': pymysql.constants.CLIENT.MULTI_STATEMENTS |
                          pymysql.constants.CLIENT.CONNECT_WITH_DB,
-            'reconnect': True,  # Enable auto-reconnect
-            'autocommit': True,  # Enable autocommit for session
             'charset': 'utf8mb4'
         }
     )
