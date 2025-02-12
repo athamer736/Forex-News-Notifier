@@ -32,21 +32,21 @@ out/
 package-lock.json
 frontend/package-lock.json
 
-# Your virtual environment directory (adjust name if yours is different)
+# Virtual Environment
 venv/
+.venv/
+ENV/
 
-# Jupyter Notebook checkpoints (if you're using notebooks)
-.ipynb_checkpoints/
-
-# IDE / Editor settings (optional, depending on your setup)
+# IDE / Editor settings
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # macOS specific files
 .DS_Store
-
-# Add this line to your .gitignore file
-venv/
+.AppleDouble
+.LSOverride
 
 # Logs and cache
 logs/
@@ -62,10 +62,16 @@ __logs__/
 /scripts/logs/
 
 # Application specific
-
 weekly_events/
 
-# Startup files from start_server.bat
+# Batch files
+*.bat
+run_*.bat
+/run_*.bat
+run_email_scheduler.bat
+run_event_scheduler.bat
+run_flask.bat
+run_frontend.bat
 start_backend.bat
 start_frontend.bat
 start_scheduler.bat
