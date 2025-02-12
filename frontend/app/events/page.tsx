@@ -455,10 +455,10 @@ function EventsPage() {
                     } else if (window.location.hostname === '192.168.0.144') {
                         baseUrl = 'http://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'https://fxalert.co.uk:5000';
+                        baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
                     }
                 } else {
-                    baseUrl = 'https://fxalert.co.uk:5000';
+                    baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
                 }
                 
                 console.log('Using base URL:', baseUrl);
