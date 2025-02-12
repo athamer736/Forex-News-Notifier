@@ -92,7 +92,7 @@ csp = {
 }
 
 Talisman(app,
-    force_https=False,  # Disable HTTPS redirect for local development
+    force_https=True,  # Enable HTTPS redirect now that we have SSL
     strict_transport_security=True,
     session_cookie_secure=True,
     session_cookie_http_only=True,
@@ -248,10 +248,17 @@ def not_found(e):
     return {"error": "Resource not found."}, 404
 
 if __name__ == "__main__":
+    # SSL certificate paths from Certbot (Windows paths)
+    ssl_context = (
+        r"C:\Certbot\live\fxalert.co.uk\fullchain.pem",  # Certificate chain file
+        r"C:\Certbot\live\fxalert.co.uk\privkey.pem"     # Private key file
+    )
+    
     app.run(
         host="0.0.0.0",
         port=5000,
-        debug=False  # Disable debug mode in production
+        debug=False,  # Disable debug mode in production
+        ssl_context=ssl_context
     )
     
     
