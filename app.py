@@ -55,7 +55,7 @@ logger.setLevel(logging.INFO)
 
 app = Flask(__name__)
 
-# Basic security headers without forcing HTTPS
+# Basic security headers with HTTPS
 csp = {
     'default-src': ["'self'", "https:", "http:"],
     'img-src': ["'self'", 'data:', 'https:', "http:"],
@@ -67,10 +67,11 @@ csp = {
     'connect-src': ["'self'", "https:", "http:", "*"]
 }
 
+# Enable HTTPS and security features
 Talisman(app,
-    force_https=False,  # Disable HTTPS forcing
-    strict_transport_security=False,  # Disable HSTS
-    session_cookie_secure=False,  # Allow non-secure cookies
+    force_https=True,  # Force HTTPS
+    strict_transport_security=True,
+    session_cookie_secure=True,
     session_cookie_http_only=True,
     feature_policy={
         'geolocation': "'none'",
@@ -120,12 +121,12 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:5000",
     "http://192.168.0.144:3000",
     "http://192.168.0.144:5000",
+    "https://fxalert.co.uk",
+    "https://www.fxalert.co.uk",
     "http://141.95.123.145:3000",
     "http://141.95.123.145:5000",
-    "http://141.95.123.145",
     "https://141.95.123.145:3000",
-    "https://141.95.123.145:5000",
-    "https://141.95.123.145"
+    "https://141.95.123.145:5000"
 ]
 
 # Simple CORS configuration
@@ -236,29 +237,38 @@ def not_found(e):
 
 if __name__ == "__main__":
     # SSL certificate paths from Certbot (Windows paths)
-    ssl_context = None  # Default to no SSL
+    cert_path = r"C:\Certbot\live\fxalert.co.uk\fullchain.pem"
+    key_path = r"C:\Certbot\live\fxalert.co.uk\privkey.pem"
     
-    # Only use SSL if accessed via domain name
-    if os.environ.get('USE_SSL', 'false').lower() == 'true':
-        cert_path = r"C:\Certbot\live\fxalert.co.uk\fullchain.pem"
-        key_path = r"C:\Certbot\live\fxalert.co.uk\privkey.pem"
-        
-        if all(os.path.exists(path) for path in [cert_path, key_path]):
-            ssl_context = (cert_path, key_path)
-            logger.info("SSL certificates found, enabling HTTPS")
-        else:
-            logger.warning("SSL certificates not found, running without HTTPS")
+    if all(os.path.exists(path) for path in [cert_path, key_path]):
+        ssl_context = (cert_path, key_path)
+        logger.info("SSL certificates found, enabling HTTPS")
+    else:
+        logger.error("SSL certificates not found at expected paths!")
+        logger.error(f"Certificate path: {cert_path}")
+        logger.error(f"Private key path: {key_path}")
+        sys.exit(1)
     
     try:
         app.run(
             host="0.0.0.0",
-            port=5000,
+            port=443,  # Standard HTTPS port
             debug=False,
             ssl_context=ssl_context
         )
     except Exception as e:
         logger.error(f"Failed to start server: {str(e)}")
-        sys.exit(1)
+        # If permission denied on port 443, try fallback to 5000
+        if "Permission denied" in str(e):
+            logger.info("Attempting to start on port 5000...")
+            app.run(
+                host="0.0.0.0",
+                port=5000,
+                debug=False,
+                ssl_context=ssl_context
+            )
+        else:
+            sys.exit(1)
     
     
     
