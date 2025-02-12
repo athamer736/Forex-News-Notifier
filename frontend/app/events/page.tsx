@@ -335,7 +335,7 @@ function EventsPage() {
 
             const userId = localStorage.getItem('userId') || 'default';
             
-            // Use the domain name directly when in production
+            // Use IP address directly for production
             let baseUrl;
             if (typeof window !== 'undefined') {
                 if (window.location.hostname === 'localhost') {
@@ -343,10 +343,10 @@ function EventsPage() {
                 } else if (window.location.hostname === '192.168.0.144') {
                     baseUrl = 'http://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'https://fxalert.co.uk';  // Use the domain directly
+                    baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
                 }
             } else {
-                baseUrl = 'https://fxalert.co.uk';  // Default to domain in SSR
+                baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
             }
 
             // Add selected date to query parameters if applicable
@@ -455,10 +455,10 @@ function EventsPage() {
                     } else if (window.location.hostname === '192.168.0.144') {
                         baseUrl = 'http://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'https://fxalert.co.uk';
+                        baseUrl = 'https://fxalert.co.uk:5000';
                     }
                 } else {
-                    baseUrl = 'https://fxalert.co.uk';
+                    baseUrl = 'https://fxalert.co.uk:5000';
                 }
                 
                 console.log('Using base URL:', baseUrl);

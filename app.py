@@ -118,7 +118,14 @@ ALLOWED_ORIGINS = build_allowed_origins(LOCAL_IPS, SERVER_IP, DOMAIN)
 # Enable CORS with security settings
 CORS(app, 
     resources={r"/*": {
-        "origins": ["*"],  # Temporarily allow all origins for debugging
+        "origins": [
+            "https://141.95.123.145:5000",
+            "http://141.95.123.145:5000",
+            "http://localhost:3000",
+            "http://localhost:5000",
+            "http://192.168.0.144:3000",
+            "http://192.168.0.144:5000"
+        ],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
         "expose_headers": ["Content-Type", "Authorization"],
@@ -143,7 +150,12 @@ def add_security_headers(response):
     
     # Add CORS headers for all responses
     origin = request.headers.get('Origin')
-    if origin in ALLOWED_ORIGINS:
+    if origin in ALLOWED_ORIGINS or origin in [
+        "https://141.95.123.145:5000",
+        "http://141.95.123.145:5000",
+        "http://localhost:3000",
+        "http://localhost:5000"
+    ]:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
