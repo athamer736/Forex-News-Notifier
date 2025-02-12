@@ -16,6 +16,13 @@ const nextConfig = {
   // Configure page optimization
   poweredByHeader: false,
   compress: true,
+  server: {
+    https: {
+      cert: "C:\\Certbot\\live\\fxalert.co.uk\\fullchain.pem",
+      key: "C:\\Certbot\\live\\fxalert.co.uk\\privkey.pem"
+    },
+    port: 3000
+  }
 }
 
 module.exports = nextConfig 

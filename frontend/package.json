@@ -5,8 +5,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
+    "dev:https": "set HTTPS=true && next dev",
     "build": "next build",
     "start": "next start",
+    "start:https": "set HTTPS=true && next start",
     "lint": "next lint"
   },
   "dependencies": {
