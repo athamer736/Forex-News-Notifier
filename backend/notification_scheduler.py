@@ -23,7 +23,7 @@ def initialize_scheduler():
     # Schedule AI summary generation for new events
     scheduler.add_job(
         generate_missing_summaries,
-        CronTrigger(hour='*/4'),  # Run every 4 hours
+        CronTrigger(minute=0),  # Run every hour at minute 0
         name='generate_ai_summaries',
         max_instances=1,
         coalesce=True

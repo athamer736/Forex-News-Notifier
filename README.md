@@ -95,6 +95,11 @@ The application will be available at:
 - Automatic hourly updates from ForexFactory
 - Process monitoring and auto-restart
 - Comprehensive logging system
+- Payment Integration:
+  - PayPal subscription support
+  - Stripe payment processing
+  - Secure payment handling
+  - Automatic subscription management
 - AI-Enhanced Market Analysis:
   - Automated market predictions for US Futures (NQ, ES, YM)
   - Forex pair analysis (GBPUSD, EURUSD, DXY)
@@ -225,7 +230,52 @@ NOTIFICATION_TIMEZONE=UTC  # Your preferred timezone
 HIGH_IMPACT_ONLY=true  # Set to false to receive all events
 ```
 
-### 7. OpenAI Configuration
+### 7. Payment Integration Setup
+
+1. PayPal Configuration:
+   ```env
+   # PayPal Configuration
+   PAYPAL_CLIENT_ID=your_paypal_client_id
+   PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+   PAYPAL_MODE=sandbox  # Change to 'live' for production
+   ```
+
+   To get PayPal credentials:
+   - Go to https://developer.paypal.com/dashboard
+   - Create a new app or select an existing one
+   - Copy the Client ID and Secret
+   - Add them to your `.env` file
+
+2. Stripe Configuration:
+   ```env
+   # Stripe Configuration
+   STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+   STRIPE_SECRET_KEY=your_stripe_secret_key
+   STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+   ```
+
+   To get Stripe credentials:
+   - Go to https://dashboard.stripe.com/apikeys
+   - Create a new API key pair
+   - Set up a webhook endpoint in your Stripe dashboard
+   - Add the keys to your `.env` file
+
+3. Configure subscription plans:
+   ```env
+   # Subscription Configuration
+   BASIC_PLAN_ID=your_basic_plan_id
+   PREMIUM_PLAN_ID=your_premium_plan_id
+   PRO_PLAN_ID=your_pro_plan_id
+   ```
+
+4. The system will automatically:
+   - Handle subscription creation and management
+   - Process recurring payments
+   - Manage subscription status updates
+   - Handle payment webhooks
+   - Send payment confirmation emails
+
+### 8. OpenAI Configuration
 
 1. Get an API key from OpenAI:
    - Go to https://platform.openai.com/account/api-keys
