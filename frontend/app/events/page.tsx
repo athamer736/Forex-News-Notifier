@@ -335,7 +335,7 @@ function EventsPage() {
 
             const userId = localStorage.getItem('userId') || 'default';
             
-            // Use IP address directly for production
+            // Use IP address directly for production with HTTP
             let baseUrl;
             if (typeof window !== 'undefined') {
                 if (window.location.hostname === 'localhost') {
@@ -343,10 +343,10 @@ function EventsPage() {
                 } else if (window.location.hostname === '192.168.0.144') {
                     baseUrl = 'http://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
+                    baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
                 }
             } else {
-                baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
+                baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
             }
 
             // Add selected date to query parameters if applicable
@@ -455,10 +455,10 @@ function EventsPage() {
                     } else if (window.location.hostname === '192.168.0.144') {
                         baseUrl = 'http://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
+                        baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
                     }
                 } else {
-                    baseUrl = 'https://141.95.123.145:5000';  // Use IP directly
+                    baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
                 }
                 
                 console.log('Using base URL:', baseUrl);

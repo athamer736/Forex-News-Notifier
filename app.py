@@ -55,6 +55,34 @@ logger.setLevel(logging.INFO)
 
 app = Flask(__name__)
 
+# Basic security headers without forcing HTTPS
+csp = {
+    'default-src': ["'self'", "https:", "http:"],
+    'img-src': ["'self'", 'data:', 'https:', "http:"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+    'style-src': ["'self'", "'unsafe-inline'"],
+    'font-src': ["'self'", 'data:', 'https:', "http:"],
+    'frame-ancestors': "'none'",
+    'form-action': "'self'",
+    'connect-src': ["'self'", "https:", "http:", "*"]
+}
+
+Talisman(app,
+    force_https=False,  # Disable HTTPS forcing
+    strict_transport_security=False,  # Disable HSTS
+    session_cookie_secure=False,  # Allow non-secure cookies
+    session_cookie_http_only=True,
+    feature_policy={
+        'geolocation': "'none'",
+        'microphone': "'none'",
+        'camera': "'none'",
+        'payment': "'none'",
+        'usb': "'none'"
+    },
+    content_security_policy=csp,
+    content_security_policy_nonce_in=['script-src']
+)
+
 # Try to use Redis for rate limiting, fall back to memory if Redis is not available
 storage_uri = "memory://"  # Default to memory storage
 try:
@@ -81,107 +109,40 @@ limiter = Limiter(
     strategy="fixed-window"
 )
 
-# Security Headers with Talisman
-csp = {
-    'default-src': ["'self'", "https:", "http:"],
-    'img-src': ["'self'", 'data:', 'https:', "http:"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-    'style-src': ["'self'", "'unsafe-inline'"],
-    'font-src': ["'self'", 'data:', 'https:', "http:"],
-    'frame-ancestors': "'none'",
-    'form-action': "'self'",
-    'connect-src': ["'self'", "https:", "http:", "*"]
-}
-
-Talisman(app,
-    force_https=True,  # Enable HTTPS redirect now that we have SSL
-    strict_transport_security=True,
-    session_cookie_secure=True,
-    session_cookie_http_only=True,
-    feature_policy={
-        'geolocation': "'none'",
-        'microphone': "'none'",
-        'camera': "'none'",
-        'payment': "'none'",
-        'usb': "'none'"
-    },
-    content_security_policy=csp,
-    content_security_policy_nonce_in=['script-src']
-)
-
 # Get IP addresses and build allowed origins
 LOCAL_IPS = get_local_ip()
 SERVER_IP = get_server_ip() or "141.95.123.145"  # Fallback to known server IP
 DOMAIN = "fxalert.co.uk"
-ALLOWED_ORIGINS = build_allowed_origins(LOCAL_IPS, SERVER_IP, DOMAIN)
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5000",
+    "http://192.168.0.144:3000",
+    "http://192.168.0.144:5000"
+]
 
-# Enable CORS with security settings
+# Simple CORS configuration
 CORS(app, 
-    resources={r"/*": {
-        "origins": [
-            "https://141.95.123.145:5000",
-            "http://141.95.123.145:5000",
-            "http://localhost:3000",
-            "http://localhost:5000",
-            "http://192.168.0.144:3000",
-            "http://192.168.0.144:5000"
-        ],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
-        "expose_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True,
-        "max_age": 600,
-        "send_wildcard": False,
-        "automatic_options": True,
-        "vary_header": True
-    }},
-    supports_credentials=True
+    resources={
+        r"/*": {
+            "origins": ALLOWED_ORIGINS,
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
+            "supports_credentials": True
+        }
+    }
 )
 
-# Add security headers to all responses
 @app.after_request
-def add_security_headers(response):
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    
-    # Add CORS headers for all responses
+def add_cors_headers(response):
     origin = request.headers.get('Origin')
-    if origin in ALLOWED_ORIGINS or origin in [
-        "https://141.95.123.145:5000",
-        "http://141.95.123.145:5000",
-        "http://localhost:3000",
-        "http://localhost:5000"
-    ]:
+    if origin in ALLOWED_ORIGINS:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
-        response.headers['Access-Control-Max-Age'] = '600'
-    
     return response
-
-@app.before_request
-def handle_preflight():
-    """Handle preflight requests"""
-    if request.method == "OPTIONS":
-        response = app.make_default_options_response()
-        origin = request.headers.get('Origin')
-        
-        if origin in ALLOWED_ORIGINS:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
-            response.headers['Access-Control-Max-Age'] = '600'
-            logger.debug(f"Preflight approved for: {origin}")
-            return response
-        else:
-            logger.warning(f"Preflight denied for: {origin}")
-            return response, 403
 
 @app.before_request
 def initialize_app():
@@ -264,34 +225,29 @@ def not_found(e):
 
 if __name__ == "__main__":
     # SSL certificate paths from Certbot (Windows paths)
-    ssl_context = (
-        r"C:\Certbot\live\fxalert.co.uk\fullchain.pem",  # Certificate chain file
-        r"C:\Certbot\live\fxalert.co.uk\privkey.pem"     # Private key file
-    )
+    ssl_context = None  # Default to no SSL
     
-    # Ensure the certificate files exist
-    if not all(os.path.exists(cert) for cert in ssl_context):
-        logger.error("SSL certificate files not found. Please check the paths.")
-        sys.exit(1)
+    # Only use SSL if accessed via domain name
+    if os.environ.get('USE_SSL', 'false').lower() == 'true':
+        cert_path = r"C:\Certbot\live\fxalert.co.uk\fullchain.pem"
+        key_path = r"C:\Certbot\live\fxalert.co.uk\privkey.pem"
+        
+        if all(os.path.exists(path) for path in [cert_path, key_path]):
+            ssl_context = (cert_path, key_path)
+            logger.info("SSL certificates found, enabling HTTPS")
+        else:
+            logger.warning("SSL certificates not found, running without HTTPS")
     
     try:
         app.run(
             host="0.0.0.0",
-            port=443,  # Standard HTTPS port
+            port=5000,
             debug=False,
             ssl_context=ssl_context
         )
     except Exception as e:
         logger.error(f"Failed to start server: {str(e)}")
-        # If permission denied on port 443, try fallback to 5000
-        if "Permission denied" in str(e):
-            logger.info("Attempting to start on port 5000...")
-            app.run(
-                host="0.0.0.0",
-                port=5000,
-                debug=False,
-                ssl_context=ssl_context
-            )
+        sys.exit(1)
     
     
     
