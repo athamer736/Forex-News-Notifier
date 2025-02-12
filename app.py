@@ -119,7 +119,13 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5000",
     "http://192.168.0.144:3000",
-    "http://192.168.0.144:5000"
+    "http://192.168.0.144:5000",
+    "http://141.95.123.145:3000",
+    "http://141.95.123.145:5000",
+    "http://141.95.123.145",
+    "https://141.95.123.145:3000",
+    "https://141.95.123.145:5000",
+    "https://141.95.123.145"
 ]
 
 # Simple CORS configuration
@@ -129,9 +135,12 @@ CORS(app,
             "origins": ALLOWED_ORIGINS,
             "methods": ["GET", "POST", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
-            "supports_credentials": True
+            "supports_credentials": True,
+            "expose_headers": ["Content-Type", "Authorization"],
+            "max_age": 600
         }
-    }
+    },
+    supports_credentials=True
 )
 
 @app.after_request
@@ -142,6 +151,8 @@ def add_cors_headers(response):
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
+        response.headers['Access-Control-Max-Age'] = '600'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
     return response
 
 @app.before_request
