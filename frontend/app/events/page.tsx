@@ -3,6 +3,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
@@ -15,6 +16,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Grid } from '@mui/material';
 import { Collapse } from '@mui/material';
 import { CardActions } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useRouter } from 'next/navigation';
 
 interface ForexEvent {
     time: string;
@@ -47,6 +50,10 @@ interface TimezoneOption {
     value: string;
     label: string;
     FlagComponent?: React.ComponentType<{ title?: string; className?: string }>;
+}
+
+interface DateError {
+    message: string;
 }
 
 const timeRangeOptions: TimeRangeOption[] = [
@@ -98,6 +105,77 @@ const impactOptions = [
     { value: 'Non-Economic', label: 'Non-Economic', color: '#424242' }
 ];
 
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.2
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { y: -20, opacity: 0 },
+    visible: {
+        y: 0,
+        opacity: 1,
+        transition: {
+            type: "spring",
+            stiffness: 100,
+            damping: 12
+        }
+    }
+};
+
+const infoVariants = {
+    hidden: { 
+        height: 0,
+        opacity: 0,
+        scale: 0.95,
+        transition: {
+            height: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+            opacity: { duration: 0.2 },
+            scale: { duration: 0.2 }
+        }
+    },
+    visible: {
+        height: 'auto',
+        opacity: 1,
+        scale: 1,
+        transition: {
+            height: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+            opacity: { duration: 0.3, delay: 0.1 },
+            scale: { duration: 0.3, delay: 0.1 }
+        }
+    }
+};
+
+const cardVariants = {
+    hidden: { scale: 0.9, opacity: 0 },
+    visible: {
+        scale: 1,
+        opacity: 1,
+        transition: {
+            type: "spring",
+            stiffness: 100,
+            damping: 12
+        }
+    },
+    hover: {
+        scale: 1.02,
+        boxShadow: "0px 8px 20px rgba(0, 0, 0, 0.2)",
+        transition: {
+            type: "spring",
+            stiffness: 400,
+            damping: 10
+        }
+    },
+    tap: {
+        scale: 0.98
+    }
+};
+
 function EventsPage() {
     const [events, setEvents] = useState<ForexEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -137,24 +215,27 @@ function EventsPage() {
     const [dateError, setDateError] = useState<string>('');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
-    const [expanded, setExpanded] = useState<Set<number>>(new Set());
+    const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const router = useRouter();
 
-    const handleExpandClick = (index: number) => {
+    const handleExpandClick = (eventId: string, e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         setExpanded(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(index)) {
-                newSet.delete(index);
+            if (newSet.has(eventId)) {
+                newSet.delete(eventId);
             } else {
-                newSet.add(index);
+                newSet.add(eventId);
             }
             return newSet;
         });
     };
 
-    const handleInfoButtonClick = (e: React.MouseEvent<HTMLButtonElement>, index: number) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleExpandClick(index);
+    const handleInfoButtonClick = (e: React.MouseEvent<HTMLButtonElement>, eventId: string) => {
+        handleExpandClick(eventId, e);
     };
 
     // Remove the loading of saved filters from this useEffect since we're now doing it in the initial state
@@ -442,7 +523,7 @@ function EventsPage() {
         return () => clearInterval(interval);
     }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone, selectedDate]);
 
-    const getImpactColor = (impact: string) => {
+    const getImpactColor = (impact: string): string => {
         switch (impact.toLowerCase()) {
             case 'high':
                 return '#d32f2f';
@@ -525,7 +606,7 @@ function EventsPage() {
 
     // Add this utility function to group events by date
     const groupEventsByDate = (events: ForexEvent[]): Record<string, GroupedEvents> => {
-        const grouped = events.reduce((acc: Record<string, GroupedEvents>, event) => {
+        return events.reduce((acc: Record<string, GroupedEvents>, event) => {
             const date = new Date(event.time);
             const displayDate = date.toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -542,13 +623,11 @@ function EventsPage() {
             acc[displayDate].events.push(event);
             return acc;
         }, {});
-        return grouped;
     };
 
     const TableView = () => {
-        const groupedEvents: Record<string, GroupedEvents> = groupEventsByDate(events);
-        const sortedDates = Object.keys(groupedEvents).sort();
-
+        const groupedEvents = groupEventsByDate(events);
+        
         return (
             <TableContainer component={Paper} sx={{ mt: 2 }}>
                 <Table>
@@ -564,7 +643,7 @@ function EventsPage() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {Object.values(groupedEvents).map((group: GroupedEvents) => (
+                        {Object.values(groupedEvents).map((group) => (
                             <React.Fragment key={group.displayDate}>
                                 <TableRow>
                                     <TableCell
@@ -577,121 +656,97 @@ function EventsPage() {
                                         {group.displayDate}
                                     </TableCell>
                                 </TableRow>
-                                {group.events.map((event: ForexEvent, index: number) => (
-                                    <React.Fragment key={`${group.displayDate}-${index}`}>
-                                        <TableRow
-                                            sx={{
-                                                backgroundColor: event.isNew ? 'rgba(25, 118, 210, 0.08)' : 'inherit',
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                                                }
-                                            }}
-                                        >
-                                            <TableCell>
-                                                {new Date(event.time).toLocaleTimeString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={event.currency}
-                                                    size="small"
-                                                    sx={{
-                                                        backgroundColor: '#1976d2',
-                                                        color: '#fff'
-                                                    }}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={event.impact}
-                                                    size="small"
-                                                    sx={{
-                                                        backgroundColor: getImpactColor(event.impact),
-                                                        color: '#fff'
-                                                    }}
-                                                />
-                                            </TableCell>
-                                            <TableCell>{event.event_title}</TableCell>
-                                            <TableCell>{event.forecast || 'N/A'}</TableCell>
-                                            <TableCell>{event.previous || 'N/A'}</TableCell>
-                                            <TableCell>
-                                                {event.ai_summary && (
-                                                    <IconButton
+                                {group.events.map((event, eventIndex) => {
+                                    const eventId = `${group.displayDate}-${event.time}-${eventIndex}`;
+                                    return (
+                                        <React.Fragment key={eventId}>
+                                            <TableRow
+                                                sx={{
+                                                    backgroundColor: event.isNew ? 'rgba(25, 118, 210, 0.08)' : 'inherit',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                                    }
+                                                }}
+                                            >
+                                                <TableCell>
+                                                    {new Date(event.time).toLocaleTimeString([], {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip
+                                                        label={event.currency}
                                                         size="small"
-                                                        onClick={(e) => handleInfoButtonClick(e, index)}
-                                                        aria-expanded={expanded.has(index)}
-                                                        aria-label="show more"
-                                                    >
-                                                        <InfoIcon />
-                                                    </IconButton>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                        {event.ai_summary && (
-                                            <TableRow>
-                                                <TableCell colSpan={7} sx={{ p: 0 }}>
-                                                    <Collapse 
-                                                        in={expanded.has(index)} 
-                                                        timeout={500}
-                                                        unmountOnExit
                                                         sx={{
-                                                            '& .MuiCollapse-wrapper': {
-                                                                willChange: 'height, transform',
-                                                                transition: 'height 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                                                            },
-                                                            '& .MuiCollapse-wrapperInner': {
-                                                                willChange: 'transform, opacity',
-                                                                transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)'
-                                                            }
+                                                            backgroundColor: '#1976d2',
+                                                            color: '#fff'
                                                         }}
-                                                    >
-                                                        <Box 
-                                                            sx={{
-                                                                p: 3,
-                                                                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                                                                transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-20px)',
-                                                                opacity: expanded.has(index) ? 1 : 0,
-                                                                transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                                                                borderRadius: 1,
-                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                                                margin: 1,
-                                                                willChange: 'transform, opacity'
-                                                            }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip
+                                                        label={event.impact}
+                                                        size="small"
+                                                        sx={{
+                                                            backgroundColor: getImpactColor(event.impact),
+                                                            color: '#fff'
+                                                        }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>{event.event_title}</TableCell>
+                                                <TableCell>{event.forecast || 'N/A'}</TableCell>
+                                                <TableCell>{event.previous || 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    {event.ai_summary && (
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={(e) => handleInfoButtonClick(e, eventId)}
+                                                            aria-expanded={expanded.has(eventId)}
+                                                            aria-label="show more"
                                                         >
-                                                            <Typography 
-                                                                variant="subtitle1" 
-                                                                gutterBottom
-                                                                sx={{ 
-                                                                    fontWeight: 500,
-                                                                    transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
-                                                                    opacity: expanded.has(index) ? 1 : 0,
-                                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms',
-                                                                    willChange: 'transform, opacity'
-                                                                }}
-                                                            >
-                                                                AI Analysis
-                                                            </Typography>
-                                                            <Typography 
-                                                                variant="body2" 
-                                                                sx={{ 
-                                                                    whiteSpace: 'pre-line',
-                                                                    transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
-                                                                    opacity: expanded.has(index) ? 1 : 0,
-                                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms',
-                                                                    willChange: 'transform, opacity'
-                                                                }}
-                                                            >
-                                                                {event.ai_summary}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Collapse>
+                                                            {expanded.has(eventId) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                                        </IconButton>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
-                                        )}
-                                    </React.Fragment>
-                                ))}
+                                            <TableRow>
+                                                <TableCell colSpan={7} sx={{ padding: 0, border: 0 }}>
+                                                    <AnimatePresence mode="sync" initial={false}>
+                                                        {expanded.has(eventId) && (
+                                                            <motion.div
+                                                                key={`info-${eventId}`}
+                                                                initial="hidden"
+                                                                animate="visible"
+                                                                exit="hidden"
+                                                                variants={infoVariants}
+                                                                style={{ 
+                                                                    overflow: 'hidden',
+                                                                    transformOrigin: 'top',
+                                                                    position: 'relative',
+                                                                    width: '100%'
+                                                                }}
+                                                            >
+                                                                <Box sx={{ 
+                                                                    p: 3, 
+                                                                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                                                                    borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+                                                                }}>
+                                                                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
+                                                                        AI Analysis
+                                                                    </Typography>
+                                                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                                                        {event.ai_summary}
+                                                                    </Typography>
+                                                                </Box>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </TableCell>
+                                            </TableRow>
+                                        </React.Fragment>
+                                    );
+                                })}
                             </React.Fragment>
                         ))}
                     </TableBody>
@@ -702,7 +757,6 @@ function EventsPage() {
 
     const GridView = () => {
         const groupedEvents = groupEventsByDate(events);
-        const sortedDates = Object.keys(groupedEvents).sort();
 
         if (events.length === 0) {
             return (
@@ -729,138 +783,146 @@ function EventsPage() {
         }
 
         return (
-            <Grid container spacing={2} sx={{ mt: 2 }}>
-                {Object.values(groupedEvents).map(group => (
-                    <Grid item xs={12} key={group.displayDate}>
-                        <Typography
-                            variant="h6"
-                            sx={{
-                                mb: 2,
-                                pb: 1,
-                                borderBottom: '2px solid #1976d2'
-                            }}
-                        >
-                            {group.displayDate}
-                        </Typography>
-                        <Grid container spacing={2}>
-                            {group.events.map((event, index) => (
-                                <Grid item xs={12} sm={6} md={4} key={`${group.displayDate}-${index}`}>
-                                    <Card
-                                        sx={{
-                                            height: '100%',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            backgroundColor: event.isNew ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
-                                        }}
+            <Grid container spacing={3}>
+                {Object.entries(groupedEvents).map(([date, group]) => (
+                    <React.Fragment key={date}>
+                        <Grid item xs={12}>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    color: '#fff',
+                                    py: 1,
+                                    px: 2,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    borderRadius: 1
+                                }}
+                            >
+                                {group.displayDate}
+                            </Typography>
+                        </Grid>
+                        {group.events.map((event, eventIndex) => {
+                            const eventId = `${group.displayDate}-${event.time}-${eventIndex}`;
+                            return (
+                                <Grid item xs={12} sm={6} md={4} key={eventId}>
+                                    <motion.div
+                                        variants={itemVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        transition={{ delay: eventIndex * 0.1 }}
                                     >
-                                        <CardContent sx={{ flexGrow: 1 }}>
-                                            <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-                                                <Chip
-                                                    label={event.currency}
-                                                    size="small"
-                                                    sx={{
-                                                        backgroundColor: '#1976d2',
-                                                        color: '#fff'
-                                                    }}
-                                                />
-                                                <Chip
-                                                    label={event.impact}
-                                                    size="small"
-                                                    sx={{
-                                                        backgroundColor: getImpactColor(event.impact),
-                                                        color: '#fff'
-                                                    }}
-                                                />
-                                            </Box>
-                                            <Typography variant="subtitle1" gutterBottom>
-                                                {new Date(event.time).toLocaleTimeString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </Typography>
-                                            <Typography variant="body1" gutterBottom>
-                                                {event.event_title}
-                                            </Typography>
-                                            <Box sx={{ mt: 1 }}>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Forecast: {event.forecast || 'N/A'}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Previous: {event.previous || 'N/A'}
-                                                </Typography>
-                                            </Box>
-                                        </CardContent>
-                                        {event.ai_summary && (
-                                            <CardActions>
-                                                <Button
-                                                    size="small"
-                                                    onClick={(e) => handleInfoButtonClick(e, index)}
-                                                    endIcon={expanded.has(index) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                                                >
-                                                    {expanded.has(index) ? 'Hide Analysis' : 'Show Analysis'}
-                                                </Button>
-                                            </CardActions>
-                                        )}
-                                        <Collapse 
-                                            in={expanded.has(index)} 
-                                            timeout={500}
-                                            unmountOnExit
+                                        <Card
                                             sx={{
-                                                '& .MuiCollapse-wrapper': {
-                                                    willChange: 'height, transform',
-                                                    transition: 'height 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                                                },
-                                                '& .MuiCollapse-wrapperInner': {
-                                                    willChange: 'transform, opacity',
-                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)'
-                                                }
+                                                height: '100%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                background: '#fff',
+                                                position: 'relative',
+                                                overflow: 'visible'
                                             }}
                                         >
-                                            <Box 
-                                                sx={{
-                                                    p: 3,
-                                                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                                                    transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-20px)',
-                                                    opacity: expanded.has(index) ? 1 : 0,
-                                                    transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                                                    borderRadius: 1,
-                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                                    margin: 1,
-                                                    willChange: 'transform, opacity'
-                                                }}
-                                            >
-                                                <Typography 
-                                                    variant="subtitle1" 
-                                                    gutterBottom
-                                                    sx={{ 
-                                                        fontWeight: 500,
-                                                        transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
-                                                        opacity: expanded.has(index) ? 1 : 0,
-                                                        transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms',
-                                                        willChange: 'transform, opacity'
+                                            <CardContent>
+                                                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <Typography variant="h6" component="div">
+                                                        {new Date(event.time).toLocaleTimeString([], {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                        <Chip
+                                                            label={event.currency}
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                                                color: '#1976d2',
+                                                                fontWeight: 'medium'
+                                                            }}
+                                                        />
+                                                        <Chip
+                                                            label={event.impact}
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: getImpactColor(event.impact),
+                                                                color: '#fff',
+                                                                fontWeight: 'medium'
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                </Box>
+                                                <Typography variant="body1" sx={{ mb: 2 }}>
+                                                    {event.event_title}
+                                                </Typography>
+                                                <Grid container spacing={1}>
+                                                    <Grid item xs={4}>
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            Forecast
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            {event.forecast || 'N/A'}
+                                                        </Typography>
+                                                    </Grid>
+                                                    <Grid item xs={4}>
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            Previous
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            {event.previous || 'N/A'}
+                                                        </Typography>
+                                                    </Grid>
+                                                    <Grid item xs={4}>
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            Actual
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            {event.actual || 'N/A'}
+                                                        </Typography>
+                                                    </Grid>
+                                                </Grid>
+                                            </CardContent>
+                                            <CardActions sx={{ mt: 'auto', justifyContent: 'flex-end' }}>
+                                                <IconButton
+                                                    onClick={(e) => handleInfoButtonClick(e, eventId)}
+                                                    aria-expanded={expanded.has(eventId)}
+                                                    aria-label="show more"
+                                                    sx={{
+                                                        transform: expanded.has(eventId) ? 'rotate(180deg)' : 'rotate(0)',
+                                                        transition: 'transform 0.3s'
                                                     }}
                                                 >
-                                                    AI Analysis
-                                                </Typography>
-                                                <Typography 
-                                                    variant="body2" 
-                                                    sx={{ 
-                                                        whiteSpace: 'pre-line',
-                                                        transform: expanded.has(index) ? 'translateY(0)' : 'translateY(-16px)',
-                                                        opacity: expanded.has(index) ? 1 : 0,
-                                                        transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms, opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms',
-                                                        willChange: 'transform, opacity'
-                                                    }}
-                                                >
-                                                    {event.ai_summary}
-                                                </Typography>
+                                                    <InfoIcon />
+                                                </IconButton>
+                                            </CardActions>
+                                            <Box sx={{ position: 'relative', width: '100%' }}>
+                                                <AnimatePresence mode="sync" initial={false}>
+                                                    {expanded.has(eventId) && (
+                                                        <motion.div
+                                                            key={`info-${eventId}`}
+                                                            initial="hidden"
+                                                            animate="visible"
+                                                            exit="hidden"
+                                                            variants={infoVariants}
+                                                            style={{ 
+                                                                overflow: 'hidden',
+                                                                transformOrigin: 'top',
+                                                                position: 'relative',
+                                                                width: '100%'
+                                                            }}
+                                                        >
+                                                            <CardContent>
+                                                                <Typography paragraph>
+                                                                    {event.ai_summary || 'No additional information available.'}
+                                                                </Typography>
+                                                            </CardContent>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </Box>
-                                        </Collapse>
-                                    </Card>
+                                        </Card>
+                                    </motion.div>
                                 </Grid>
-                            ))}
-                        </Grid>
-                    </Grid>
+                            );
+                        })}
+                    </React.Fragment>
                 ))}
             </Grid>
         );
@@ -875,536 +937,304 @@ function EventsPage() {
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-            {error && (
-                <Box mb={4}>
-                    <Alert 
-                        severity={error.includes('Rate limit') ? "info" : "error"}
-                        sx={{ mb: 2 }}
-                    >
-                        {error}
-                        {retryTimer !== null && (
-                            <Box component="span" sx={{ display: 'block', mt: 1 }}>
-                                Retrying automatically...
-                            </Box>
-                        )}
-                    </Alert>
-                </Box>
-            )}
-
-            <Box mb={6} textAlign="center">
-                <Typography 
-                    variant="h3" 
-                    component="h1" 
-                    gutterBottom
-                    sx={{
-                        fontWeight: 'bold',
-                        color: '#cccccc',
-                        transition: 'color 0.3s ease',
-                        mb: 4
-                    }}
+        <Box
+            sx={{
+                minHeight: '100vh',
+                background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+                color: '#fff',
+                pt: 8,
+                pb: 12
+            }}
+        >
+            <Container maxWidth="lg">
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
                 >
-                    Forex Economic Calendar
-                </Typography>
-                
-                <Box 
-                    display="flex" 
-                    flexDirection="row" 
-                    justifyContent="center" 
-                    alignItems="flex-start" 
-                    gap={2} 
-                    mb={6}
-                    sx={{
-                        flexWrap: 'wrap',
-                        maxWidth: '900px',
-                        margin: '0 auto',
-                        position: 'relative'
-                    }}
-                >
-                    {/* View Toggle Button */}
-                    <Box 
-                        sx={{ 
-                            position: 'absolute',
-                            right: 0,
-                            top: -50,
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            borderRadius: '8px',
-                            padding: '4px'
-                        }}
-                    >
-                        <IconButton 
-                            onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
-                            sx={{ 
-                                color: '#000',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                                }
-                            }}
-                        >
-                            {viewMode === 'grid' ? <TableViewIcon /> : <GridViewIcon />}
-                        </IconButton>
-                    </Box>
-
-                    {/* Timezone Selector */}
-                    <Box sx={{ minWidth: '200px', pb: 3 }}>
-                        <Typography 
-                            variant="h6" 
-                            sx={{ 
-                                mb: 1,
-                                fontWeight: 600,
-                                color: '#fff',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                fontSize: '0.9rem'
-                            }}
-                        >
-                            Timezone
-                        </Typography>
-                        <FormControl fullWidth>
-                            <Select
-                                value={selectedTimezone}
-                                onChange={(e) => setSelectedTimezone(e.target.value)}
+                    <motion.div variants={itemVariants}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                            <Button
+                                onClick={() => router.push('/')}
+                                startIcon={<ArrowBackIcon />}
                                 sx={{
-                                    backgroundColor: '#fff',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.7)',
-                                    },
-                                }}
-                                renderValue={(value) => {
-                                    const option = timezoneOptions.find(opt => opt.value === value);
-                                    return (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {option?.FlagComponent ? (
-                                                <Box sx={{ width: 24, height: 16 }}>
-                                                    <option.FlagComponent title={option.label} />
-                                                </Box>
-                                            ) : (
-                                                <Box 
-                                                    sx={{ 
-                                                        width: 24, 
-                                                        height: 16, 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center' 
-                                                    }}
-                                                >
-                                                    🌐
-                                                </Box>
-                                            )}
-                                            <span>{option?.label}</span>
-                                        </Box>
-                                    );
+                                    color: '#fff',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                    }
                                 }}
                             >
-                                {timezoneOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {option.FlagComponent && (
-                                                <Box sx={{ width: 24, height: 16 }}>
-                                                    <option.FlagComponent title={option.label} />
-                                                </Box>
-                                            )}
-                                            {!option.FlagComponent && (
-                                                <Box 
-                                                    sx={{ 
-                                                        width: 24, 
-                                                        height: 16, 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center' 
-                                                    }}
-                                                >
-                                                    🌐
-                                                </Box>
-                                            )}
-                                            <span>{option.label}</span>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
+                                Back to Home
+                            </Button>
+                        </Box>
 
-                    {/* Time Range Button and Menu */}
-                    <Box sx={{ minWidth: '200px', pb: 3 }}>
-                        <Typography 
-                            variant="h6" 
-                            sx={{ 
-                                mb: 1,
-                                fontWeight: 600,
-                                color: '#fff',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                fontSize: '0.9rem'
-                            }}
-                        >
-                            Time Range
-                        </Typography>
-                        <Button
-                            id="time-range-button"
-                            aria-controls={open ? 'time-range-menu' : undefined}
-                            aria-haspopup="true"
-                            aria-expanded={open ? 'true' : undefined}
-                            onClick={handleClick}
-                            startIcon={<CalendarTodayIcon />}
+                        <Typography
+                            variant="h1"
                             sx={{
-                                width: '100%',
-                                backgroundColor: '#fff',
-                                color: '#000',
-                                textTransform: 'none',
-                                justifyContent: 'flex-start',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                },
-                                padding: '8px 14px',
-                                height: '56px', // Match height with other inputs
+                                fontSize: { xs: '2.5rem', md: '4rem' },
+                                fontWeight: 700,
+                                textAlign: 'center',
+                                mb: 2,
+                                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent'
                             }}
                         >
-                            {getTimeRangeDisplayText()}
-                        </Button>
-                        <Popover
-                            id="time-range-menu"
-                            anchorEl={anchorEl}
-                            open={open}
-                            onClose={handleClose}
-                            anchorOrigin={{
-                                vertical: 'bottom',
-                                horizontal: 'left',
-                            }}
-                            transformOrigin={{
-                                vertical: 'top',
-                                horizontal: 'left',
-                            }}
-                            PaperProps={{
-                                sx: {
-                                    mt: 1,
-                                    width: '300px',
-                                    p: 2,
-                                }
-                            }}
-                        >
-                            <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                                    Select Date
-                                </Typography>
-                                <TextField
-                                    type="date"
-                                    value={selectedDate}
-                                    onChange={handleDateChange}
-                                    fullWidth
-                                    size="small"
-                                    inputProps={{
-                                        min: '2025-02-02'
-                                    }}
-                                    sx={{ 
-                                        mb: 2,
-                                        '& input::-webkit-calendar-picker-indicator': {
-                                            opacity: 1
-                                        },
-                                        '& input[type="date"]::-webkit-datetime-edit-day-field:disabled, & input[type="date"]::-webkit-datetime-edit-month-field:disabled, & input[type="date"]::-webkit-datetime-edit-year-field:disabled': {
-                                            color: 'rgba(0, 0, 0, 0.38)'
-                                        }
-                                    }}
-                                />
-                            </Box>
-                            <Box>
-                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                                    Quick Ranges
-                                </Typography>
-                                {timeRangeOptions.map((option) => (
-                                    <MenuItem 
-                                        key={option.value} 
-                                        value={option.value}
-                                        onClick={() => {
-                                            setTimeRange(option.value);
-                                            if (option.value !== 'specific_date') {
-                                                setSelectedDate('');
-                                            }
-                                            handleClose();
-                                        }}
-                                        selected={timeRange === option.value}
-                                        sx={{
-                                            borderRadius: '4px',
-                                            mb: 0.5,
-                                            '&.Mui-selected': {
-                                                backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                                            },
-                                            '&.Mui-selected:hover': {
-                                                backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                                            },
-                                        }}
-                                    >
-                                        {option.label}
-                                    </MenuItem>
-                                ))}
-                            </Box>
-                        </Popover>
-                    </Box>
-
-                    {/* Currency Filter */}
-                    <Box sx={{ minWidth: '200px', pb: 3 }}>
-                        <Typography 
-                            variant="h6" 
-                            sx={{ 
-                                mb: 1,
-                                fontWeight: 600,
-                                color: '#fff',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                fontSize: '0.9rem'
-                            }}
-                        >
-                            Currencies
+                            Forex Events Calendar
                         </Typography>
-                        <FormControl fullWidth>
-                            <Select
-                                multiple
-                                value={selectedCurrencies}
-                                onChange={handleCurrencyChange}
-                                displayEmpty
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            '& .Mui-selected': {
-                                                backgroundColor: 'rgba(25, 118, 210, 0.08) !important'
-                                            }
-                                        }
-                                    }
-                                }}
-                                renderValue={(selected) => {
-                                    if (selected.length === 0) {
-                                        return <span style={{ color: 'rgba(0, 0, 0, 0.6)' }}>Select currencies...</span>;
-                                    }
-                                    if (selected.length === 1) {
-                                        return (
-                                            <Chip 
-                                                label={selected[0]}
-                                                sx={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: '#fff',
-                                                    height: '24px'
-                                                }}
-                                            />
-                                        );
-                                    }
-                                    return (
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Chip 
-                                                label={`${selected.length} currencies selected`}
-                                                sx={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: '#fff',
-                                                    height: '24px'
-                                                }}
-                                            />
-                                        </Box>
-                                    );
-                                }}
-                                sx={{
-                                    backgroundColor: '#fff',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.7)',
-                                    },
-                                }}
-                            >
-                                {currencyOptions.map((option) => (
-                                    <MenuItem 
-                                        key={option.value} 
-                                        value={option.value}
-                                        sx={{
-                                            position: 'relative',
-                                            border: selectedCurrencies.includes(option.value) ? '1px solid #1976d2' : 'none',
-                                            backgroundColor: selectedCurrencies.includes(option.value) ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
-                                            borderRadius: '4px',
-                                            my: 0.5,
-                                            '&:hover': {
-                                                backgroundColor: selectedCurrencies.includes(option.value) ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)'
-                                            }
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                                            <span>{option.label}</span>
-                                            {selectedCurrencies.includes(option.value) && (
-                                                <Chip 
-                                                    size="small"
-                                                    label="×"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleRemoveCurrency(option.value);
-                                                    }}
-                                                    onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                    }}
-                                                    sx={{ 
-                                                        ml: 1,
-                                                        minWidth: '24px',
-                                                        height: '24px',
-                                                        backgroundColor: '#1976d2',
-                                                        color: '#fff',
-                                                        '&:hover': {
-                                                            backgroundColor: '#d32f2f'
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
+                    </motion.div>
 
-                    {/* Impact Filter */}
-                    <Box sx={{ minWidth: '200px', pb: 3 }}>
-                        <Typography 
-                            variant="h6" 
-                            sx={{ 
-                                mb: 1,
-                                fontWeight: 600,
-                                color: '#fff',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                fontSize: '0.9rem'
+                    <motion.div variants={itemVariants}>
+                        <Typography
+                            variant="h2"
+                            sx={{
+                                fontSize: { xs: '1.2rem', md: '1.5rem' },
+                                textAlign: 'center',
+                                mb: 6,
+                                color: 'rgba(255, 255, 255, 0.8)'
                             }}
                         >
-                            Impact Levels
+                            Track real-time forex events and market updates
                         </Typography>
-                        <FormControl fullWidth>
-                            <Select
-                                multiple
-                                value={selectedImpacts}
-                                onChange={handleImpactChange}
-                                displayEmpty
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            '& .Mui-selected': {
-                                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important'
-                                            }
-                                        }
-                                    }
-                                }}
-                                renderValue={(selected) => {
-                                    if (selected.length === 0) {
-                                        return <span style={{ color: 'rgba(0, 0, 0, 0.6)' }}>Select impact levels...</span>;
-                                    }
-                                    if (selected.length === 1) {
-                                        const impact = selected[0] as string;
-                                        return (
-                                            <Chip 
-                                                label={impact}
-                                                sx={{
-                                                    backgroundColor: getImpactColor(impact),
-                                                    color: '#fff',
-                                                    height: '24px'
-                                                }}
-                                            />
-                                        );
-                                    }
-                                    return (
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Chip 
-                                                label={`${selected.length} impacts selected`}
-                                                sx={{
-                                                    backgroundColor: '#424242',
-                                                    color: '#fff',
-                                                    height: '24px'
-                                                }}
-                                            />
-                                        </Box>
-                                    );
-                                }}
-                                sx={{
-                                    backgroundColor: '#fff',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.3)',
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.7)',
-                                    },
-                                }}
-                            >
-                                {impactOptions.map((option) => (
-                                    <MenuItem 
-                                        key={option.value} 
-                                        value={option.value}
-                                        sx={{
-                                            position: 'relative',
-                                            border: selectedImpacts.includes(option.value) ? `1px solid ${option.color}` : 'none',
-                                            backgroundColor: selectedImpacts.includes(option.value) ? `${option.color}15` : 'transparent',
-                                            borderRadius: '4px',
-                                            my: 0.5,
-                                            '&:hover': {
-                                                backgroundColor: selectedImpacts.includes(option.value) ? `${option.color}20` : 'rgba(0, 0, 0, 0.04)'
-                                            }
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                <Box
-                                                    sx={{
-                                                        width: 12,
-                                                        height: 12,
-                                                        borderRadius: '50%',
-                                                        backgroundColor: option.color,
-                                                        mr: 1
-                                                    }}
-                                                />
-                                                <span>{option.label}</span>
-                                            </Box>
-                                            {selectedImpacts.includes(option.value) && (
-                                                <Chip 
-                                                    size="small"
-                                                    label="×"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleRemoveImpact(option.value);
-                                                    }}
-                                                    onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                    }}
-                                                    sx={{ 
-                                                        ml: 1,
-                                                        minWidth: '24px',
-                                                        height: '24px',
-                                                        backgroundColor: option.color,
-                                                        color: '#fff',
-                                                        '&:hover': {
-                                                            backgroundColor: '#d32f2f'
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
-                </Box>
-            </Box>
+                    </motion.div>
 
-            {viewMode === 'grid' ? <GridView /> : <TableView />}
-        </Container>
+                    <motion.div variants={itemVariants}>
+                        <Box
+                            sx={{
+                                background: '#fff',
+                                borderRadius: 2,
+                                p: 4,
+                                mb: 4,
+                                color: '#000'
+                            }}
+                        >
+                            {/* Filters Section */}
+                            <Grid container spacing={3} sx={{ mb: 4 }}>
+                                <Grid item xs={12} md={4}>
+                                    <FormControl fullWidth sx={{ minWidth: '100%' }}>
+                                        <Select
+                                            value={timeRange}
+                                            onChange={(e) => setTimeRange(e.target.value)}
+                                            sx={{
+                                                backgroundColor: '#fff',
+                                                height: '56px',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.23)'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.87)'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            }}
+                                        >
+                                            {timeRangeOptions.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={12} md={4}>
+                                    <FormControl fullWidth>
+                                        <Select
+                                            multiple
+                                            value={selectedCurrencies}
+                                            onChange={handleCurrencyChange}
+                                            renderValue={(selected) => (
+                                                <Box sx={{ 
+                                                    display: 'flex', 
+                                                    flexWrap: 'wrap', 
+                                                    gap: 0.5,
+                                                    maxWidth: '100%',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    {selected.map((value) => (
+                                                        <Chip 
+                                                            key={value} 
+                                                            label={value}
+                                                            size="small"
+                                                            sx={{
+                                                                maxWidth: '90px',
+                                                                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                                color: '#2196F3',
+                                                                '& .MuiChip-label': {
+                                                                    whiteSpace: 'nowrap',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    fontSize: '0.8125rem',
+                                                                    padding: '0 6px'
+                                                                }
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            )}
+                                            sx={{
+                                                backgroundColor: '#fff',
+                                                height: '56px',
+                                                '& .MuiSelect-select': {
+                                                    display: 'flex',
+                                                    flexWrap: 'wrap',
+                                                    gap: '4px',
+                                                    alignItems: 'center',
+                                                    padding: '8px 14px',
+                                                    minHeight: '56px !important',
+                                                    maxHeight: '56px !important',
+                                                    overflow: 'hidden !important'
+                                                },
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.23)'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.87)'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            }}
+                                            MenuProps={{
+                                                PaperProps: {
+                                                    style: {
+                                                        maxHeight: '300px'
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            {currencyOptions.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={12} md={4}>
+                                    <FormControl fullWidth>
+                                        <Select
+                                            multiple
+                                            value={selectedImpacts}
+                                            onChange={handleImpactChange}
+                                            renderValue={(selected) => (
+                                                <Box sx={{ 
+                                                    display: 'flex', 
+                                                    flexWrap: 'wrap', 
+                                                    gap: 0.5,
+                                                    maxWidth: '100%',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    {selected.map((value) => (
+                                                        <Chip 
+                                                            key={value} 
+                                                            label={value}
+                                                            size="small"
+                                                            sx={{
+                                                                maxWidth: '90px',
+                                                                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                                color: '#2196F3',
+                                                                '& .MuiChip-label': {
+                                                                    whiteSpace: 'nowrap',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    fontSize: '0.8125rem',
+                                                                    padding: '0 6px'
+                                                                }
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            )}
+                                            sx={{
+                                                backgroundColor: '#fff',
+                                                height: '56px',
+                                                '& .MuiSelect-select': {
+                                                    display: 'flex',
+                                                    flexWrap: 'wrap',
+                                                    gap: '4px',
+                                                    alignItems: 'center',
+                                                    padding: '8px 14px',
+                                                    minHeight: '56px !important',
+                                                    maxHeight: '56px !important',
+                                                    overflow: 'hidden !important'
+                                                },
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.23)'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.87)'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            }}
+                                            MenuProps={{
+                                                PaperProps: {
+                                                    style: {
+                                                        maxHeight: '300px'
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            {impactOptions.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            </Grid>
+
+                            {/* View Toggle */}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                                <IconButton
+                                    onClick={() => setViewMode('table')}
+                                    sx={{
+                                        color: viewMode === 'table' ? '#2196F3' : 'rgba(0, 0, 0, 0.54)',
+                                        mr: 1
+                                    }}
+                                >
+                                    <TableViewIcon />
+                                </IconButton>
+                                <IconButton
+                                    onClick={() => setViewMode('grid')}
+                                    sx={{
+                                        color: viewMode === 'grid' ? '#2196F3' : 'rgba(0, 0, 0, 0.54)'
+                                    }}
+                                >
+                                    <GridViewIcon />
+                                </IconButton>
+                            </Box>
+
+                            {/* Events Display */}
+                            {loading ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                                    <CircularProgress sx={{ color: '#2196F3' }} />
+                                </Box>
+                            ) : error ? (
+                                <Alert severity="error" sx={{ mb: 3 }}>
+                                    {error}
+                                </Alert>
+                            ) : (
+                                viewMode === 'table' ? (
+                                    <motion.div variants={itemVariants}>
+                                        <TableView />
+                                    </motion.div>
+                                ) : (
+                                    <motion.div variants={itemVariants}>
+                                        <GridView />
+                                    </motion.div>
+                                )
+                            )}
+                        </Box>
+                    </motion.div>
+                </motion.div>
+            </Container>
+        </Box>
     );
 }
 
