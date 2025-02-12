@@ -83,13 +83,14 @@ limiter = Limiter(
 
 # Security Headers with Talisman
 csp = {
-    'default-src': "'self'",
-    'img-src': ["'self'", 'data:', 'https:'],
-    'script-src': ["'self'", "'unsafe-inline'"],
+    'default-src': ["'self'", "https:", "http:"],
+    'img-src': ["'self'", 'data:', 'https:', "http:"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
     'style-src': ["'self'", "'unsafe-inline'"],
-    'font-src': ["'self'", 'data:', 'https:'],
+    'font-src': ["'self'", 'data:', 'https:', "http:"],
     'frame-ancestors': "'none'",
-    'form-action': "'self'"
+    'form-action': "'self'",
+    'connect-src': ["'self'", "https:", "http:", "*"]
 }
 
 Talisman(app,
@@ -117,7 +118,7 @@ ALLOWED_ORIGINS = build_allowed_origins(LOCAL_IPS, SERVER_IP, DOMAIN)
 # Enable CORS with security settings
 CORS(app, 
     resources={r"/*": {
-        "origins": ALLOWED_ORIGINS,  # Use the complete list from build_allowed_origins
+        "origins": ["*"],  # Temporarily allow all origins for debugging
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
         "expose_headers": ["Content-Type", "Authorization"],
