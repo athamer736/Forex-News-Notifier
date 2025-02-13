@@ -10,12 +10,12 @@ app.prepare().then(() => {
     createServer((req, res) => {
         const parsedUrl = parse(req.url, true);
         handle(req, res, parsedUrl);
-    }).listen(process.env.PORT || 3000, (err) => {
+    }).listen(process.env.PORT || 3001, (err) => {
         if (err) {
             console.error('Failed to start server:', err);
             throw err;
         }
-        console.log('> Ready on http://localhost:' + (process.env.PORT || 3000));
+        console.log('> Ready on http://localhost:' + (process.env.PORT || 3001));
     });
 }).catch(err => {
     console.error('Error during app preparation:', err);

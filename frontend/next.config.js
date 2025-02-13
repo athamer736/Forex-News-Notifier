@@ -8,7 +8,9 @@ const nextConfig = {
   },
   // Configure page optimization
   poweredByHeader: false,
-  compress: true
+  compress: true,
+  // Add port configuration
+  port: 3001
 }
 
 module.exports = nextConfig 
