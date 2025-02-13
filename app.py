@@ -69,9 +69,9 @@ csp = {
 
 # Enable HTTPS and security features
 Talisman(app,
-    force_https=True,  # Force HTTPS
-    strict_transport_security=True,
-    session_cookie_secure=True,
+    force_https=False,  # Don't force HTTPS
+    strict_transport_security=False,
+    session_cookie_secure=False,
     session_cookie_http_only=True,
     feature_policy={
         'geolocation': "'none'",
@@ -115,16 +115,16 @@ LOCAL_IPS = get_local_ip()
 SERVER_IP = get_server_ip() or "141.95.123.145"  # Fallback to known server IP
 DOMAIN = "fxalert.co.uk"
 ALLOWED_ORIGINS = [
-    "https://localhost:3000",
-    "https://localhost:5000",
-    "https://127.0.0.1:3000",
-    "https://127.0.0.1:5000",
-    "https://192.168.0.144:3000",
-    "https://192.168.0.144:5000",
-    "https://fxalert.co.uk",
-    "https://www.fxalert.co.uk",
-    "https://141.95.123.145:3000",
-    "https://141.95.123.145:5000"
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5000",
+    "http://192.168.0.144:3000",
+    "http://192.168.0.144:5000",
+    "http://fxalert.co.uk",
+    "http://www.fxalert.co.uk",
+    "http://141.95.123.145:3000",
+    "http://141.95.123.145:5000"
 ]
 
 # Simple CORS configuration
@@ -242,47 +242,12 @@ def not_found(e):
     return {"error": "Resource not found."}, 404
 
 if __name__ == "__main__":
-    cert_path = r"C:\Certbot\live\fxalert.co.uk\fullchain.pem"
-    key_path = r"C:\Certbot\live\fxalert.co.uk\privkey.pem"
-    
     try:
-        # Check if certificate files exist and are readable
-        if not os.path.exists(cert_path):
-            logger.error(f"Certificate file not found: {cert_path}")
-            sys.exit(1)
-        if not os.path.exists(key_path):
-            logger.error(f"Private key file not found: {key_path}")
-            sys.exit(1)
-            
-        # Try to read the files to verify permissions
-        with open(cert_path, 'rb') as f:
-            f.read()
-        with open(key_path, 'rb') as f:
-            f.read()
-            
-        ssl_context = (cert_path, key_path)
-        logger.info("SSL certificates loaded successfully")
-        
-        # Try to start on port 443 first
-        try:
-            logger.info("Starting Flask backend on port 443 (HTTPS)...")
-            app.run(
-                host="0.0.0.0",
-                port=443,
-                debug=False,
-                ssl_context=ssl_context
-            )
-        except PermissionError:
-            # If permission denied on 443, try 5000
-            logger.info("Permission denied on port 443, falling back to port 5000...")
-            logger.info("Note: Frontend will still run on port 3000")
-            app.run(
-                host="0.0.0.0",
-                port=5000,
-                debug=False,
-                ssl_context=ssl_context
-            )
-            
+        app.run(
+            host="0.0.0.0",
+            port=5000,
+            debug=False
+        )
     except Exception as e:
         logger.error(f"Failed to start server: {str(e)}")
         logger.error("Error details:", exc_info=True)
