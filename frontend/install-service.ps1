@@ -93,6 +93,21 @@ Write-Host "Installing new service..."
 
 Write-Host "Installing dependencies and building the application..."
 Set-Location $appDirectory
+
+# Load environment variables from .env.local
+$envContent = Get-Content .env.local
+$envString = ""
+foreach ($line in $envContent) {
+    if ($line -match '^\s*([^#][^=]+)=(.+)$') {
+        $key = $matches[1].Trim()
+        $value = $matches[2].Trim()
+        $envString += "$key=$value;"
+    }
+}
+
+Write-Host "Setting environment variables for the service..."
+& $nssm set $serviceName AppEnvironmentExtra $envString
+
 npm install
 npm run build
 
@@ -101,7 +116,6 @@ Write-Host "Configuring service..."
 & $nssm set $serviceName AppDirectory $appDirectory
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
-& $nssm set $serviceName AppEnvironmentExtra "NODE_ENV=production"
 & $nssm set $serviceName Start SERVICE_AUTO_START
 & $nssm set $serviceName ObjectName LocalSystem  # Run as LocalSystem account
 & $nssm set $serviceName AppStdout "$appDirectory\logs\service-output.log"
