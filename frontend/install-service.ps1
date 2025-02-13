@@ -94,8 +94,19 @@ Write-Host "Installing new service..."
 Write-Host "Installing dependencies and building the application..."
 Set-Location $appDirectory
 
+# Copy .env.local from root directory if it exists
+Write-Host "Copying environment file..."
+$rootEnvFile = "C:\FlaskApps\forex_news_notifier\.env.local"
+if (Test-Path $rootEnvFile) {
+    Copy-Item $rootEnvFile -Destination ".env.local" -Force
+    Write-Host "Environment file copied successfully"
+} else {
+    Write-Error "Could not find .env.local in root directory"
+    exit 1
+}
+
 # Load environment variables from .env.local
-$envContent = Get-Content .env.local
+$envContent = Get-Content ".env.local"
 $envString = "NODE_ENV=production;"  # Ensure production mode is set
 foreach ($line in $envContent) {
     if ($line -match '^\s*([^#][^=]+)=(.+)$') {
