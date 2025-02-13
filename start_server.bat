@@ -81,8 +81,8 @@ start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && 
 :: Start email scheduler in a new window
 start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && call venv\Scripts\activate && python scripts\email_scheduler.py"
 
-:: Start frontend in a new window
-start "Frontend Server" cmd /c "color 0D && echo Starting Frontend... && cd frontend && npm run dev"
+:: Start frontend in a new window with production mode
+start "Frontend Server" cmd /c "color 0D && echo Starting Frontend in Production Mode... && cd frontend && npm run build && echo Build complete, starting server... && npm run start && pause"
 
 echo.
 echo %GREEN%All components started in separate windows!%RESET%
