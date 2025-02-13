@@ -139,20 +139,39 @@ try {
 Write-Host "Building application..."
 try {
     $env:NODE_ENV = "production"
-    # Use the full path to next
-    $nextBin = Join-Path $appDirectory "node_modules\.bin\next"
-    & $nextBin build
+    # Run npm run build directly
+    Write-Host "Running build command..."
+    npm run build
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm run build failed with exit code $LASTEXITCODE"
+    }
 
+    # Verify the build was created
     if (-not (Test-Path ".next")) {
         throw "Build failed - .next directory not created"
     }
+    
+    Write-Host "Build completed successfully"
 } catch {
     Write-Error "Build failed: $_"
+    # Get the npm error log if it exists
+    $npmLog = Join-Path $env:TEMP "npm-debug.log"
+    if (Test-Path $npmLog) {
+        Write-Host "NPM Debug Log:"
+        Get-Content $npmLog | ForEach-Object { Write-Host $_ }
+    }
     exit 1
 }
 
 Write-Host "Configuring service..."
-& $nssm set $serviceName AppParameters ".\node_modules\next\dist\bin\next start -p 3000"
+# Set the correct path to node and the start script
+$nodePath = (Get-Command node).Path
+$startScript = Join-Path $appDirectory "node_modules\next\dist\bin\next"
+$startParams = "start -p 3000"
+
+& $nssm set $serviceName Application $nodePath
+& $nssm set $serviceName AppParameters "$startScript $startParams"
 & $nssm set $serviceName AppDirectory $appDirectory
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
