@@ -12,14 +12,15 @@ Write-Host "Adding new HTTP binding..."
 New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "fxalert.co.uk"
 
 Write-Host "Adding new HTTPS binding..."
-$binding = New-WebBinding -Name $siteName -Protocol "https" -Port 3000 -HostHeader "fxalert.co.uk" -SslFlags 1
+New-WebBinding -Name $siteName -Protocol "https" -Port 3000 -HostHeader "fxalert.co.uk" -SslFlags 1
 
-Write-Host "Getting certificate from store..."
-$cert = Get-Item -Path "Cert:\LocalMachine\My\$thumbprint"
+Write-Host "Configuring SSL certificate..."
+Push-Location IIS:\SslBindings
+Get-Item "Cert:\LocalMachine\My\$thumbprint" | New-Item "0.0.0.0!3000"
+Pop-Location
 
-Write-Host "Binding certificate to website..."
-$binding = Get-WebBinding -Name $siteName -Protocol "https" -Port 3000
-$binding.AddSslCertificate($thumbprint, "My")
+Write-Host "Setting physical path..."
+Set-ItemProperty "IIS:\Sites\$siteName" -Name "physicalPath" -Value "C:\FlaskApps\forex_news_notifier\frontend"
 
 Write-Host "Restarting IIS..."
 iisreset /restart
