@@ -1,41 +1,28 @@
 # Requires -RunAsAdministrator
+Import-Module WebAdministration
 
 # Certificate thumbprint
 $thumbprint = "71F1F7C0984196C468404F281CE0FE617E5EFA3B"
+$siteName = "ForexNewsNotifier"
 
-# Remove existing bindings for port 3000
-$existingBindings = & netsh http show sslcert
-if ($existingBindings -match "0.0.0.0:3000") {
-    & netsh http delete sslcert ipport=0.0.0.0:3000
-}
+Write-Host "Removing existing bindings..."
+Get-WebBinding -Name $siteName | Remove-WebBinding
 
-# Generate new GUID for the application ID
-$appGuid = [System.Guid]::NewGuid().ToString("B")
+Write-Host "Adding new HTTP binding..."
+New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "fxalert.co.uk"
 
-# Add new SSL certificate binding
-Write-Host "Adding SSL certificate binding..."
-$result = & netsh http add sslcert ipport=0.0.0.0:3000 certhash=$thumbprint appid=$appGuid
+Write-Host "Adding new HTTPS binding..."
+$binding = New-WebBinding -Name $siteName -Protocol "https" -Port 3000 -HostHeader "fxalert.co.uk" -SslFlags 1
 
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "SSL certificate binding successful!"
-} else {
-    Write-Host "SSL certificate binding failed with error code: $LASTEXITCODE"
-    Write-Host $result
-}
+Write-Host "Getting certificate from store..."
+$cert = Get-Item -Path "Cert:\LocalMachine\My\$thumbprint"
 
-# Verify the binding
-Write-Host "`nVerifying SSL bindings:"
-& netsh http show sslcert ipport=0.0.0.0:3000
+Write-Host "Binding certificate to website..."
+$binding = Get-WebBinding -Name $siteName -Protocol "https" -Port 3000
+$binding.AddSslCertificate($thumbprint, "My")
 
-# Update IIS bindings
-Import-Module WebAdministration
-Set-ItemProperty "IIS:\Sites\ForexNewsNotifier" -Name "bindings" -Value @{
-    protocol="https";
-    bindingInformation="*:3000:fxalert.co.uk";
-    certificateHash=$thumbprint;
-    sslFlags=1
-}
+Write-Host "Restarting IIS..."
+iisreset /restart
 
-# Restart IIS
-Write-Host "`nRestarting IIS..."
-iisreset /restart 
+Write-Host "Configuration complete. Verifying bindings..."
+Get-WebBinding -Name $siteName | Format-Table Protocol, BindingInformation 
