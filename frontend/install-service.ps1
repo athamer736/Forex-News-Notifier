@@ -96,7 +96,7 @@ Set-Location $appDirectory
 
 # Load environment variables from .env.local
 $envContent = Get-Content .env.local
-$envString = ""
+$envString = "NODE_ENV=production;"  # Ensure production mode is set
 foreach ($line in $envContent) {
     if ($line -match '^\s*([^#][^=]+)=(.+)$') {
         $key = $matches[1].Trim()
@@ -108,8 +108,25 @@ foreach ($line in $envContent) {
 Write-Host "Setting environment variables for the service..."
 & $nssm set $serviceName AppEnvironmentExtra $envString
 
+Write-Host "Cleaning previous build..."
+if (Test-Path ".next") {
+    Remove-Item -Recurse -Force ".next"
+}
+if (Test-Path "node_modules") {
+    Remove-Item -Recurse -Force "node_modules"
+}
+
+Write-Host "Installing dependencies..."
 npm install
+
+Write-Host "Building application..."
+$env:NODE_ENV = "production"
 npm run build
+
+if (-not (Test-Path ".next")) {
+    Write-Error "Build failed - .next directory not created"
+    exit 1
+}
 
 Write-Host "Configuring service..."
 & $nssm set $serviceName AppParameters ".\node_modules\next\dist\bin\next start -p 3000"
