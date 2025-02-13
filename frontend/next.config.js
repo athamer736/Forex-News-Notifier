@@ -6,23 +6,9 @@ const nextConfig = {
     // Remove console logs in production
     removeConsole: process.env.NODE_ENV === 'production',
   },
-  // Enable static optimization
-  experimental: {
-    // Enable optimizations
-    optimizeCss: true,
-    // Enable modern build output
-    optimizePackageImports: ['@mui/material', '@mui/icons-material'],
-  },
   // Configure page optimization
   poweredByHeader: false,
-  compress: true,
-  server: {
-    https: {
-      cert: "C:\\Certbot\\live\\fxalert.co.uk\\fullchain.pem",
-      key: "C:\\Certbot\\live\\fxalert.co.uk\\privkey.pem"
-    },
-    port: 3000
-  }
+  compress: true
 }
 
 module.exports = nextConfig 

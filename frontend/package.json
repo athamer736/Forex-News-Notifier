@@ -5,10 +5,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
-    "dev:https": "set HTTPS=true && next dev",
+    "dev:https": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node server.js",
     "build": "next build",
-    "start": "next start",
-    "start:https": "set HTTPS=true && next start",
+    "start": "next start -p 3000",
+    "start:https": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=production node server.js",
     "lint": "next lint"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "@paypal/react-paypal-js": "^8.8.2",
     "@stripe/stripe-js": "^5.6.0",
     "country-flag-icons": "^1.5.16",
+    "critters": "^0.0.23",
     "framer-motion": "^12.4.2",
     "next": "^14.2.23",
     "react": "^18",
@@ -31,6 +32,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.17",
+    "cross-env": "^7.0.3",
     "eslint": "^8",
     "eslint-config-next": "14.1.0",
     "postcss": "^8.4.35",
