@@ -108,11 +108,18 @@ if (Test-Path $rootEnvFile) {
 # Load environment variables from .env.local
 $envContent = Get-Content ".env.local"
 $envString = "NODE_ENV=production;"  # Ensure production mode is set
+
+# Don't disable TLS verification in production
+$envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"  # Enable certificate verification
+
 foreach ($line in $envContent) {
     if ($line -match '^\s*([^#][^=]+)=(.+)$') {
         $key = $matches[1].Trim()
         $value = $matches[2].Trim()
-        $envString += "$key=$value;"
+        # Skip the NODE_TLS_REJECT_UNAUTHORIZED variable as we've already set it
+        if ($key -ne "NODE_TLS_REJECT_UNAUTHORIZED") {
+            $envString += "$key=$value;"
+        }
     }
 }
 
