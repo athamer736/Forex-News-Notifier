@@ -16,6 +16,53 @@ echo    Forex News Notifier Server Manager
 echo =======================================%RESET%
 echo.
 
+:: Check if running as administrator
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo %RED%Please run this script as Administrator%RESET%
+    pause
+    exit /b 1
+)
+
+:: Ask for mode
+echo Choose startup mode:
+echo 1) Development Mode (separate windows)
+echo 2) Production Mode (Windows Services)
+set /p mode="Enter choice (1 or 2): "
+
+if "%mode%"=="2" (
+    echo %YELLOW%Starting Production Mode (Windows Services)...%RESET%
+    
+    :: Start the Flask Backend Service
+    echo %YELLOW%Starting Flask Backend Service...%RESET%
+    net start FlaskBackend
+    if %errorLevel% neq 0 (
+        echo %RED%Failed to start Flask Backend Service%RESET%
+        pause
+        exit /b 1
+    )
+
+    :: Start the Next.js Frontend Service
+    echo %YELLOW%Starting Next.js Frontend Service...%RESET%
+    net start NextJSFrontend
+    if %errorLevel% neq 0 (
+        echo %RED%Failed to start Next.js Frontend Service%RESET%
+        pause
+        exit /b 1
+    )
+
+    echo.
+    echo %GREEN%Services started successfully!%RESET%
+    echo %BLUE%Backend running on https://localhost:5000%RESET%
+    echo %BLUE%Frontend running on https://localhost:3000%RESET%
+    echo.
+    echo %YELLOW%Press any key to exit...%RESET%
+    pause > nul
+    exit /b 0
+)
+
+:: Development Mode - Keep existing functionality
+
 :: Check if Python is installed
 python --version > nul 2>&1
 if %errorlevel% neq 0 (
@@ -38,8 +85,8 @@ if %errorlevel% neq 0 (
 if not exist "logs" mkdir logs
 
 :: Check if we're in the right directory
-if not exist "scripts\start_server.py" (
-    echo %RED%Error: Could not find start_server.py%RESET%
+if not exist "frontend" (
+    echo %RED%Error: Could not find frontend directory%RESET%
     echo Please run this batch file from the project root directory
     pause
     exit /b 1
@@ -90,94 +137,28 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: Install frontend dependencies
-echo %YELLOW%Installing frontend dependencies...%RESET%
-cd frontend
-call npm install > ..\logs\npm_install.log 2>&1
-if %errorlevel% neq 0 (
-    echo %RED%Error installing frontend dependencies. Check logs\npm_install.log for details%RESET%
-    cd ..
+:: Start the Flask Backend Service
+echo %YELLOW%Starting Flask Backend Service...%RESET%
+net start FlaskBackend
+if %errorLevel% neq 0 (
+    echo %RED%Failed to start Flask Backend Service%RESET%
     pause
     exit /b 1
 )
-cd ..
 
-echo.
-echo %GREEN%All dependencies installed successfully!%RESET%
-echo.
-
-:: Initialize database
-echo %YELLOW%Initializing database...%RESET%
-python scripts\init_db.py > logs\db_init.log 2>&1
-if %errorlevel% neq 0 (
-    echo %RED%Error initializing database. Check logs\db_init.log for details%RESET%
+:: Start the Next.js Frontend Service
+echo %YELLOW%Starting Next.js Frontend Service...%RESET%
+net start NextJSFrontend
+if %errorLevel% neq 0 (
+    echo %RED%Failed to start Next.js Frontend Service%RESET%
     pause
     exit /b 1
 )
-echo %GREEN%Database initialized successfully!%RESET%
+
 echo.
-
-:: Create individual batch files for each component
-echo %YELLOW%Creating component runners...%RESET%
-
-:: Create Flask server runner
-echo @echo off > run_flask.bat
-echo title Forex News Notifier - Flask Server >> run_flask.bat
-echo color 0B >> run_flask.bat
-echo set PYTHONPATH=%cd% >> run_flask.bat
-echo call venv\Scripts\activate >> run_flask.bat
-echo python app.py >> run_flask.bat
-echo pause >> run_flask.bat
-
-:: Create event scheduler runner
-echo @echo off > run_event_scheduler.bat
-echo title Forex News Notifier - Event Scheduler >> run_event_scheduler.bat
-echo color 0A >> run_event_scheduler.bat
-echo set PYTHONPATH=%cd% >> run_event_scheduler.bat
-echo call venv\Scripts\activate >> run_event_scheduler.bat
-echo python scripts\run_scheduler.py >> run_event_scheduler.bat
-echo pause >> run_event_scheduler.bat
-
-:: Create email scheduler runner
-echo @echo off > run_email_scheduler.bat
-echo title Forex News Notifier - Email Scheduler >> run_email_scheduler.bat
-echo color 0E >> run_email_scheduler.bat
-echo set PYTHONPATH=%cd% >> run_email_scheduler.bat
-echo call venv\Scripts\activate >> run_email_scheduler.bat
-echo python scripts\email_scheduler.py >> run_email_scheduler.bat
-echo pause >> run_email_scheduler.bat
-
-:: Create frontend runner
-echo @echo off > run_frontend.bat
-echo title Forex News Notifier - Frontend >> run_frontend.bat
-echo color 0D >> run_frontend.bat
-echo cd frontend >> run_frontend.bat
-echo npm run dev >> run_frontend.bat
-echo pause >> run_frontend.bat
-
-:: Start all components in separate windows
-echo %YELLOW%Starting all components...%RESET%
-echo %BLUE%Each component will open in its own window%RESET%
+echo %GREEN%Services started successfully!%RESET%
+echo %BLUE%Backend running on https://localhost:5000%RESET%
+echo %BLUE%Frontend running on https://localhost:3000%RESET%
 echo.
-
-start "Flask Server" run_flask.bat
-timeout /t 2 > nul
-start "Event Scheduler" run_event_scheduler.bat
-timeout /t 2 > nul
-start "Email Scheduler" run_email_scheduler.bat
-timeout /t 2 > nul
-start "Frontend" run_frontend.bat
-
-echo %GREEN%All components started!%RESET%
-echo.
-echo %BLUE%Component Status:%RESET%
-echo - Flask Server: Running in separate window
-echo - Event Scheduler: Running in separate window
-echo - Email Scheduler: Running in separate window
-echo - Frontend: Running in separate window
-echo.
-echo %YELLOW%To stop all components, close their respective windows%RESET%
-echo %YELLOW%You can also close this window - the other processes will continue running%RESET%
-echo.
-echo %BLUE%Press any key to exit this window...%RESET%
+echo %YELLOW%Press any key to exit...%RESET%
 pause > nul 
