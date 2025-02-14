@@ -43,47 +43,17 @@ $serviceName = "FlaskBackend"
 $nssm = "C:\nssm\win64\nssm.exe"
 $pythonExe = "C:\FlaskApps\forex_news_notifier\venv\Scripts\python.exe"
 $appDirectory = "C:\FlaskApps\forex_news_notifier"
-$gunicornScript = Join-Path $appDirectory "backend\run_gunicorn.py"
+$serverScript = Join-Path $appDirectory "backend\run_gunicorn.py"
 
-# Create Gunicorn script
-$gunicornContent = @"
-import os
-import sys
-from gunicorn.app.base import BaseApplication
-from app import app
+# Ensure logs directory exists
+$logsDir = Join-Path $appDirectory "logs"
+if (-not (Test-Path $logsDir)) {
+    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+}
 
-class GunicornApp(BaseApplication):
-    def __init__(self, app, options=None):
-        self.options = options or {}
-        self.application = app
-        super().__init__()
-
-    def load_config(self):
-        for key, value in self.options.items():
-            self.cfg.set(key, value)
-
-    def load(self):
-        return self.application
-
-if __name__ == '__main__':
-    options = {
-        'bind': '0.0.0.0:5000',
-        'workers': 4,
-        'certfile': 'C:/Certbot/live/fxalert.co.uk/fullchain.pem',
-        'keyfile': 'C:/Certbot/live/fxalert.co.uk/privkey.pem',
-        'accesslog': 'logs/gunicorn-access.log',
-        'errorlog': 'logs/gunicorn-error.log',
-        'capture_output': True,
-        'ssl_version': 5,  # TLS
-        'do_handshake_on_connect': False,
-        'worker_class': 'sync'
-    }
-    GunicornApp(app, options).run()
-"@
-
-# Create the Gunicorn script file
-New-Item -Path $gunicornScript -ItemType File -Force
-Set-Content -Path $gunicornScript -Value $gunicornContent
+Write-Host "Installing required Python packages..."
+$pipCmd = Join-Path (Split-Path $pythonExe) "pip.exe"
+& $pipCmd install waitress paste
 
 Write-Host "NSSM found at $nssm"
 
@@ -98,20 +68,23 @@ try {
 
 Write-Host "Stopping and removing existing service if it exists..."
 & $nssm stop $serviceName 2>$null
+Start-Sleep -Seconds 2
 & $nssm remove $serviceName confirm 2>$null
+Start-Sleep -Seconds 2
 
 Write-Host "Installing new service..."
 & $nssm install $serviceName $pythonExe
 
 Write-Host "Configuring service..."
 & $nssm set $serviceName AppDirectory $appDirectory
-& $nssm set $serviceName AppParameters "$gunicornScript"
+& $nssm set $serviceName AppParameters "$serverScript"
 & $nssm set $serviceName DisplayName "Flask Backend Service"
 & $nssm set $serviceName Description "Forex News Notifier Backend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
-& $nssm set $serviceName ObjectName LocalSystem
+& $nssm set $serviceName ObjectName "LocalSystem"
 & $nssm set $serviceName AppStdout "logs\flask-service-output.log"
 & $nssm set $serviceName AppStderr "logs\flask-service-error.log"
+& $nssm set $serviceName AppThrottle 0
 
 # Set environment variables
 $envString = "PATH=$env:PATH;$appDirectory\venv\Scripts;"
@@ -119,7 +92,8 @@ $envString += "PYTHONPATH=$appDirectory;"
 $envString += "FLASK_ENV=production;"
 $envString += "FLASK_APP=app.py;"
 $envString += "SSL_CERT_FILE=C:/Certbot/live/fxalert.co.uk/fullchain.pem;"
-$envString += "SSL_KEY_FILE=C:/Certbot/live/fxalert.co.uk/privkey.pem"
+$envString += "SSL_KEY_FILE=C:/Certbot/live/fxalert.co.uk/privkey.pem;"
+$envString += "PYTHONUNBUFFERED=1"
 
 & $nssm set $serviceName AppEnvironmentExtra $envString
 
@@ -131,13 +105,23 @@ $service = Get-Service $serviceName
 Write-Host "Service Status: $($service.Status)"
 
 if ($service.Status -ne 'Running') {
-    Write-Warning "Service is not running. Attempting to start again..."
+    Write-Warning "Service is not running. Checking error logs..."
+    if (Test-Path "logs\flask-service-error.log") {
+        Write-Host "Error log contents:"
+        Get-Content "logs\flask-service-error.log" -Tail 20
+    }
+    
+    Write-Warning "Attempting to start again with more delay..."
     Stop-Service $serviceName -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
-    Start-Service $serviceName
     Start-Sleep -Seconds 5
+    Start-Service $serviceName
+    Start-Sleep -Seconds 10
     $service = Get-Service $serviceName
     Write-Host "Final Service Status: $($service.Status)"
+    
+    if ($service.Status -ne 'Running') {
+        Write-Error "Failed to start service. Please check the logs in the logs directory."
+    }
 }
 
 Write-Host "Service installation complete. Check Windows Services to verify the service is running." 

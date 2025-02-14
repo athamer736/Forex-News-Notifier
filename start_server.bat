@@ -83,7 +83,7 @@ if not exist "venv" (
 
 :: Install required Python packages
 echo %YELLOW%Installing/Updating Python packages...%RESET%
-call venv\Scripts\activate && pip install gunicorn
+call venv\Scripts\activate && pip install waitress paste
 
 :: Start Frontend Service Installation in a new window
 start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.js Frontend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd frontend; .\install-service.ps1; pause"""
