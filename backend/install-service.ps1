@@ -44,21 +44,6 @@ $nssm = "C:\nssm\win64\nssm.exe"
 $pythonExe = "C:\FlaskApps\forex_news_notifier\venv\Scripts\python.exe"
 $appDirectory = "C:\FlaskApps\forex_news_notifier"
 $appScript = Join-Path $appDirectory "app.py"
-$gunicornScript = Join-Path $appDirectory "backend\run_gunicorn.py"
-
-# Create a batch script to run both servers
-$batchScript = @"
-@echo off
-echo Starting Flask Backend Services...
-start "Flask Main" /B "$pythonExe" "$appScript"
-start "Flask Gunicorn" /B "$pythonExe" "$gunicornScript"
-:loop
-timeout /t 60 /nobreak > nul
-goto loop
-"@
-
-$batchPath = Join-Path $appDirectory "run_servers.bat"
-$batchScript | Out-File -FilePath $batchPath -Encoding ASCII
 
 # Ensure logs directory exists
 $logsDir = Join-Path $appDirectory "logs"
@@ -69,7 +54,6 @@ if (-not (Test-Path $logsDir)) {
 Write-Host "Installing required Python packages..."
 $pipCmd = Join-Path (Split-Path $pythonExe) "pip.exe"
 & $pipCmd install -r requirements.txt
-& $pipCmd install waitress paste
 
 Write-Host "NSSM found at $nssm"
 
@@ -89,11 +73,11 @@ Start-Sleep -Seconds 2
 Start-Sleep -Seconds 2
 
 Write-Host "Installing new service..."
-& $nssm install $serviceName cmd.exe
+& $nssm install $serviceName $pythonExe
 
 Write-Host "Configuring service..."
 & $nssm set $serviceName AppDirectory $appDirectory
-& $nssm set $serviceName AppParameters "/c $batchPath"
+& $nssm set $serviceName AppParameters "$appScript"
 & $nssm set $serviceName DisplayName "Flask Backend Service"
 & $nssm set $serviceName Description "Forex News Notifier Backend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
@@ -143,4 +127,4 @@ if ($service.Status -ne 'Running') {
 }
 
 Write-Host "`nService installation complete. Check Windows Services to verify the service is running."
-Write-Host "Both Flask servers are running on port 5000" 
+Write-Host "Flask server is running on port 5000" 
