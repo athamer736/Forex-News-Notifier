@@ -82,22 +82,25 @@ Write-Host "Installing new service..."
 Write-Host "Installing dependencies and building the application..."
 Set-Location $appDirectory
 
-# Copy .env from root directory if it exists
-Write-Host "Copying environment file..."
+# Check for environment files
+Write-Host "Checking environment files..."
+$frontendEnvFile = Join-Path $appDirectory ".env"
 $rootEnvFile = "C:\FlaskApps\forex_news_notifier\.env"
-$localEnvFile = ".env"
-if (Test-Path $rootEnvFile) {
-    Copy-Item $rootEnvFile -Destination $localEnvFile -Force
+
+# Prioritize frontend .env file
+if (Test-Path $frontendEnvFile) {
+    Write-Host "Using existing frontend environment file"
+} elseif (Test-Path $rootEnvFile) {
+    Write-Host "Copying root environment file..."
+    Copy-Item $rootEnvFile -Destination $frontendEnvFile -Force
     Write-Host "Environment file copied successfully"
-} elseif (Test-Path $localEnvFile) {
-    Write-Host "Using existing environment file"
 } else {
-    Write-Error "Could not find .env file"
+    Write-Error "Could not find any .env file"
     exit 1
 }
 
 # Load environment variables from .env
-$envContent = Get-Content $localEnvFile
+$envContent = Get-Content $frontendEnvFile
 $envString = "NODE_ENV=production;"
 $envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"
 
