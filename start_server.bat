@@ -72,6 +72,14 @@ if not exist "venv" (
     )
 )
 
+:: Install and configure frontend service first
+echo %YELLOW%Installing and configuring Next.js Frontend Service...%RESET%
+powershell -ExecutionPolicy Bypass -File "frontend\install-service.ps1"
+if %errorLevel% neq 0 (
+    echo %RED%Warning: Frontend service installation had issues%RESET%
+    echo %YELLOW%Continuing with other services...%RESET%
+)
+
 :: Start Flask backend in a new window
 start "Flask Backend" cmd /c "color 09 && echo Starting Flask Backend... && call venv\Scripts\activate && python app.py"
 
@@ -81,11 +89,11 @@ start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && 
 :: Start email scheduler in a new window
 start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && call venv\Scripts\activate && python scripts\email_scheduler.py"
 
-:: Start frontend in a new window with production mode
+:: Start frontend in production mode
 start "Frontend Server" cmd /c "color 0D && echo Starting Frontend in Production Mode... && cd frontend && npm run build && echo Build complete, starting server... && npm run start && pause"
 
 echo.
-echo %GREEN%All components started in separate windows!%RESET%
+echo %GREEN%All components started!%RESET%
 echo %BLUE%Backend running on https://localhost:5000%RESET%
 echo %BLUE%Frontend running on https://localhost:3000%RESET%
 echo.
@@ -96,65 +104,4 @@ pause > nul
 taskkill /F /FI "WINDOWTITLE eq Flask Backend*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Frontend Server*" > nul 2>&1
-
-:MENU
-echo Choose startup mode:
-echo 1) Development Mode (separate windows)
-echo 2) Production Mode (Windows Services)
-set /p mode="Enter choice (1 or 2): "
-
-if "%mode%"=="2" (
-    echo %YELLOW%Starting Production Mode (Windows Services)...%RESET%
-    
-    :: Start the Flask Backend Service
-    echo %YELLOW%Starting Flask Backend Service...%RESET%
-    net start FlaskBackend
-    if %errorLevel% neq 0 (
-        echo %RED%Failed to start Flask Backend Service%RESET%
-        pause
-        exit /b 1
-    )
-
-    :: Start the Next.js Frontend Service
-    echo %YELLOW%Starting Next.js Frontend Service...%RESET%
-    net start NextJSFrontend
-    if %errorLevel% neq 0 (
-        echo %RED%Failed to start Next.js Frontend Service%RESET%
-        pause
-        exit /b 1
-    )
-
-    echo.
-    echo %GREEN%Services started successfully!%RESET%
-    echo %BLUE%Backend running on https://localhost:5000%RESET%
-    echo %BLUE%Frontend running on https://localhost:3000%RESET%
-    echo.
-    echo %YELLOW%Press any key to exit...%RESET%
-    pause > nul
-    goto :EOF
-)
-
-if "%mode%"=="1" (
-    :: Development Mode
-    echo %YELLOW%Starting Development Mode...%RESET%
-
-    echo.
-    echo %GREEN%All components started in separate windows!%RESET%
-    echo %BLUE%Backend running on https://localhost:5000%RESET%
-    echo %BLUE%Frontend running on https://localhost:3000%RESET%
-    echo.
-    echo %YELLOW%Close this window to stop all services...%RESET%
-    pause > nul
-    
-    :: Kill all the processes when the user closes the window
-    taskkill /F /FI "WINDOWTITLE eq Flask Backend*" > nul 2>&1
-    taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
-    taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1
-    taskkill /F /FI "WINDOWTITLE eq Frontend Server*" > nul 2>&1
-    goto :EOF
-) else (
-    echo %RED%Invalid choice. Please enter 1 or 2.%RESET%
-    echo.
-    goto :MENU
-) 
+taskkill /F /FI "WINDOWTITLE eq Frontend Server*" > nul 2>&1 
