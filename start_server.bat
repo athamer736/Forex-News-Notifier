@@ -83,7 +83,7 @@ if not exist "venv" (
 
 :: Install required Python packages
 echo %YELLOW%Installing/Updating Python packages...%RESET%
-call venv\Scripts\activate && pip install waitress paste
+call venv\Scripts\activate && pip install -r requirements.txt
 
 :: Start Backend Service Installation in a new window
 echo %YELLOW%Installing and starting backend service...%RESET%
@@ -100,6 +100,10 @@ start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.j
 :: Start event scheduler in a new window
 echo %YELLOW%Starting event scheduler...%RESET%
 start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && call venv\Scripts\activate && python scripts\run_scheduler.py"
+
+:: Start AI summary generator in a new window with hourly scheduling
+echo %YELLOW%Starting AI summary generator...%RESET%
+start "AI Summary Generator" cmd /c "color 0D && echo Starting AI Summary Generator... && call venv\Scripts\activate && (for /l %%x in () do ( python scripts\generate_summaries.py && timeout /t 3600 /nobreak )) && pause"
 
 :: Start email scheduler in a new window
 echo %YELLOW%Starting email scheduler...%RESET%
@@ -121,4 +125,5 @@ pause > nul
 taskkill /F /FI "WINDOWTITLE eq Frontend Service Installation*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Backend Service Installation*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq AI Summary Generator*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1 
