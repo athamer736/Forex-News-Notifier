@@ -87,4 +87,15 @@ try {
         console.error('Please verify certificate paths');
     }
     process.exit(1);
-} 
+}
+
+// Add error handlers for the HTTPS server
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+    process.exit(1);
+}); 
