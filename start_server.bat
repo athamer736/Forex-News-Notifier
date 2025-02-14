@@ -72,13 +72,8 @@ if not exist "venv" (
     )
 )
 
-:: Install and configure frontend service first
-echo %YELLOW%Installing and configuring Next.js Frontend Service...%RESET%
-powershell -ExecutionPolicy Bypass -File "frontend\install-service.ps1"
-if %errorLevel% neq 0 (
-    echo %RED%Warning: Frontend service installation had issues%RESET%
-    echo %YELLOW%Continuing with other services...%RESET%
-)
+:: Start Frontend Service Installation in a new window
+start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.js Frontend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd frontend; .\install-service.ps1; pause"""
 
 :: Start Flask backend in a new window
 start "Flask Backend" cmd /c "color 09 && echo Starting Flask Backend... && call venv\Scripts\activate && python app.py"
@@ -93,7 +88,7 @@ start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && 
 start "Frontend Server" cmd /c "color 0D && echo Starting Frontend in Production Mode... && cd frontend && npm run build && echo Build complete, starting server... && npm run start && pause"
 
 echo.
-echo %GREEN%All components started!%RESET%
+echo %GREEN%All components started in separate windows!%RESET%
 echo %BLUE%Backend running on https://localhost:5000%RESET%
 echo %BLUE%Frontend running on https://localhost:3000%RESET%
 echo.
@@ -101,6 +96,7 @@ echo %YELLOW%Close this window to stop all services...%RESET%
 pause > nul
 
 :: Kill all the processes when the user closes the window
+taskkill /F /FI "WINDOWTITLE eq Frontend Service Installation*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Flask Backend*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1
