@@ -53,12 +53,21 @@ if not exist "frontend" (
     exit /b 1
 )
 
+:: Check for SSL certificates
+if not exist "C:\Certbot\live\fxalert.co.uk\fullchain.pem" (
+    echo %RED%Error: SSL certificates not found%RESET%
+    echo Please ensure SSL certificates are installed at C:\Certbot\live\fxalert.co.uk\
+    pause
+    exit /b 1
+)
+
 :: Display startup message
 echo %YELLOW%Starting Forex News Notifier Server...%RESET%
 echo.
 echo %GREEN%[✓]%RESET% Python detected
 echo %GREEN%[✓]%RESET% Node.js detected
 echo %GREEN%[✓]%RESET% Project files found
+echo %GREEN%[✓]%RESET% SSL certificates found
 echo.
 
 :: Create and activate virtual environment if it doesn't exist
@@ -72,11 +81,15 @@ if not exist "venv" (
     )
 )
 
+:: Install required Python packages
+echo %YELLOW%Installing/Updating Python packages...%RESET%
+call venv\Scripts\activate && pip install gunicorn
+
 :: Start Frontend Service Installation in a new window
 start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.js Frontend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd frontend; .\install-service.ps1; pause"""
 
-:: Start Flask backend in a new window
-start "Flask Backend" cmd /c "color 09 && echo Starting Flask Backend... && call venv\Scripts\activate && python app.py"
+:: Start Backend Service Installation in a new window
+start "Backend Service Installation" cmd /c "color 0C && echo Installing Flask Backend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd backend; .\install-service.ps1; pause"""
 
 :: Start event scheduler in a new window
 start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && call venv\Scripts\activate && python scripts\run_scheduler.py"
@@ -84,20 +97,16 @@ start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && 
 :: Start email scheduler in a new window
 start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && call venv\Scripts\activate && python scripts\email_scheduler.py"
 
-:: Start frontend in production mode
-start "Frontend Server" cmd /c "color 0D && echo Starting Frontend in Production Mode... && cd frontend && npm run build && echo Build complete, starting server... && npm run start && pause"
-
 echo.
 echo %GREEN%All components started in separate windows!%RESET%
-echo %BLUE%Backend running on https://localhost:5000%RESET%
-echo %BLUE%Frontend running on https://localhost:3000%RESET%
+echo %BLUE%Backend running on https://fxalert.co.uk:5000%RESET%
+echo %BLUE%Frontend running on https://fxalert.co.uk:3000%RESET%
 echo.
 echo %YELLOW%Close this window to stop all services...%RESET%
 pause > nul
 
 :: Kill all the processes when the user closes the window
 taskkill /F /FI "WINDOWTITLE eq Frontend Service Installation*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Flask Backend*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Backend Service Installation*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Frontend Server*" > nul 2>&1 
+taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1 

@@ -25,7 +25,33 @@ try {
 
     const sslOptions = {
         key: privateKey,
-        cert: certificate
+        cert: certificate,
+        secureOptions: require('constants').SSL_OP_NO_TLSv1 | require('constants').SSL_OP_NO_TLSv1_1,
+        ciphers: [
+            "ECDHE-RSA-AES128-GCM-SHA256",
+            "ECDHE-ECDSA-AES128-GCM-SHA256",
+            "ECDHE-RSA-AES256-GCM-SHA384",
+            "ECDHE-ECDSA-AES256-GCM-SHA384",
+            "DHE-RSA-AES128-GCM-SHA256",
+            "ECDHE-RSA-AES128-SHA256",
+            "DHE-RSA-AES128-SHA256",
+            "ECDHE-RSA-AES256-SHA384",
+            "DHE-RSA-AES256-SHA384",
+            "ECDHE-RSA-AES256-SHA256",
+            "DHE-RSA-AES256-SHA256",
+            "HIGH",
+            "!aNULL",
+            "!eNULL",
+            "!EXPORT",
+            "!DES",
+            "!RC4",
+            "!MD5",
+            "!PSK",
+            "!SRP",
+            "!CAMELLIA"
+        ].join(':'),
+        honorCipherOrder: true,
+        minVersion: 'TLSv1.2'
     };
 
     app.prepare().then(() => {
@@ -72,6 +98,24 @@ try {
             }
         });
 
+        // Set up error handlers for both servers
+        [httpsServer, httpServer].forEach(server => {
+            server.on('error', (err) => {
+                console.error('Server error:', err);
+                if (err.code === 'EACCES') {
+                    console.error('Permission denied. Try running with administrator privileges.');
+                }
+                if (err.code === 'EADDRINUSE') {
+                    console.error('Address already in use. Check if another service is using the port.');
+                }
+            });
+
+            server.on('clientError', (err, socket) => {
+                console.error('Client error:', err);
+                socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+            });
+        });
+
     }).catch(err => {
         console.error('Error during app preparation:', err);
         process.exit(1);
@@ -89,7 +133,7 @@ try {
     process.exit(1);
 }
 
-// Add error handlers for the HTTPS server
+// Add error handlers for the process
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
     process.exit(1);
@@ -98,4 +142,15 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
     console.error('Unhandled Rejection:', err);
     process.exit(1);
+});
+
+// Handle shutdown gracefully
+process.on('SIGTERM', () => {
+    console.log('Received SIGTERM. Performing graceful shutdown...');
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('Received SIGINT. Performing graceful shutdown...');
+    process.exit(0);
 }); 
