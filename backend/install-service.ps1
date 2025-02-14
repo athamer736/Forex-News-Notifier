@@ -43,7 +43,7 @@ $serviceName = "FlaskBackend"
 $nssm = "C:\nssm\win64\nssm.exe"
 $pythonExe = "C:\FlaskApps\forex_news_notifier\venv\Scripts\python.exe"
 $appDirectory = "C:\FlaskApps\forex_news_notifier"
-$waitressScript = Join-Path $appDirectory "backend\run_waitress.py"
+$appScript = Join-Path $appDirectory "app.py"
 
 # Ensure logs directory exists
 $logsDir = Join-Path $appDirectory "logs"
@@ -54,7 +54,6 @@ if (-not (Test-Path $logsDir)) {
 Write-Host "Installing required Python packages..."
 $pipCmd = Join-Path (Split-Path $pythonExe) "pip.exe"
 & $pipCmd install -r requirements.txt
-& $pipCmd install waitress paste
 
 Write-Host "NSSM found at $nssm"
 
@@ -78,9 +77,9 @@ Write-Host "Installing new service..."
 
 Write-Host "Configuring service..."
 & $nssm set $serviceName AppDirectory $appDirectory
-& $nssm set $serviceName AppParameters "$waitressScript"
-& $nssm set $serviceName DisplayName "Flask Backend Service (Waitress)"
-& $nssm set $serviceName Description "Forex News Notifier Backend Service using Waitress WSGI Server"
+& $nssm set $serviceName AppParameters "$appScript"
+& $nssm set $serviceName DisplayName "Flask Backend Service"
+& $nssm set $serviceName Description "Forex News Notifier Backend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
 & $nssm set $serviceName ObjectName "LocalSystem"
 & $nssm set $serviceName AppStdout "$logsDir\flask-service-output.log"
