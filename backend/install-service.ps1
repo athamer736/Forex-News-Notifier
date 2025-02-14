@@ -54,7 +54,7 @@ if (-not (Test-Path $logsDir)) {
 Write-Host "Installing required Python packages..."
 $pipCmd = Join-Path (Split-Path $pythonExe) "pip.exe"
 & $pipCmd install -r requirements.txt
-& $pipCmd install waitress
+& $pipCmd install waitress paste
 
 Write-Host "NSSM found at $nssm"
 
@@ -80,12 +80,16 @@ Write-Host "Configuring service..."
 & $nssm set $serviceName AppDirectory $appDirectory
 & $nssm set $serviceName AppParameters "$waitressScript"
 & $nssm set $serviceName DisplayName "Flask Backend Service (Waitress)"
-& $nssm set $serviceName Description "Forex News Notifier Backend Service using Waitress"
+& $nssm set $serviceName Description "Forex News Notifier Backend Service using Waitress WSGI Server"
 & $nssm set $serviceName Start SERVICE_AUTO_START
 & $nssm set $serviceName ObjectName "LocalSystem"
-& $nssm set $serviceName AppStdout "logs\flask-service-output.log"
-& $nssm set $serviceName AppStderr "logs\flask-service-error.log"
+& $nssm set $serviceName AppStdout "$logsDir\flask-service-output.log"
+& $nssm set $serviceName AppStderr "$logsDir\flask-service-error.log"
 & $nssm set $serviceName AppThrottle 0
+& $nssm set $serviceName AppRotateFiles 1
+& $nssm set $serviceName AppRotateOnline 1
+& $nssm set $serviceName AppRotateSeconds 86400
+& $nssm set $serviceName AppRotateBytes 10485760
 
 # Set environment variables
 $envString = "PATH=$env:PATH;$appDirectory\venv\Scripts;"
@@ -109,9 +113,9 @@ Write-Host "Service Status: $($service.Status)"
 
 if ($service.Status -ne 'Running') {
     Write-Warning "Service is not running. Checking error logs..."
-    if (Test-Path "logs\flask-service-error.log") {
+    if (Test-Path "$logsDir\flask-service-error.log") {
         Write-Host "Error log contents:"
-        Get-Content "logs\flask-service-error.log" -Tail 20
+        Get-Content "$logsDir\flask-service-error.log" -Tail 20
     }
     
     Write-Warning "Attempting to start again with more delay..."
@@ -127,5 +131,6 @@ if ($service.Status -ne 'Running') {
     }
 }
 
-Write-Host "`nService installation complete. Check Windows Services to verify the service is running."
-Write-Host "Flask server is running on port 5000 using Waitress" 
+Write-Host "`nService installation complete. Check logs at:"
+Write-Host "Output Log: $logsDir\flask-service-output.log"
+Write-Host "Error Log: $logsDir\flask-service-error.log" 
