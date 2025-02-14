@@ -85,22 +85,34 @@ if not exist "venv" (
 echo %YELLOW%Installing/Updating Python packages...%RESET%
 call venv\Scripts\activate && pip install waitress paste
 
-:: Start Frontend Service Installation in a new window
-start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.js Frontend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd frontend; .\install-service.ps1; pause"""
-
 :: Start Backend Service Installation in a new window
+echo %YELLOW%Installing and starting backend service...%RESET%
 start "Backend Service Installation" cmd /c "color 0C && echo Installing Flask Backend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd backend; .\install-service.ps1; pause"""
 
+:: Wait for backend service to start
+echo %YELLOW%Waiting for backend service to initialize...%RESET%
+timeout /t 10 /nobreak > nul
+
+:: Start Frontend Service Installation in a new window
+echo %YELLOW%Installing and starting frontend service...%RESET%
+start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.js Frontend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd frontend; .\install-service.ps1; pause"""
+
 :: Start event scheduler in a new window
+echo %YELLOW%Starting event scheduler...%RESET%
 start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && call venv\Scripts\activate && python scripts\run_scheduler.py"
 
 :: Start email scheduler in a new window
+echo %YELLOW%Starting email scheduler...%RESET%
 start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && call venv\Scripts\activate && python scripts\email_scheduler.py"
 
 echo.
 echo %GREEN%All components started in separate windows!%RESET%
 echo %BLUE%Backend running on https://fxalert.co.uk:5000%RESET%
 echo %BLUE%Frontend running on https://fxalert.co.uk:3000%RESET%
+echo.
+echo %YELLOW%Services Status:%RESET%
+powershell -Command "Write-Host 'Backend Service: ' -NoNewline; Get-Service FlaskBackend | Select-Object -ExpandProperty Status"
+powershell -Command "Write-Host 'Frontend Service: ' -NoNewline; Get-Service NextJSFrontend | Select-Object -ExpandProperty Status"
 echo.
 echo %YELLOW%Close this window to stop all services...%RESET%
 pause > nul

@@ -53,7 +53,7 @@ if (-not (Test-Path $logsDir)) {
 
 Write-Host "Installing required Python packages..."
 $pipCmd = Join-Path (Split-Path $pythonExe) "pip.exe"
-& $pipCmd install waitress paste
+& $pipCmd install waitress paste flask-cors flask-limiter flask-talisman
 
 Write-Host "NSSM found at $nssm"
 
@@ -93,7 +93,8 @@ $envString += "FLASK_ENV=production;"
 $envString += "FLASK_APP=app.py;"
 $envString += "SSL_CERT_FILE=C:/Certbot/live/fxalert.co.uk/fullchain.pem;"
 $envString += "SSL_KEY_FILE=C:/Certbot/live/fxalert.co.uk/privkey.pem;"
-$envString += "PYTHONUNBUFFERED=1"
+$envString += "PYTHONUNBUFFERED=1;"
+$envString += "FLASK_DEBUG=0"
 
 & $nssm set $serviceName AppEnvironmentExtra $envString
 
