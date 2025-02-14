@@ -72,8 +72,25 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             start_time = (now + timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = start_time + timedelta(days=7)
         elif time_range == 'specific_date':
-            start_time = datetime.strptime(specific_date, '%Y-%m-%d').replace(tzinfo=pytz.UTC)
-            end_time = start_time + timedelta(days=1)
+            if not specific_date:
+                raise ValueError("No date provided for specific date filter")
+            try:
+                # Parse and validate the date
+                start_time = datetime.strptime(specific_date, '%Y-%m-%d')
+                if start_time.tzinfo is None:
+                    start_time = pytz.UTC.localize(start_time)
+                
+                # Check if date is before our data start date
+                min_date = datetime(2025, 2, 2, tzinfo=pytz.UTC)
+                if start_time < min_date:
+                    raise ValueError("Sorry, we do not have data from before February 2, 2025")
+                
+                # Set end time to end of the selected day
+                end_time = start_time + timedelta(days=1) - timedelta(microseconds=1)
+            except ValueError as e:
+                if "does not match format" in str(e):
+                    raise ValueError("Invalid date format. Please use YYYY-MM-DD")
+                raise
 
         # Get filtered events from database
         filtered_events = db_get_filtered_events(
