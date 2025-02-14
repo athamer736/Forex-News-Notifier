@@ -24,7 +24,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import StarIcon from '@mui/icons-material/Star';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import { PaymentService } from '@/services/PaymentService';
+import { PaymentService } from '../../services/PaymentService';
 import { useRouter } from 'next/navigation';
 
 const DonationPage = () => {
