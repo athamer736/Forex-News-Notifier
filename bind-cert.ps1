@@ -10,11 +10,10 @@ if (-not $isAdmin) {
     exit 1
 }
 
-# Certificate thumbprint and paths
-$thumbprint = "AA79E98B5F0900A7B04586CF87126EE5F8695F0B"
-$siteName = "ForexNewsNotifier"
+# Certificate paths and settings
 $certPath = "C:\Certbot\live\fxalert.co.uk\fullchain.pem"
 $keyPath = "C:\Certbot\live\fxalert.co.uk\privkey.pem"
+$siteName = "ForexNewsNotifier"
 
 # Verify certificate files exist
 if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
@@ -24,16 +23,32 @@ if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
     exit 1
 }
 
-# Verify certificate in store
-$cert = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $thumbprint }
-if (-not $cert) {
-    Write-Host "Certificate not found in store. Re-importing..."
-    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
-    $cert.Import($certPath, $keyPath, "Exportable,PersistKeySet")
-    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("My", "LocalMachine")
+# Import certificate directly from PEM files
+Write-Host "Importing certificate to store..."
+$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+$certContent = Get-Content -Path $certPath -Raw
+$keyContent = Get-Content -Path $keyPath -Raw
+
+try {
+    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store "My", "LocalMachine"
     $store.Open("ReadWrite")
+    
+    # Remove existing certificates for the domain
+    $existingCerts = $store.Certificates | Where-Object { $_.Subject -like "*fxalert.co.uk*" }
+    foreach ($existingCert in $existingCerts) {
+        $store.Remove($existingCert)
+    }
+    
+    # Import new certificate
+    $cert.Import($certPath)
     $store.Add($cert)
     $store.Close()
+    
+    $thumbprint = $cert.Thumbprint
+    Write-Host "Certificate imported successfully with thumbprint: $thumbprint"
+} catch {
+    Write-Host "Failed to import certificate: $_"
+    exit 1
 }
 
 Write-Host "Removing existing bindings..."
@@ -69,39 +84,13 @@ foreach ($port in $ports) {
 # Add the new certificate bindings
 foreach ($port in $ports) {
     Write-Host "Binding certificate to port $port..."
+    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid"
+    $bindResult = Invoke-Expression $bindCmd
     
-    # Try with different methods
-    $methods = @(
-        @{
-            Command = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid"
-            Description = "Standard method"
-        },
-        @{
-            Command = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid certstorename=MY sslctlstorename=MY"
-            Description = "Store-specific method"
-        },
-        @{
-            Command = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid clientcertnegotiation=enable"
-            Description = "Client negotiation method"
-        }
-    )
-    
-    $success = $false
-    foreach ($method in $methods) {
-        Write-Host "Trying $($method.Description)..."
-        $result = Invoke-Expression $method.Command 2>&1
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Successfully bound certificate to port $port using $($method.Description)"
-            $success = $true
-            break
-        } else {
-            Write-Host "Failed with $($method.Description): $result"
-        }
-    }
-    
-    if (-not $success) {
-        Write-Host "Failed to bind certificate to port $port after trying all methods"
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Successfully bound certificate to port $port"
+    } else {
+        Write-Host "Failed to bind certificate to port $port. Error: $bindResult"
     }
 }
 
