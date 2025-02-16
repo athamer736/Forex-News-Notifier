@@ -112,60 +112,62 @@ function Bind-SSLCert {
     
     # Remove existing binding if it exists
     try {
+        Write-Host "Removing existing binding for port $port..."
         $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
         $deleteResult = Invoke-Expression $deleteCmd 2>&1
-        Write-Host "Removed existing binding (if any)"
+        Start-Sleep -Seconds 2  # Add delay after deletion
     } catch {
-        Write-Host "No existing binding to remove"
+        Write-Host "No existing binding to remove or error removing binding"
     }
     
-    # Add new binding with full parameters
-    $bindCmd = @"
-    netsh http add sslcert `
-    ipport=0.0.0.0:$port `
-    certhash=$thumbprint `
-    appid="{$appid}" `
-    certstorename=MY `
-    verifyclientcertrevocation=enable `
-    verifyrevocationwithcachedclientcertonly=disable `
-    usagecheck=enable `
-    revocationfreshnesstime=auto `
-    urlretrievaltimeout=60 `
-    sslctlidentifier=none `
-    sslctlstorename=MY
-"@
-    
-    Write-Host "Executing binding command..."
-    $result = Invoke-Expression $bindCmd 2>&1
-    
-    # Verify the binding was created
-    $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
-    $verifyResult = Invoke-Expression $verifyCmd 2>&1
-    
-    if ($verifyResult -match $thumbprint) {
-        Write-Host "Successfully verified SSL binding for port $port"
-        return $true
-    } else {
-        Write-Host "Failed to verify SSL binding for port $port. Trying alternative method..."
+    try {
+        # Simple binding command with minimal parameters
+        Write-Host "Adding new SSL binding for port $port..."
+        $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
+        $result = Invoke-Expression $bindCmd 2>&1
         
-        # Try alternative binding method
-        $altBindCmd = @"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Initial binding successful, verifying..."
+            Start-Sleep -Seconds 2  # Add delay before verification
+            
+            # Verify the binding
+            $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
+            $verifyResult = Invoke-Expression $verifyCmd 2>&1
+            
+            if ($verifyResult -match $thumbprint) {
+                Write-Host "Successfully verified SSL binding for port $port"
+                return $true
+            }
+        }
+        
+        Write-Host "Standard binding failed, trying with additional parameters..."
+        
+        # Try with additional parameters
+        $extendedBindCmd = @"
         netsh http add sslcert `
         ipport=0.0.0.0:$port `
         certhash=$thumbprint `
-        appid="{$appid}" `
-        certstorename=MY
+        appid={$appid} `
+        certstorename=MY `
+        sslctlstorename=MY
 "@
         
-        $altResult = Invoke-Expression $altBindCmd 2>&1
-        $verifyResult = Invoke-Expression $verifyCmd 2>&1
+        $extResult = Invoke-Expression $extendedBindCmd 2>&1
+        Start-Sleep -Seconds 2  # Add delay after binding
         
-        if ($verifyResult -match $thumbprint) {
-            Write-Host "Successfully verified SSL binding for port $port using alternative method"
+        # Final verification
+        $finalVerifyResult = Invoke-Expression $verifyCmd 2>&1
+        if ($finalVerifyResult -match $thumbprint) {
+            Write-Host "Successfully verified SSL binding for port $port using extended parameters"
             return $true
         }
         
         Write-Host "Failed to create SSL binding for port $port"
+        Write-Host "Last command result: $extResult"
+        return $false
+        
+    } catch {
+        Write-Host "Error during SSL binding process for port $port: $_"
         return $false
     }
 }
