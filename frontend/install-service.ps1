@@ -154,8 +154,8 @@ if ($portInUse) {
 Write-Host "Configuring URL ACLs..."
 $null = netsh http delete urlacl url=http://+:3000/
 $null = netsh http delete urlacl url=https://+:3000/
-$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM"
-$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM"
+$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
+$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
 
 # Configure SSL certificate binding
 Write-Host "Configuring SSL certificate binding..."
@@ -195,7 +195,7 @@ if ($cert) {
 Write-Host "Installing service..."
 & $nssm install $serviceName $nodeExe
 & $nssm set $serviceName AppDirectory $appDirectory
-& $nssm set $serviceName AppParameters "node_modules\next\dist\bin\next start -p 3000"
+& $nssm set $serviceName AppParameters "server.js"
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
@@ -207,6 +207,7 @@ $envString += "HTTPS=true;"
 $envString += "SSL_CRT_FILE=$certPath;"
 $envString += "SSL_KEY_FILE=$keyPath;"
 $envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"
+$envString += "PORT=3000;"
 
 # Add other environment variables from .env file
 $envContent = Get-Content $frontendEnvFile
@@ -214,7 +215,7 @@ foreach ($line in $envContent) {
     if ($line -match '^\s*([^#][^=]+)=(.+)$') {
         $key = $matches[1].Trim()
         $value = $matches[2].Trim()
-        if ($key -notin @("NODE_ENV", "HTTPS", "SSL_CRT_FILE", "SSL_KEY_FILE", "NODE_TLS_REJECT_UNAUTHORIZED")) {
+        if ($key -notin @("NODE_ENV", "HTTPS", "SSL_CRT_FILE", "SSL_KEY_FILE", "NODE_TLS_REJECT_UNAUTHORIZED", "PORT")) {
             $envString += "$key=$value;"
         }
     }
@@ -254,6 +255,17 @@ if (Test-Path $certDir) {
     $certAcl.AddAccessRule($fileSystemAccessRule)
     Set-Acl $certDir $certAcl
 }
+
+# Add permissions for Network Service account
+$networkServiceRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+    "NT AUTHORITY\NETWORK SERVICE",
+    "FullControl",
+    "ContainerInherit,ObjectInherit",
+    "None",
+    "Allow"
+)
+$acl.AddAccessRule($networkServiceRule)
+Set-Acl $appDirectory $acl
 
 Write-Host "Starting service..."
 & $nssm stop $serviceName 2>$null
