@@ -149,6 +149,31 @@ try {
 Write-Host "Creating log directory..."
 New-Item -ItemType Directory -Force -Path "$appDirectory\logs" | Out-Null
 
+# Release port 3000 if it's in use
+Write-Host "Checking port 3000..."
+$portInUse = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+if ($portInUse) {
+    Write-Host "Port 3000 is in use. Attempting to release..."
+    foreach ($connection in $portInUse) {
+        $process = Get-Process -Id $connection.OwningProcess -ErrorAction SilentlyContinue
+        if ($process) {
+            Write-Host "Stopping process: $($process.ProcessName) (PID: $($process.Id))"
+            Stop-Process -Id $process.Id -Force
+        }
+    }
+    Start-Sleep -Seconds 2
+}
+
+# Remove existing URL ACL
+Write-Host "Removing existing URL ACL..."
+$null = netsh http delete urlacl url=http://+:3000/
+$null = netsh http delete urlacl url=https://+:3000/
+
+# Add new URL ACL for LocalSystem
+Write-Host "Adding URL ACL for port 3000..."
+$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM"
+$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM"
+
 Write-Host "Installing service..."
 & $nssm install $serviceName $nodeExe
 & $nssm set $serviceName AppDirectory $appDirectory
@@ -176,6 +201,14 @@ $fileSystemAccessRule = New-Object System.Security.AccessControl.FileSystemAcces
 $acl.AddAccessRule($fileSystemAccessRule)
 Set-Acl $appDirectory $acl
 
+# Also set permissions for the .next directory specifically
+$nextDir = Join-Path $appDirectory ".next"
+if (Test-Path $nextDir) {
+    $nextAcl = Get-Acl $nextDir
+    $nextAcl.AddAccessRule($fileSystemAccessRule)
+    Set-Acl $nextDir $nextAcl
+}
+
 Write-Host "Starting service..."
 & $nssm stop $serviceName 2>$null
 Start-Sleep -Seconds 2
@@ -192,8 +225,15 @@ while ($attempt -lt $maxAttempts) {
     Write-Host "Service Status: $($service.Status)"
     
     if ($service.Status -eq 'Running') {
-        $serviceStarted = $true
-        break
+        # Additional check to verify if the port is actually listening
+        $portCheck = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+        if ($portCheck) {
+            $serviceStarted = $true
+            Write-Host "Port 3000 is now listening"
+            break
+        } else {
+            Write-Host "Service is running but port 3000 is not yet listening"
+        }
     }
     
     if ($service.Status -eq 'Paused') {
