@@ -14,12 +14,17 @@ if (-not $isAdmin) {
 $certPath = "C:\Certbot\live\fxalert.co.uk\fullchain.pem"
 $keyPath = "C:\Certbot\live\fxalert.co.uk\privkey.pem"
 $tempDir = [System.IO.Path]::GetTempPath()
-$opensslDir = "C:\OpenSSL"
-$opensslZip = Join-Path $tempDir "openssl.zip"
-$opensslExe = Join-Path $opensslDir "openssl.exe"
 $tempPfxPath = Join-Path $tempDir "certificate.pfx"
 $pfxPassword = [System.Guid]::NewGuid().ToString("N")
 $siteName = "ForexNewsNotifier"
+
+# Find OpenSSL from Git installation
+$gitOpenSSL = "C:\Program Files\Git\usr\bin\openssl.exe"
+if (-not (Test-Path $gitOpenSSL)) {
+    Write-Host "OpenSSL not found in Git installation. Please ensure Git is installed."
+    Write-Host "Expected path: $gitOpenSSL"
+    exit 1
+}
 
 # Verify certificate files exist
 if (-not (Test-Path $certPath)) {
@@ -29,33 +34,6 @@ if (-not (Test-Path $certPath)) {
 if (-not (Test-Path $keyPath)) {
     Write-Host "Private key file not found at: $keyPath"
     exit 1
-}
-
-# Download and setup OpenSSL if not present
-if (-not (Test-Path $opensslExe)) {
-    Write-Host "OpenSSL not found. Downloading and setting up..."
-    try {
-        # Create OpenSSL directory
-        New-Item -ItemType Directory -Force -Path $opensslDir | Out-Null
-        
-        # Download OpenSSL
-        $webClient = New-Object System.Net.WebClient
-        $webClient.Headers.Add("User-Agent", "PowerShell Script")
-        $opensslUrl = "https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.1.3.zip"
-        $webClient.DownloadFile($opensslUrl, $opensslZip)
-        
-        # Extract OpenSSL
-        Write-Host "Extracting OpenSSL..."
-        Expand-Archive -Path $opensslZip -DestinationPath $opensslDir -Force
-        
-        # Clean up zip file
-        Remove-Item $opensslZip -Force
-        
-        Write-Host "OpenSSL setup complete"
-    } catch {
-        Write-Host "Failed to setup OpenSSL: $_"
-        exit 1
-    }
 }
 
 # Import certificate to store
@@ -73,10 +51,10 @@ try {
     }
     $store.Close()
 
-    # Convert PEM to PFX using OpenSSL
+    # Convert PEM to PFX using OpenSSL from Git
     Write-Host "Converting to PFX format using OpenSSL..."
-    $opensslCmd = "& '$opensslExe' pkcs12 -export -out '$tempPfxPath' -inkey '$keyPath' -in '$certPath' -password pass:$pfxPassword"
-    $result = Invoke-Expression $opensslCmd
+    $opensslCmd = "& '$gitOpenSSL' pkcs12 -export -out '$tempPfxPath' -inkey '$keyPath' -in '$certPath' -password pass:$pfxPassword"
+    $result = Invoke-Expression $opensslCmd 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to create PFX file using OpenSSL: $result"
     }
