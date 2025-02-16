@@ -10,17 +10,22 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 // SSL certificate paths with absolute paths
-const CERT_PATH = 'C:/Certbot/live/fxalert.co.uk';
+const CERT_PATH = process.env.SSL_CRT_FILE || 'C:/Certbot/live/fxalert.co.uk/fullchain.pem';
+const KEY_PATH = process.env.SSL_KEY_FILE || 'C:/Certbot/live/fxalert.co.uk/privkey.pem';
+const PORT = process.env.PORT || 3000;
+
 console.log('Starting server with following configuration:');
-console.log('Certificate path:', CERT_PATH);
 console.log('Environment:', process.env.NODE_ENV);
+console.log('Certificate path:', CERT_PATH);
+console.log('Key path:', KEY_PATH);
+console.log('Port:', PORT);
 
 try {
     // Read certificates synchronously
     console.log('Reading SSL certificates...');
-    const privateKey = fs.readFileSync(path.join(CERT_PATH, 'privkey.pem'), 'utf8');
+    const privateKey = fs.readFileSync(KEY_PATH, 'utf8');
     console.log('Private key loaded');
-    const certificate = fs.readFileSync(path.join(CERT_PATH, 'fullchain.pem'), 'utf8');
+    const certificate = fs.readFileSync(CERT_PATH, 'utf8');
     console.log('Certificate loaded');
 
     const sslOptions = {
@@ -55,7 +60,6 @@ try {
     };
 
     app.prepare().then(() => {
-        // Create HTTPS server first
         console.log('Creating HTTPS server...');
         const httpsServer = createHttpsServer(sslOptions, (req, res) => {
             try {
@@ -69,13 +73,12 @@ try {
         });
 
         // Listen on HTTPS port
-        const port = process.env.PORT || 3000;
-        httpsServer.listen(port, (err) => {
+        httpsServer.listen(PORT, (err) => {
             if (err) {
                 console.error('Failed to start HTTPS server:', err);
                 throw err;
             }
-            console.log(`> HTTPS Server ready on https://fxalert.co.uk:${port}`);
+            console.log(`> HTTPS Server ready on https://localhost:${PORT}`);
         });
 
         // Set up error handlers
