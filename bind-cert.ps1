@@ -67,8 +67,19 @@ try {
     # Import the PFX
     Write-Host "Importing PFX certificate..."
     $cert = Import-PfxCertificate -FilePath $tempPfxPath -CertStoreLocation Cert:\LocalMachine\My -Password $securePfxPass
-    $thumbprint = $cert.Thumbprint
+    
+    # Clean and format the thumbprint
+    $thumbprint = $cert.Thumbprint.Replace(" ", "").Replace("-", "").ToUpper()
     Write-Host "Certificate imported successfully with thumbprint: $thumbprint"
+    
+    # Verify the certificate exists in the store
+    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store "My", "LocalMachine"
+    $store.Open("ReadOnly")
+    $certInStore = $store.Certificates | Where-Object { $_.Thumbprint -eq $thumbprint }
+    if (-not $certInStore) {
+        throw "Certificate not found in store after import"
+    }
+    $store.Close()
 
 } catch {
     Write-Host "Failed to import certificate: $_"
@@ -110,6 +121,9 @@ function Bind-SSLCert {
     
     Write-Host "Binding certificate to port $port..."
     
+    # Clean the thumbprint again just to be sure
+    $thumbprint = $thumbprint.Replace(" ", "").Replace("-", "").ToUpper()
+    
     # Store verify command as it's used multiple times
     $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
     
@@ -119,7 +133,18 @@ function Bind-SSLCert {
     $deleteResult = Invoke-Expression $deleteCmd 2>&1
     Start-Sleep -Seconds 2  # Add delay after deletion
     
-    # Simplified binding command
+    # Try with the Windows HTTP API first
+    Write-Host "Attempting to bind using Windows HTTP API..."
+    try {
+        $binding = New-Object -TypeName System.Net.HttpListener
+        $binding.Prefixes.Add("https://+:$port/")
+        $binding.Start()
+        $binding.Stop()
+    } catch {
+        Write-Host "Windows HTTP API binding failed, falling back to netsh..."
+    }
+    
+    # Simplified binding command with clean thumbprint
     Write-Host "Adding new SSL binding for port $port..."
     $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
     Write-Host "Executing command: $bindCmd"
@@ -137,10 +162,10 @@ function Bind-SSLCert {
             return $true
         }
         
-        Write-Host "Initial binding failed, trying alternative parameters..."
+        Write-Host "Initial binding failed, trying with HTTP.sys direct binding..."
         
-        # Try alternative parameters
-        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY"
+        # Try using HTTP.sys directly
+        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY sslctlidentifier=0x0"
         Write-Host "Executing alternative command: $altBindCmd"
         
         $altResult = Invoke-Expression $altBindCmd 2>&1
@@ -156,6 +181,19 @@ function Bind-SSLCert {
         Write-Host "Failed to create SSL binding for port $port"
         Write-Host "Initial attempt output: $result"
         Write-Host "Alternative attempt output: $altResult"
+        
+        # Display current certificate store information for debugging
+        Write-Host "Checking certificate store..."
+        $store = New-Object System.Security.Cryptography.X509Certificates.X509Store "My", "LocalMachine"
+        $store.Open("ReadOnly")
+        $certInStore = $store.Certificates | Where-Object { $_.Thumbprint -eq $thumbprint }
+        if ($certInStore) {
+            Write-Host "Certificate found in store with correct thumbprint"
+        } else {
+            Write-Host "Certificate not found in store with thumbprint: $thumbprint"
+        }
+        $store.Close()
+        
         return $false
         
     } catch {
