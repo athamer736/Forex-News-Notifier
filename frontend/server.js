@@ -38,9 +38,9 @@ try {
     // Read certificates synchronously
     console.log('Reading SSL certificates...');
     const privateKey = fs.readFileSync(KEY_PATH, 'utf8');
-    console.log('Private key loaded, length:', privateKey.length);
+    console.log('Private key loaded successfully, length:', privateKey.length);
     const certificate = fs.readFileSync(CERT_PATH, 'utf8');
-    console.log('Certificate loaded, length:', certificate.length);
+    console.log('Certificate loaded successfully, length:', certificate.length);
 
     const sslOptions = {
         key: privateKey,
@@ -59,11 +59,17 @@ try {
         rejectUnauthorized: false
     };
 
+    console.log('SSL options configured:', {
+        minVersion: sslOptions.minVersion,
+        maxVersion: sslOptions.maxVersion,
+        ciphers: sslOptions.ciphers,
+        handshakeTimeout: sslOptions.handshakeTimeout
+    });
+
     app.prepare().then(() => {
         console.log('Creating HTTPS server...');
         const httpsServer = createHttpsServer(sslOptions, (req, res) => {
-            // Log incoming requests
-            console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+            console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - ${req.socket.getPeerCertificate().subject || 'No client cert'}`);
             
             try {
                 const parsedUrl = parse(req.url, true);
@@ -77,7 +83,9 @@ try {
 
         // Enhanced error handling for TLS handshake
         httpsServer.on('tlsClientError', (err, tlsSocket) => {
-            console.error('TLS Client Error:', err);
+            console.error('TLS Client Error:', err.message);
+            console.error('Error code:', err.code);
+            console.error('Error stack:', err.stack);
             console.error('Client IP:', tlsSocket.remoteAddress);
             console.error('Client Port:', tlsSocket.remotePort);
         });
@@ -90,14 +98,18 @@ try {
             }
             console.log(`> HTTPS Server ready on port ${PORT}`);
             console.log('> Listening on all interfaces (0.0.0.0)');
-            console.log('> TLS version:', tls.DEFAULT_MIN_VERSION);
+            console.log('> TLS version:', sslOptions.minVersion);
+            console.log('> Process running as:', process.getuid?.() || 'N/A');
         });
 
         // Set up error handlers
         httpsServer.on('error', (err) => {
-            console.error('Server error:', err);
+            console.error('Server error:', err.message);
+            console.error('Error code:', err.code);
+            console.error('Error stack:', err.stack);
             if (err.code === 'EACCES') {
                 console.error('Permission denied. Try running with administrator privileges.');
+                console.error('Current user:', process.getuid?.() || 'N/A');
             }
             if (err.code === 'EADDRINUSE') {
                 console.error('Address already in use. Check if another service is using the port.');
@@ -105,34 +117,34 @@ try {
             process.exit(1);
         });
 
-        httpsServer.on('clientError', (err, socket) => {
-            console.error('Client error:', err);
-            console.error('Client IP:', socket.remoteAddress);
-            console.error('Client Port:', socket.remotePort);
-            socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
-        });
-
         // Log successful TLS connections
         httpsServer.on('secureConnection', (tlsSocket) => {
             console.log('New TLS connection established');
             console.log('TLS Protocol Version:', tlsSocket.getProtocol());
             console.log('Cipher:', tlsSocket.getCipher().name);
+            console.log('Client IP:', tlsSocket.remoteAddress);
+            console.log('Client Port:', tlsSocket.remotePort);
         });
 
     }).catch(err => {
-        console.error('Error during app preparation:', err);
+        console.error('Error during app preparation:', err.message);
+        console.error('Stack trace:', err.stack);
         process.exit(1);
     });
 } catch (err) {
-    console.error('Critical error during server startup:', err);
-    console.error('Error details:', err.stack);
+    console.error('Critical error during server startup:', err.message);
+    console.error('Error code:', err.code);
+    console.error('Error stack:', err.stack);
     if (err.code === 'EACCES') {
         console.error('Permission denied accessing certificate files');
-        console.error('Please check file permissions');
-    }
-    if (err.code === 'ENOENT') {
-        console.error('Certificate files not found');
-        console.error('Please verify certificate paths');
+        console.error('Current user:', process.getuid?.() || 'N/A');
+        console.error('File permissions:');
+        try {
+            console.error('Cert file:', fs.statSync(CERT_PATH));
+            console.error('Key file:', fs.statSync(KEY_PATH));
+        } catch (e) {
+            console.error('Could not read file stats:', e.message);
+        }
     }
     process.exit(1);
 }
