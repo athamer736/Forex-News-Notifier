@@ -45,8 +45,14 @@ try {
     const sslOptions = {
         key: privateKey,
         cert: certificate,
-        minVersion: tls.DEFAULT_MIN_VERSION,
-        ciphers: tls.DEFAULT_CIPHERS,
+        minVersion: 'TLSv1.2',
+        maxVersion: 'TLSv1.3',
+        ciphers: [
+            'ECDHE-ECDSA-AES128-GCM-SHA256',
+            'ECDHE-RSA-AES128-GCM-SHA256',
+            'ECDHE-ECDSA-AES256-GCM-SHA384',
+            'ECDHE-RSA-AES256-GCM-SHA384'
+        ].join(':'),
         honorCipherOrder: true,
         handshakeTimeout: 120000,
         requestCert: false,
