@@ -100,37 +100,74 @@ Write-Host "Configuring SSL certificates..."
 # Create a new GUID for the application
 $appid = [System.Guid]::NewGuid().ToString("B")
 
-# Remove any existing certificate bindings
-$ports = @(443, 3000, 5000)
-foreach ($port in $ports) {
-    try {
-        netsh http delete sslcert ipport=0.0.0.0:$port | Out-Null
-    } catch {
-        Write-Host "No existing binding for port $port"
-    }
-}
-
-# Add the new certificate bindings with additional parameters
-foreach ($port in $ports) {
-    Write-Host "Binding certificate to port $port..."
-    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid certstore=MY sslctlstorename=MY"
-    $bindResult = Invoke-Expression $bindCmd
+# Function to bind SSL certificate
+function Bind-SSLCert {
+    param(
+        [string]$port,
+        [string]$thumbprint,
+        [string]$appid
+    )
     
+    Write-Host "Binding certificate to port $port..."
+    
+    # Remove existing binding
+    $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
+    Invoke-Expression $deleteCmd | Out-Null
+    
+    # Add new binding with full parameters
+    $bindCmd = @"
+    netsh http add sslcert `
+    ipport=0.0.0.0:$port `
+    certhash=$thumbprint `
+    appid="$appid" `
+    certstorename=MY `
+    verifyclientcertrevocation=enable `
+    verifyrevocationwithcachedclientcertonly=disable `
+    usagecheck=enable `
+    revocationfreshnesstime=auto `
+    urlretrievaltimeout=60 `
+    sslctlidentifier=none `
+    sslctlstorename=MY
+"@
+    
+    $result = Invoke-Expression $bindCmd 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Successfully bound certificate to port $port"
-    } else {
-        Write-Host "Failed to bind certificate to port $port. Error: $bindResult"
-        
-        # Try alternative binding method
-        Write-Host "Trying alternative binding method for port $port..."
-        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid certstore=MY sslctlstorename=MY clientcertnegotiation=enable"
-        $altBindResult = Invoke-Expression $altBindCmd
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Successfully bound certificate to port $port using alternative method"
-        } else {
-            Write-Host "Failed to bind certificate to port $port using alternative method. Error: $altBindResult"
-        }
+        return $true
+    }
+    
+    Write-Host "Failed to bind certificate to port $port. Error: $result"
+    
+    # Try alternative binding
+    $altBindCmd = @"
+    netsh http add sslcert `
+    ipport=0.0.0.0:$port `
+    certhash=$thumbprint `
+    appid="$appid" `
+    certstorename=MY `
+    sslctlstorename=MY `
+    clientcertnegotiation=enable
+"@
+    
+    $altResult = Invoke-Expression $altBindCmd 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Successfully bound certificate to port $port using alternative method"
+        return $true
+    }
+    
+    Write-Host "Failed to bind certificate to port $port using alternative method. Error: $altResult"
+    return $false
+}
+
+# Bind certificates to each port
+$ports = @(443, 3000, 5000)
+$bindingResults = @()
+
+foreach ($port in $ports) {
+    $success = Bind-SSLCert -port $port -thumbprint $thumbprint -appid $appid
+    $bindingResults += @{
+        Port = $port
+        Success = $success
     }
 }
 
@@ -144,4 +181,11 @@ Write-Host "`nVerifying SSL certificate bindings..."
 foreach ($port in $ports) {
     Write-Host "`nPort $port bindings:"
     netsh http show sslcert ipport=0.0.0.0:$port
+}
+
+# Report final status
+Write-Host "`nBinding Results Summary:"
+foreach ($result in $bindingResults) {
+    $status = if ($result.Success) { "Success" } else { "Failed" }
+    Write-Host "Port $($result.Port): $status"
 } 
