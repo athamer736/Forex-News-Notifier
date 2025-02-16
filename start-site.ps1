@@ -6,6 +6,42 @@ $siteName = "ForexNewsNotifier"
 Write-Host "Configuring and starting website: $siteName"
 Write-Host "======================================"
 
+# Function to check if a port is in use
+function Test-PortInUse {
+    param($port)
+    
+    $connections = netstat -ano | findstr ":$port "
+    return $connections -ne $null
+}
+
+# Function to kill process using a port
+function Stop-ProcessUsingPort {
+    param($port)
+    
+    $connections = netstat -ano | findstr ":$port "
+    if ($connections) {
+        $connections | ForEach-Object {
+            $parts = $_ -split '\s+'
+            $processId = $parts[-1]
+            Write-Host "Stopping process $processId using port $port..."
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+# Check and release ports
+$ports = @(80, 443, 3000, 5000)
+Write-Host "`nChecking port usage..."
+foreach ($port in $ports) {
+    if (Test-PortInUse $port) {
+        Write-Host "Port $port is in use. Attempting to release..." -ForegroundColor Yellow
+        Stop-ProcessUsingPort $port
+        Start-Sleep -Seconds 2
+    } else {
+        Write-Host "Port $port is available" -ForegroundColor Green
+    }
+}
+
 # Stop the site first if it exists
 Write-Host "`nStopping website if it exists..."
 Stop-Website -Name $siteName -ErrorAction SilentlyContinue
@@ -18,11 +54,26 @@ if (Test-Path "IIS:\AppPools\$siteName") {
 }
 Start-Sleep -Seconds 2
 
-# Reset IIS
-Write-Host "Resetting IIS..."
+# Stop any Node.js processes that might be running
+Write-Host "Stopping any Node.js processes..."
+Get-Process | Where-Object { $_.ProcessName -eq "node" } | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
+
+# Reset IIS with cleanup
+Write-Host "Resetting IIS with cleanup..."
 try {
+    # Stop IIS
     iisreset /stop
     Start-Sleep -Seconds 5
+    
+    # Clean up IIS worker processes
+    Get-Process | Where-Object { $_.ProcessName -like "w3wp*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    
+    # Delete temporary IIS files
+    Remove-Item -Path "C:\inetpub\temp\IIS Temporary Compressed Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+    
+    # Start IIS
     iisreset /start
     Start-Sleep -Seconds 5
     Write-Host "IIS reset completed" -ForegroundColor Green
@@ -52,13 +103,14 @@ Write-Host "Starting application pool..."
 Start-WebAppPool -Name $siteName
 Start-Sleep -Seconds 2
 
-# Verify the website exists
-Write-Host "`nChecking website configuration..."
-$site = Get-Website -Name $siteName
-if (-not $site) {
-    Write-Host "Website not found. Creating new website..." -ForegroundColor Yellow
-    New-Website -Name $siteName -PhysicalPath "C:\FlaskApps\forex_news_notifier\frontend" -ApplicationPool $siteName -Force
-}
+# Remove and recreate the website
+Write-Host "`nRemoving existing website configuration..."
+Remove-Website -Name $siteName -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
+
+Write-Host "Creating new website..."
+$physicalPath = "C:\FlaskApps\forex_news_notifier\frontend"
+New-Website -Name $siteName -PhysicalPath $physicalPath -ApplicationPool $siteName -Force
 
 # Configure website settings
 Write-Host "Configuring website settings..."
@@ -66,7 +118,6 @@ Set-ItemProperty "IIS:\Sites\$siteName" -name "applicationPool" -value $siteName
 Set-ItemProperty "IIS:\Sites\$siteName" -name "serverAutoStart" -value $true
 
 # Verify physical path exists and set permissions
-$physicalPath = "C:\FlaskApps\forex_news_notifier\frontend"
 if (-not (Test-Path $physicalPath)) {
     Write-Host "Creating physical path directory..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $physicalPath -Force | Out-Null
@@ -77,6 +128,11 @@ Write-Host "Setting directory permissions..."
 $acl = Get-Acl $physicalPath
 $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("IIS_IUSRS", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
 $acl.SetAccessRule($accessRule)
+$acl | Set-Acl $physicalPath
+
+# Also grant permissions to NETWORK SERVICE
+$networkServiceRule = New-Object System.Security.AccessControl.FileSystemAccessRule("NETWORK SERVICE", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+$acl.SetAccessRule($networkServiceRule)
 $acl | Set-Acl $physicalPath
 
 # Create a test index.html if it doesn't exist
@@ -98,6 +154,15 @@ if (-not (Test-Path $indexPath)) {
 "@ | Out-File -FilePath $indexPath -Encoding UTF8
 }
 
+# Add bindings
+Write-Host "`nConfiguring bindings..."
+New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "fxalert.co.uk"
+New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "www.fxalert.co.uk"
+New-WebBinding -Name $siteName -Protocol "https" -Port 443 -HostHeader "fxalert.co.uk" -SslFlags 1
+New-WebBinding -Name $siteName -Protocol "https" -Port 443 -HostHeader "www.fxalert.co.uk" -SslFlags 1
+New-WebBinding -Name $siteName -Protocol "https" -Port 3000 -HostHeader "fxalert.co.uk" -SslFlags 1
+New-WebBinding -Name $siteName -Protocol "https" -Port 5000 -HostHeader "fxalert.co.uk" -SslFlags 1
+
 # Start the website with retry logic
 Write-Host "`nStarting website..."
 $maxRetries = 3
@@ -109,6 +174,7 @@ while (-not $started -and $retryCount -lt $maxRetries) {
         $retryCount++
         Write-Host "Attempt $retryCount of $maxRetries..."
         Start-Website -Name $siteName
+        Start-Sleep -Seconds 5  # Give it time to fully start
         $site = Get-Website -Name $siteName
         if ($site.State -eq "Started") {
             $started = $true
