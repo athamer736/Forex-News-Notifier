@@ -117,7 +117,8 @@ function Bind-SSLCert {
         $deleteResult = Invoke-Expression $deleteCmd 2>&1
         Start-Sleep -Seconds 2  # Add delay after deletion
     } catch {
-        Write-Host "No existing binding to remove or error removing binding"
+        $errorMessage = $_.Exception.Message
+        Write-Host "Error removing binding: $errorMessage"
     }
     
     try {
@@ -163,11 +164,12 @@ function Bind-SSLCert {
         }
         
         Write-Host "Failed to create SSL binding for port $port"
-        Write-Host "Last command result: $extResult"
+        Write-Host "Command output: $extResult"
         return $false
         
     } catch {
-        Write-Host "Error during SSL binding process for port $port: $_"
+        $errorMessage = $_.Exception.Message
+        Write-Host "Error during SSL binding process for port $port: $errorMessage"
         return $false
     }
 }
