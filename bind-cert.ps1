@@ -43,7 +43,7 @@ foreach ($port in $ports) {
         if ($LASTEXITCODE -eq 0) {
             Write-Host "Successfully bound certificate to port $port using alternative method"
         } else {
-            Write-Host "Failed to bind certificate to port $port: $result"
+            Write-Host ("Failed to bind certificate to port " + $port + ": " + $result)
         }
     } else {
         Write-Host "Successfully bound certificate to port $port"
