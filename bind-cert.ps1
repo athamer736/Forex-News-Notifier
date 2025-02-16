@@ -13,6 +13,8 @@ if (-not $isAdmin) {
 # Certificate paths and settings
 $certPath = "C:\Certbot\live\fxalert.co.uk\fullchain.pem"
 $keyPath = "C:\Certbot\live\fxalert.co.uk\privkey.pem"
+$tempPfxPath = [System.IO.Path]::GetTempFileName() + ".pfx"
+$pfxPassword = [System.Guid]::NewGuid().ToString("N")
 $siteName = "ForexNewsNotifier"
 
 # Verify certificate files exist
@@ -23,32 +25,42 @@ if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
     exit 1
 }
 
-# Import certificate directly from PEM files
+# Import certificate to store
 Write-Host "Importing certificate to store..."
-$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
-$certContent = Get-Content -Path $certPath -Raw
-$keyContent = Get-Content -Path $keyPath -Raw
-
 try {
+    # Create secure string for password
+    $securePfxPass = ConvertTo-SecureString -String $pfxPassword -Force -AsPlainText
+    
+    # Remove existing certificates for the domain from store
     $store = New-Object System.Security.Cryptography.X509Certificates.X509Store "My", "LocalMachine"
     $store.Open("ReadWrite")
-    
-    # Remove existing certificates for the domain
     $existingCerts = $store.Certificates | Where-Object { $_.Subject -like "*fxalert.co.uk*" }
     foreach ($existingCert in $existingCerts) {
         $store.Remove($existingCert)
     }
-    
-    # Import new certificate
-    $cert.Import($certPath)
-    $store.Add($cert)
     $store.Close()
-    
+
+    # Use certutil to create PFX from PEM files
+    Write-Host "Converting certificate to PFX format..."
+    $result = certutil -f -p $pfxPassword -mergepfx $certPath $tempPfxPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create PFX file: $result"
+    }
+
+    # Import the PFX
+    Write-Host "Importing PFX certificate..."
+    $cert = Import-PfxCertificate -FilePath $tempPfxPath -CertStoreLocation Cert:\LocalMachine\My -Password $securePfxPass
     $thumbprint = $cert.Thumbprint
     Write-Host "Certificate imported successfully with thumbprint: $thumbprint"
+
 } catch {
     Write-Host "Failed to import certificate: $_"
     exit 1
+} finally {
+    # Clean up temporary PFX file
+    if (Test-Path $tempPfxPath) {
+        Remove-Item -Path $tempPfxPath -Force
+    }
 }
 
 Write-Host "Removing existing bindings..."
