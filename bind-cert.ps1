@@ -110,50 +110,58 @@ function Bind-SSLCert {
     
     Write-Host "Binding certificate to port $port..."
     
+    # Store verify command as it's used multiple times
+    $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
+    
     # Remove existing binding if it exists
     Write-Host "Removing existing binding for port $port..."
     $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
     $deleteResult = Invoke-Expression $deleteCmd 2>&1
     Start-Sleep -Seconds 2  # Add delay after deletion
     
-    # Format the command with proper GUID format
+    # Format the command with proper GUID format and all required parameters
     Write-Host "Adding new SSL binding for port $port..."
-    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
+    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY clientcertnegotiation=disable"
     Write-Host "Executing command: $bindCmd"
-    $result = Invoke-Expression $bindCmd 2>&1
     
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Initial binding successful, verifying..."
-        Start-Sleep -Seconds 2  # Add delay before verification
+    try {
+        $result = Invoke-Expression $bindCmd 2>&1
+        Start-Sleep -Seconds 2  # Add delay after binding
         
         # Verify the binding
-        $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
+        Write-Host "Verifying binding..."
         $verifyResult = Invoke-Expression $verifyCmd 2>&1
         
         if ($verifyResult -match $thumbprint) {
             Write-Host "Successfully verified SSL binding for port $port"
             return $true
         }
+        
+        Write-Host "Initial binding failed, trying alternative parameters..."
+        
+        # Try alternative parameters
+        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY sslctlstorename=MY clientcertnegotiation=disable verifyclientcertrevocation=disable"
+        Write-Host "Executing alternative command: $altBindCmd"
+        
+        $altResult = Invoke-Expression $altBindCmd 2>&1
+        Start-Sleep -Seconds 2  # Add delay after binding
+        
+        # Final verification
+        $finalVerifyResult = Invoke-Expression $verifyCmd 2>&1
+        if ($finalVerifyResult -match $thumbprint) {
+            Write-Host "Successfully verified SSL binding for port $port using alternative parameters"
+            return $true
+        }
+        
+        Write-Host "Failed to create SSL binding for port $port"
+        Write-Host "Initial attempt output: $result"
+        Write-Host "Alternative attempt output: $altResult"
+        return $false
+        
+    } catch {
+        Write-Host "Error during SSL binding: $_"
+        return $false
     }
-    
-    Write-Host "Standard binding failed, trying with additional parameters..."
-    
-    # Try with additional parameters
-    $extendedBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY clientcertnegotiation=disable"
-    Write-Host "Executing extended command: $extendedBindCmd"
-    $extResult = Invoke-Expression $extendedBindCmd 2>&1
-    Start-Sleep -Seconds 2  # Add delay after binding
-    
-    # Final verification
-    $finalVerifyResult = Invoke-Expression $verifyCmd 2>&1
-    if ($finalVerifyResult -match $thumbprint) {
-        Write-Host "Successfully verified SSL binding for port $port using extended parameters"
-        return $true
-    }
-    
-    Write-Host "Failed to create SSL binding for port $port"
-    Write-Host "Command output: $extResult"
-    return $false
 }
 
 # Bind certificates to each port
