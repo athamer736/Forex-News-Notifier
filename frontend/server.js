@@ -20,7 +20,11 @@ function log(message, error = null) {
     const logMessage = `${timestamp} - ${message}`;
     console.log(logMessage);
     if (error) {
-        console.error(`${timestamp} - Error Details:`, error);
+        console.error(`${timestamp} - Error Details:`, error.message);
+        if (error.code) console.error(`${timestamp} - Error Code:`, error.code);
+        if (error.errno) console.error(`${timestamp} - Error Number:`, error.errno);
+        if (error.syscall) console.error(`${timestamp} - System Call:`, error.syscall);
+        if (error.path) console.error(`${timestamp} - Path:`, error.path);
         console.error(`${timestamp} - Stack:`, error.stack);
     }
 }
@@ -32,50 +36,77 @@ function verifyCertificates() {
     try {
         // Check certificate file
         if (!fs.existsSync(CERT_PATH)) {
-            throw new Error(`Certificate file not found at: ${CERT_PATH}`);
+            const err = new Error(`Certificate file not found at: ${CERT_PATH}`);
+            err.code = 'ENOENT';
+            err.path = CERT_PATH;
+            throw err;
         }
         
         // Check key file
         if (!fs.existsSync(KEY_PATH)) {
-            throw new Error(`Private key file not found at: ${KEY_PATH}`);
+            const err = new Error(`Private key file not found at: ${KEY_PATH}`);
+            err.code = 'ENOENT';
+            err.path = KEY_PATH;
+            throw err;
         }
         
         // Get file stats and check permissions
-        const certStats = fs.statSync(CERT_PATH);
-        const keyStats = fs.statSync(KEY_PATH);
+        let certStats, keyStats;
+        try {
+            certStats = fs.statSync(CERT_PATH);
+            log(`Certificate stats: Size=${certStats.size}, Mode=${certStats.mode.toString(8)}, UID=${certStats.uid}, GID=${certStats.gid}`);
+        } catch (statErr) {
+            log('Error getting certificate stats:', statErr);
+            throw statErr;
+        }
+        
+        try {
+            keyStats = fs.statSync(KEY_PATH);
+            log(`Key stats: Size=${keyStats.size}, Mode=${keyStats.mode.toString(8)}, UID=${keyStats.uid}, GID=${keyStats.gid}`);
+        } catch (statErr) {
+            log('Error getting key stats:', statErr);
+            throw statErr;
+        }
         
         // Check if files are readable
         try {
             fs.accessSync(CERT_PATH, fs.constants.R_OK);
             fs.accessSync(KEY_PATH, fs.constants.R_OK);
         } catch (accessErr) {
-            throw new Error(`Permission denied: Cannot read certificate files.\nCert permissions: ${certStats.mode}\nKey permissions: ${keyStats.mode}`);
+            log('Permission denied accessing certificate files:', accessErr);
+            throw accessErr;
         }
         
-        // Log detailed file information
-        log(`Certificate file (${CERT_PATH}):
-        Size: ${certStats.size} bytes
-        Permissions: ${certStats.mode.toString(8)}
-        Last modified: ${certStats.mtime}
-        UID: ${certStats.uid}
-        GID: ${certStats.gid}`);
+        // Try to read the first few bytes of each file
+        let certTest, keyTest;
+        try {
+            certTest = fs.readFileSync(CERT_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
+            log('Successfully read certificate file');
+        } catch (readErr) {
+            log('Error reading certificate file:', readErr);
+            throw readErr;
+        }
         
-        log(`Key file (${KEY_PATH}):
-        Size: ${keyStats.size} bytes
-        Permissions: ${keyStats.mode.toString(8)}
-        Last modified: ${keyStats.mtime}
-        UID: ${keyStats.uid}
-        GID: ${keyStats.gid}`);
-        
-        // Try to read the first few bytes of each file to verify they're accessible
-        const certTest = fs.readFileSync(CERT_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
-        const keyTest = fs.readFileSync(KEY_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
+        try {
+            keyTest = fs.readFileSync(KEY_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
+            log('Successfully read key file');
+        } catch (readErr) {
+            log('Error reading key file:', readErr);
+            throw readErr;
+        }
         
         if (!certTest.includes('-----BEGIN CERTIFICATE-----')) {
-            throw new Error('Invalid certificate file format');
+            const err = new Error('Invalid certificate file format');
+            err.code = 'EINVAL';
+            err.path = CERT_PATH;
+            throw err;
         }
+        
         if (!keyTest.includes('-----BEGIN PRIVATE KEY-----')) {
-            throw new Error('Invalid private key file format');
+            const err = new Error('Invalid private key file format');
+            err.code = 'EINVAL';
+            err.path = KEY_PATH;
+            throw err;
         }
         
         log('Certificate files verified successfully');
