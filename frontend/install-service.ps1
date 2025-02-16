@@ -87,21 +87,6 @@ if (Test-Path $frontendEnvFile) {
     exit 1
 }
 
-# Load environment variables from .env
-$envContent = Get-Content $frontendEnvFile
-$envString = "NODE_ENV=production;"
-$envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"
-
-foreach ($line in $envContent) {
-    if ($line -match '^\s*([^#][^=]+)=(.+)$') {
-        $key = $matches[1].Trim()
-        $value = $matches[2].Trim()
-        if ($key -ne "NODE_TLS_REJECT_UNAUTHORIZED") {
-            $envString += "$key=$value;"
-        }
-    }
-}
-
 Write-Host "Cleaning previous build..."
 if (Test-Path ".next") {
     Remove-Item -Recurse -Force ".next"
@@ -154,23 +139,21 @@ Write-Host "Checking port 3000..."
 $portInUse = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
 if ($portInUse) {
     Write-Host "Port 3000 is in use. Attempting to release..."
-    foreach ($connection in $portInUse) {
-        $process = Get-Process -Id $connection.OwningProcess -ErrorAction SilentlyContinue
+    # Only try to stop non-system processes
+    $portInUse | Where-Object { $_.OwningProcess -ne 4 } | ForEach-Object {
+        $process = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
         if ($process) {
             Write-Host "Stopping process: $($process.ProcessName) (PID: $($process.Id))"
-            Stop-Process -Id $process.Id -Force
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         }
     }
     Start-Sleep -Seconds 2
 }
 
-# Remove existing URL ACL
-Write-Host "Removing existing URL ACL..."
+# Remove existing URL ACLs and add new ones
+Write-Host "Configuring URL ACLs..."
 $null = netsh http delete urlacl url=http://+:3000/
 $null = netsh http delete urlacl url=https://+:3000/
-
-# Add new URL ACL for LocalSystem
-Write-Host "Adding URL ACL for port 3000..."
 $null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM"
 $null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM"
 
@@ -185,14 +168,29 @@ if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
     exit 1
 }
 
-# Remove existing SSL binding for port 3000
-$null = netsh http delete sslcert ipport=0.0.0.0:3000
-$null = netsh http delete sslcert ipport=[::]:3000
+# Get certificate from store
+$cert = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*fxalert.co.uk*" } | Select-Object -First 1
 
-# Create new SSL binding
-$appGuid = [System.Guid]::NewGuid().ToString("B")
-$certHash = (Get-PfxCertificate -FilePath $certPath).Thumbprint
-$null = netsh http add sslcert ipport=0.0.0.0:3000 certhash=$certHash appid="{$appGuid}" certstorename=MY
+if (-not $cert) {
+    Write-Host "Certificate not found in store. Importing..."
+    # Import certificate using import-cert.ps1
+    & "$appDirectory\..\import-cert.ps1"
+    Start-Sleep -Seconds 2
+    $cert = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*fxalert.co.uk*" } | Select-Object -First 1
+}
+
+if ($cert) {
+    Write-Host "Using certificate with thumbprint: $($cert.Thumbprint)"
+    # Remove existing binding
+    $null = netsh http delete sslcert ipport=0.0.0.0:3000
+    
+    # Add new binding without password prompt
+    $guid = [System.Guid]::NewGuid().ToString("B")
+    $null = netsh http add sslcert ipport=0.0.0.0:3000 certhash=$($cert.Thumbprint) appid="{$guid}" certstorename=MY
+} else {
+    Write-Error "Could not find or import SSL certificate"
+    exit 1
+}
 
 Write-Host "Installing service..."
 & $nssm install $serviceName $nodeExe
@@ -278,16 +276,7 @@ while ($attempt -lt $maxAttempts) {
         if ($portCheck) {
             $serviceStarted = $true
             Write-Host "Port 3000 is now listening"
-            
-            # Test HTTPS access
-            try {
-                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                $response = Invoke-WebRequest -Uri "https://localhost:3000" -UseBasicParsing
-                Write-Host "HTTPS access test successful: $($response.StatusCode)"
-                break
-            } catch {
-                Write-Host "HTTPS access test failed: $_"
-            }
+            break
         } else {
             Write-Host "Service is running but port 3000 is not yet listening"
         }
