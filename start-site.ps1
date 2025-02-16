@@ -47,6 +47,50 @@ function Stop-ProcessUsingPort {
     }
 }
 
+# Function to restart IIS and related services
+function Restart-IISServices {
+    Write-Host "Stopping IIS services..."
+    
+    # Stop dependent services first
+    $services = @(
+        "W3SVC",      # World Wide Web Publishing Service
+        "WAS",        # Windows Process Activation Service
+        "WMSVC",      # Web Management Service
+        "IISADMIN"    # IIS Admin Service
+    )
+    
+    foreach ($service in $services) {
+        if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
+            Write-Host "Stopping $service..."
+            Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
+        }
+    }
+    
+    # Kill any remaining IIS-related processes
+    Stop-ProcessesAggressively @("w3wp", "WAS", "WWAHost")
+    Start-Sleep -Seconds 5
+    
+    # Clean up IIS temporary files
+    Write-Host "Cleaning up IIS temporary files..."
+    Remove-Item -Path "C:\inetpub\temp\IIS Temporary Compressed Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "C:\Windows\Microsoft.NET\Framework\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+    
+    # Start services in reverse order
+    Write-Host "Starting IIS services..."
+    [array]::Reverse($services)
+    
+    foreach ($service in $services) {
+        if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
+            Write-Host "Starting $service..."
+            Start-Service -Name $service -ErrorAction Continue
+            Start-Sleep -Seconds 2
+        }
+    }
+    
+    Write-Host "IIS services restarted"
+}
+
 # Stop all related processes
 Write-Host "`nStopping all related processes..."
 Stop-ProcessesAggressively @("w3wp", "node", "python", "flask", "waitress")
@@ -102,32 +146,8 @@ Set-Location $physicalPath
 & "$physicalPath\install-service.ps1"
 Start-Sleep -Seconds 5
 
-# Stop IIS completely
-Write-Host "`nStopping IIS completely..."
-try {
-    Stop-Service -Name W3SVC -Force
-    Stop-Service -Name WAS -Force
-    Start-Sleep -Seconds 5
-    
-    # Kill any remaining IIS-related processes
-    Stop-ProcessesAggressively @("w3wp", "WAS", "WWAHost")
-    Start-Sleep -Seconds 5
-    
-    # Clean up IIS temporary files
-    Write-Host "Cleaning up IIS temporary files..."
-    Remove-Item -Path "C:\inetpub\temp\IIS Temporary Compressed Files\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path "C:\Windows\Microsoft.NET\Framework\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
-    
-    # Start IIS services
-    Start-Service -Name WAS
-    Start-Service -Name W3SVC
-    Start-Sleep -Seconds 5
-    
-    Write-Host "IIS services restarted successfully" -ForegroundColor Green
-} catch {
-    Write-Host "Error managing IIS services: $_" -ForegroundColor Red
-}
+# Restart IIS and related services
+Restart-IISServices
 
 # Remove and recreate application pool
 Write-Host "`nRecreating application pool..."
@@ -181,12 +201,18 @@ foreach ($perm in $permissions) {
 
 $acl | Set-Acl $physicalPath
 
-# Create the website using appcmd
-Write-Host "Creating website using appcmd..."
-$appCmd = "$env:windir\system32\inetsrv\appcmd.exe"
+# Create the website
+Write-Host "Creating website..."
+New-Website -Name $siteName -PhysicalPath $physicalPath -ApplicationPool $siteName -Force
 
-& $appCmd add site /name:$siteName /physicalPath:$physicalPath /bindings:"http/*:80:fxalert.co.uk,http/*:80:www.fxalert.co.uk,https/*:443:fxalert.co.uk,https/*:443:www.fxalert.co.uk,https/*:3000:fxalert.co.uk,https/*:5000:fxalert.co.uk"
-& $appCmd set site /site.name:$siteName /[path='/'].applicationPool:$siteName
+# Add bindings
+Write-Host "Adding website bindings..."
+New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "fxalert.co.uk"
+New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "www.fxalert.co.uk"
+New-WebBinding -Name $siteName -Protocol "https" -Port 443 -HostHeader "fxalert.co.uk" -SslFlags 1
+New-WebBinding -Name $siteName -Protocol "https" -Port 443 -HostHeader "www.fxalert.co.uk" -SslFlags 1
+New-WebBinding -Name $siteName -Protocol "https" -Port 3000 -HostHeader "fxalert.co.uk" -SslFlags 1
+New-WebBinding -Name $siteName -Protocol "https" -Port 5000 -HostHeader "fxalert.co.uk" -SslFlags 1
 
 # Configure SSL bindings
 Write-Host "Configuring SSL bindings..."
@@ -200,7 +226,15 @@ foreach ($port in $ports) {
 
 # Start the website
 Write-Host "`nStarting website..."
-Start-Website -Name $siteName
+try {
+    Start-Website -Name $siteName -ErrorAction Stop
+    Write-Host "Website started successfully" -ForegroundColor Green
+} catch {
+    Write-Host "Error starting website: $_" -ForegroundColor Red
+    Write-Host "Attempting to start website using appcmd..."
+    $appCmd = "$env:windir\system32\inetsrv\appcmd.exe"
+    & $appCmd start site /site.name:$siteName
+}
 
 # Display current status
 Write-Host "`nCurrent Status:"
