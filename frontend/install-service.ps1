@@ -5,21 +5,16 @@ if (-not (Test-Path "C:\nssm\win64\nssm.exe")) {
     # Create NSSM directory
     New-Item -ItemType Directory -Path "C:\nssm\win64" -Force | Out-Null
 
-    # Download pre-compiled NSSM executable directly
+    # Download pre-compiled NSSM executable
     $nssmUrl = "https://archive.org/download/nssm-2.24/nssm-2.24.zip"
     $nssmZip = "$env:TEMP\nssm.zip"
     $nssmPath = "C:\nssm\win64\nssm.exe"
 
-    Write-Host "Downloading NSSM from archive.org..."
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $webClient = New-Object System.Net.WebClient
         $webClient.Headers.Add("User-Agent", "PowerShell Script")
         $webClient.DownloadFile($nssmUrl, $nssmZip)
-        
-        if (-not (Test-Path $nssmZip)) {
-            throw "Download failed - ZIP file not created"
-        }
         
         Write-Host "Extracting NSSM..."
         Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -27,20 +22,14 @@ if (-not (Test-Path "C:\nssm\win64\nssm.exe")) {
         if (Test-Path $tempDir) {
             Remove-Item -Path $tempDir -Recurse -Force
         }
-        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-        
         [System.IO.Compression.ZipFile]::ExtractToDirectory($nssmZip, $tempDir)
         
         $nssmFile = Get-ChildItem -Path $tempDir -Recurse -Filter "nssm.exe" | 
                     Where-Object { $_.FullName -like "*win64*" } | 
                     Select-Object -First 1
 
-        if ($nssmFile) {
-            Copy-Item -Path $nssmFile.FullName -Destination $nssmPath -Force
-            Write-Host "NSSM installed successfully"
-        } else {
-            throw "Could not find nssm.exe in the downloaded package"
-        }
+        Copy-Item -Path $nssmFile.FullName -Destination $nssmPath -Force
+        Write-Host "NSSM installed successfully"
 
         Remove-Item -Path $nssmZip -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -74,10 +63,9 @@ try {
 
 Write-Host "Stopping and removing existing service if it exists..."
 & $nssm stop $serviceName 2>$null
+Start-Sleep -Seconds 2
 & $nssm remove $serviceName confirm 2>$null
-
-Write-Host "Installing new service..."
-& $nssm install $serviceName $nodeExe
+Start-Sleep -Seconds 2
 
 Write-Host "Installing dependencies and building the application..."
 Set-Location $appDirectory
@@ -114,9 +102,6 @@ foreach ($line in $envContent) {
     }
 }
 
-Write-Host "Setting environment variables for the service..."
-& $nssm set $serviceName AppEnvironmentExtra $envString
-
 Write-Host "Cleaning previous build..."
 if (Test-Path ".next") {
     Remove-Item -Recurse -Force ".next"
@@ -145,15 +130,12 @@ try {
 Write-Host "Building application..."
 try {
     $env:NODE_ENV = "production"
-    # Run npm run build directly
-    Write-Host "Running build command..."
     npm run build
     
     if ($LASTEXITCODE -ne 0) {
         throw "npm run build failed with exit code $LASTEXITCODE"
     }
 
-    # Verify the build was created
     if (-not (Test-Path ".next")) {
         throw "Build failed - .next directory not created"
     }
@@ -161,51 +143,66 @@ try {
     Write-Host "Build completed successfully"
 } catch {
     Write-Error "Build failed: $_"
-    # Get the npm error log if it exists
-    $npmLog = Join-Path $env:TEMP "npm-debug.log"
-    if (Test-Path $npmLog) {
-        Write-Host "NPM Debug Log:"
-        Get-Content $npmLog | ForEach-Object { Write-Host $_ }
-    }
     exit 1
 }
-
-Write-Host "Configuring service..."
-# Set the correct path to node and the start script
-$nodePath = (Get-Command node).Path
-$startScript = Join-Path $appDirectory "node_modules\next\dist\bin\next"
-$startParams = "start -p 3000"
-
-& $nssm set $serviceName Application $nodePath
-& $nssm set $serviceName AppParameters "$startScript $startParams"
-& $nssm set $serviceName AppDirectory $appDirectory
-& $nssm set $serviceName DisplayName "Next.js Frontend Service"
-& $nssm set $serviceName Description "Forex News Notifier Frontend Service"
-& $nssm set $serviceName Start SERVICE_AUTO_START
-& $nssm set $serviceName ObjectName LocalSystem
-& $nssm set $serviceName AppStdout "$appDirectory\logs\service-output.log"
-& $nssm set $serviceName AppStderr "$appDirectory\logs\service-error.log"
 
 Write-Host "Creating log directory..."
 New-Item -ItemType Directory -Force -Path "$appDirectory\logs" | Out-Null
 
+Write-Host "Installing service..."
+& $nssm install $serviceName $nodeExe
+& $nssm set $serviceName AppDirectory $appDirectory
+& $nssm set $serviceName AppParameters ".\node_modules\next\dist\bin\next start -p 3000"
+& $nssm set $serviceName DisplayName "Next.js Frontend Service"
+& $nssm set $serviceName Description "Forex News Notifier Frontend Service"
+& $nssm set $serviceName Start SERVICE_AUTO_START
+& $nssm set $serviceName AppEnvironmentExtra $envString
+& $nssm set $serviceName AppStdout "$appDirectory\logs\service-output.log"
+& $nssm set $serviceName AppStderr "$appDirectory\logs\service-error.log"
+& $nssm set $serviceName AppRotateFiles 1
+& $nssm set $serviceName AppRotateOnline 1
+& $nssm set $serviceName AppRotateSeconds 86400
+& $nssm set $serviceName AppRotateBytes 10485760
+& $nssm set $serviceName AppThrottle 0
+& $nssm set $serviceName DependOnService "FlaskBackend"
+
 Write-Host "Starting service..."
-& $nssm stop $serviceName 2>$null
-Start-Sleep -Seconds 2
 & $nssm start $serviceName
 
-Start-Sleep -Seconds 5
-$service = Get-Service $serviceName
-Write-Host "Service Status: $($service.Status)"
+# Wait for service to start and verify its status
+$maxAttempts = 5
+$attempt = 0
+$serviceStarted = $false
 
-if ($service.Status -ne 'Running') {
-    Write-Warning "Service is not running. Attempting to start again..."
-    Stop-Service $serviceName -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
-    Start-Service $serviceName
+while ($attempt -lt $maxAttempts) {
     Start-Sleep -Seconds 5
     $service = Get-Service $serviceName
-    Write-Host "Final Service Status: $($service.Status)"
+    Write-Host "Service Status: $($service.Status)"
+    
+    if ($service.Status -eq 'Running') {
+        $serviceStarted = $true
+        break
+    }
+    
+    if ($service.Status -eq 'Paused') {
+        Write-Host "Service is paused, attempting to resume..."
+        Resume-Service $serviceName
+    } elseif ($service.Status -ne 'Running') {
+        Write-Host "Attempting to start service again..."
+        & $nssm restart $serviceName
+    }
+    
+    $attempt++
+}
+
+if (-not $serviceStarted) {
+    Write-Host "Service failed to start after $maxAttempts attempts. Checking error logs..."
+    if (Test-Path "$appDirectory\logs\service-error.log") {
+        Write-Host "Error log contents:"
+        Get-Content "$appDirectory\logs\service-error.log" -Tail 20
+    }
+    Write-Error "Service failed to start properly"
+    exit 1
 }
 
 Write-Host "Service installation complete. Check Windows Services to verify the service is running."
