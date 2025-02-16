@@ -154,10 +154,14 @@ if ($portInUse) {
 Write-Host "Configuring URL ACLs..."
 $null = netsh http delete urlacl url=http://+:3000/
 $null = netsh http delete urlacl url=https://+:3000/
+$null = netsh http delete urlacl url=http://+:80/
+$null = netsh http delete urlacl url=https://+:80/
+
+# Add URL ACLs with proper permissions
 $null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
 $null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
-$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
-$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
+$null = netsh http add urlacl url=http://+:80/ user="NT AUTHORITY\SYSTEM" listen=yes
+$null = netsh http add urlacl url=https://+:80/ user="NT AUTHORITY\SYSTEM" listen=yes
 
 # Configure SSL certificate binding
 Write-Host "Configuring SSL certificate binding..."
@@ -183,12 +187,14 @@ if (-not $cert) {
 
 if ($cert) {
     Write-Host "Using certificate with thumbprint: $($cert.Thumbprint)"
-    # Remove existing binding
+    # Remove existing bindings
     $null = netsh http delete sslcert ipport=0.0.0.0:3000
+    $null = netsh http delete sslcert ipport=0.0.0.0:80
     
-    # Add new binding without password prompt
+    # Add new bindings without password prompt
     $guid = [System.Guid]::NewGuid().ToString("B")
     $null = netsh http add sslcert ipport=0.0.0.0:3000 certhash=$($cert.Thumbprint) appid="{$guid}" certstorename=MY
+    $null = netsh http add sslcert ipport=0.0.0.0:80 certhash=$($cert.Thumbprint) appid="{$guid}" certstorename=MY
 } else {
     Write-Error "Could not find or import SSL certificate"
     exit 1
@@ -201,7 +207,7 @@ Write-Host "Installing service..."
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
-& $nssm set $serviceName ObjectName "NT AUTHORITY\NETWORK SERVICE"
+& $nssm set $serviceName ObjectName "LocalSystem"
 
 # Set environment variables including SSL configuration
 $envString = "NODE_ENV=production;"
@@ -233,9 +239,9 @@ foreach ($line in $envContent) {
 & $nssm set $serviceName AppThrottle 0
 & $nssm set $serviceName DependOnService "FlaskBackend"
 
-# Set directory permissions for Network Service
+# Set directory permissions
 $acl = Get-Acl $appDirectory
-$identity = "NT AUTHORITY\NETWORK SERVICE"
+$identity = "NT AUTHORITY\SYSTEM"
 $fileSystemRights = "FullControl"
 $type = "Allow"
 $fileSystemAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, $fileSystemRights, "ContainerInherit,ObjectInherit", "None", $type)
@@ -257,17 +263,6 @@ if (Test-Path $certDir) {
     $certAcl.AddAccessRule($fileSystemAccessRule)
     Set-Acl $certDir $certAcl
 }
-
-# Add permissions for System account
-$systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-    "NT AUTHORITY\SYSTEM",
-    "FullControl",
-    "ContainerInherit,ObjectInherit",
-    "None",
-    "Allow"
-)
-$acl.AddAccessRule($systemRule)
-Set-Acl $appDirectory $acl
 
 Write-Host "Starting service..."
 & $nssm stop $serviceName 2>$null
