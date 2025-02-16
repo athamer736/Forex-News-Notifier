@@ -29,28 +29,61 @@ function log(message, error = null) {
 function verifyCertificates() {
     log('Verifying certificate files...');
     
-    if (!fs.existsSync(CERT_PATH)) {
-        throw new Error(`Certificate file not found at: ${CERT_PATH}`);
+    try {
+        // Check certificate file
+        if (!fs.existsSync(CERT_PATH)) {
+            throw new Error(`Certificate file not found at: ${CERT_PATH}`);
+        }
+        
+        // Check key file
+        if (!fs.existsSync(KEY_PATH)) {
+            throw new Error(`Private key file not found at: ${KEY_PATH}`);
+        }
+        
+        // Get file stats and check permissions
+        const certStats = fs.statSync(CERT_PATH);
+        const keyStats = fs.statSync(KEY_PATH);
+        
+        // Check if files are readable
+        try {
+            fs.accessSync(CERT_PATH, fs.constants.R_OK);
+            fs.accessSync(KEY_PATH, fs.constants.R_OK);
+        } catch (accessErr) {
+            throw new Error(`Permission denied: Cannot read certificate files.\nCert permissions: ${certStats.mode}\nKey permissions: ${keyStats.mode}`);
+        }
+        
+        // Log detailed file information
+        log(`Certificate file (${CERT_PATH}):
+        Size: ${certStats.size} bytes
+        Permissions: ${certStats.mode.toString(8)}
+        Last modified: ${certStats.mtime}
+        UID: ${certStats.uid}
+        GID: ${certStats.gid}`);
+        
+        log(`Key file (${KEY_PATH}):
+        Size: ${keyStats.size} bytes
+        Permissions: ${keyStats.mode.toString(8)}
+        Last modified: ${keyStats.mtime}
+        UID: ${keyStats.uid}
+        GID: ${keyStats.gid}`);
+        
+        // Try to read the first few bytes of each file to verify they're accessible
+        const certTest = fs.readFileSync(CERT_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
+        const keyTest = fs.readFileSync(KEY_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
+        
+        if (!certTest.includes('-----BEGIN CERTIFICATE-----')) {
+            throw new Error('Invalid certificate file format');
+        }
+        if (!keyTest.includes('-----BEGIN PRIVATE KEY-----')) {
+            throw new Error('Invalid private key file format');
+        }
+        
+        log('Certificate files verified successfully');
+        return true;
+    } catch (err) {
+        log('Certificate verification failed', err);
+        throw err;
     }
-    if (!fs.existsSync(KEY_PATH)) {
-        throw new Error(`Private key file not found at: ${KEY_PATH}`);
-    }
-    
-    // Get file stats for additional verification
-    const certStats = fs.statSync(CERT_PATH);
-    const keyStats = fs.statSync(KEY_PATH);
-    
-    log(`Certificate file (${CERT_PATH}):
-    Size: ${certStats.size} bytes
-    Permissions: ${certStats.mode}
-    Last modified: ${certStats.mtime}`);
-    
-    log(`Key file (${KEY_PATH}):
-    Size: ${keyStats.size} bytes
-    Permissions: ${keyStats.mode}
-    Last modified: ${keyStats.mtime}`);
-    
-    log('Certificate files verified successfully');
 }
 
 try {
@@ -60,16 +93,28 @@ try {
     log(`Process ID: ${process.pid}`);
     log(`Working Directory: ${process.cwd()}`);
     log(`Memory Usage: ${JSON.stringify(process.memoryUsage())}`);
+    log(`User Info: ${process.getuid?.() || 'N/A'}`);
     
     // Verify certificate files
     verifyCertificates();
 
-    // Read certificates
+    // Read certificates with explicit error handling
     log('Reading SSL certificates...');
-    const privateKey = fs.readFileSync(KEY_PATH, 'utf8');
-    log(`Private key loaded successfully, length: ${privateKey.length}`);
-    const certificate = fs.readFileSync(CERT_PATH, 'utf8');
-    log(`Certificate loaded successfully, length: ${certificate.length}`);
+    let privateKey, certificate;
+    
+    try {
+        privateKey = fs.readFileSync(KEY_PATH, 'utf8');
+        log(`Private key loaded successfully, length: ${privateKey.length}`);
+    } catch (keyErr) {
+        throw new Error(`Failed to read private key: ${keyErr.message}`);
+    }
+    
+    try {
+        certificate = fs.readFileSync(CERT_PATH, 'utf8');
+        log(`Certificate loaded successfully, length: ${certificate.length}`);
+    } catch (certErr) {
+        throw new Error(`Failed to read certificate: ${certErr.message}`);
+    }
 
     const sslOptions = {
         key: privateKey,
