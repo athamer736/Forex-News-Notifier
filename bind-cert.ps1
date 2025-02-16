@@ -124,63 +124,41 @@ function Bind-SSLCert {
     # Clean the thumbprint again just to be sure
     $thumbprint = $thumbprint.Replace(" ", "").Replace("-", "").ToUpper()
     
-    # Store verify command as it's used multiple times
-    $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
-    
-    # Remove existing binding if it exists
-    Write-Host "Removing existing binding for port $port..."
-    $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
-    $deleteResult = Invoke-Expression $deleteCmd 2>&1
-    Start-Sleep -Seconds 2  # Add delay after deletion
-    
-    # Try with the Windows HTTP API first
-    Write-Host "Attempting to bind using Windows HTTP API..."
     try {
-        $binding = New-Object -TypeName System.Net.HttpListener
-        $binding.Prefixes.Add("https://+:$port/")
-        $binding.Start()
-        $binding.Stop()
-    } catch {
-        Write-Host "Windows HTTP API binding failed, falling back to netsh..."
-    }
-    
-    # Simplified binding command with clean thumbprint
-    Write-Host "Adding new SSL binding for port $port..."
-    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
-    Write-Host "Executing command: $bindCmd"
-    
-    try {
-        $result = Invoke-Expression $bindCmd 2>&1
-        Start-Sleep -Seconds 2  # Add delay after binding
+        # Remove existing binding if it exists
+        Write-Host "Removing existing binding for port $port..."
+        try {
+            Get-Item -Path "IIS:\SslBindings\0.0.0.0!$port" -ErrorAction Stop | Remove-Item -Force
+        } catch {
+            Write-Host "No existing binding to remove"
+        }
         
-        # Verify the binding
+        # Get the certificate from the store
+        Write-Host "Retrieving certificate from store..."
+        $cert = Get-ChildItem -Path "Cert:\LocalMachine\My\$thumbprint" -ErrorAction Stop
+        
+        if (-not $cert) {
+            throw "Certificate not found in store"
+        }
+        
+        Write-Host "Creating new SSL binding..."
+        # Create the SSL binding using native PowerShell commands
+        $cert | New-Item -Path "IIS:\SslBindings\0.0.0.0!$port" -Force
+        
+        # Verify the binding was created
         Write-Host "Verifying binding..."
-        $verifyResult = Invoke-Expression $verifyCmd 2>&1
+        $binding = Get-Item -Path "IIS:\SslBindings\0.0.0.0!$port" -ErrorAction SilentlyContinue
         
-        if ($verifyResult -match $thumbprint) {
-            Write-Host "Successfully verified SSL binding for port $port"
+        if ($binding -and $binding.Thumbprint -eq $thumbprint) {
+            Write-Host "Successfully created SSL binding for port $port"
             return $true
         }
         
-        Write-Host "Initial binding failed, trying with HTTP.sys direct binding..."
+        Write-Host "Failed to verify binding creation"
+        return $false
         
-        # Try using HTTP.sys directly
-        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY sslctlidentifier=0x0"
-        Write-Host "Executing alternative command: $altBindCmd"
-        
-        $altResult = Invoke-Expression $altBindCmd 2>&1
-        Start-Sleep -Seconds 2  # Add delay after binding
-        
-        # Final verification
-        $finalVerifyResult = Invoke-Expression $verifyCmd 2>&1
-        if ($finalVerifyResult -match $thumbprint) {
-            Write-Host "Successfully verified SSL binding for port $port using alternative parameters"
-            return $true
-        }
-        
-        Write-Host "Failed to create SSL binding for port $port"
-        Write-Host "Initial attempt output: $result"
-        Write-Host "Alternative attempt output: $altResult"
+    } catch {
+        Write-Host "Error during SSL binding: $_"
         
         # Display current certificate store information for debugging
         Write-Host "Checking certificate store..."
@@ -195,16 +173,17 @@ function Bind-SSLCert {
         $store.Close()
         
         return $false
-        
-    } catch {
-        Write-Host "Error during SSL binding: $_"
-        return $false
     }
 }
 
 # Bind certificates to each port
 $ports = @(443, 3000, 5000)
 $bindingResults = @()
+
+# Ensure WebAdministration module is loaded
+if (-not (Get-Module -Name WebAdministration)) {
+    Import-Module WebAdministration -Force
+}
 
 foreach ($port in $ports) {
     $success = Bind-SSLCert -port $port -thumbprint $thumbprint -appid $appid
@@ -220,10 +199,11 @@ iisreset /restart
 Write-Host "Configuration complete. Verifying bindings..."
 Get-WebBinding -Name $siteName | Format-Table Protocol, bindingInformation
 
-Write-Host "`nVerifying SSL certificate bindings..."
+Write-Host "`nVerifying SSL bindings..."
 foreach ($port in $ports) {
-    Write-Host "`nPort $port bindings:"
-    netsh http show sslcert ipport=0.0.0.0:$port
+    Write-Host "`nPort $port binding:"
+    Get-Item "IIS:\SslBindings\0.0.0.0!$port" -ErrorAction SilentlyContinue | 
+        Select-Object Host, Port, Store, Thumbprint
 }
 
 # Report final status
