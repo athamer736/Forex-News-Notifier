@@ -69,51 +69,30 @@ try {
         });
 
         // Listen on HTTPS port
-        httpsServer.listen(3000, (err) => {
+        const port = process.env.PORT || 3000;
+        httpsServer.listen(port, (err) => {
             if (err) {
                 console.error('Failed to start HTTPS server:', err);
                 throw err;
             }
-            console.log('> HTTPS Server ready on https://fxalert.co.uk:3000');
+            console.log(`> HTTPS Server ready on https://fxalert.co.uk:${port}`);
         });
 
-        // Create HTTP redirect server
-        console.log('Creating HTTP redirect server...');
-        const httpServer = createHttpServer((req, res) => {
-            const host = req.headers.host || 'fxalert.co.uk';
-            const httpsUrl = `https://${host.split(':')[0]}:3000${req.url}`;
-            console.log(`Redirecting ${req.url} to ${httpsUrl}`);
-            res.writeHead(301, { Location: httpsUrl });
-            res.end();
-        });
-
-        // Listen on HTTP port
-        httpServer.listen(80, (err) => {
-            if (err) {
-                console.error('Failed to start HTTP redirect server:', err);
-                // Don't throw, just log the error
-                console.log('HTTP redirect server failed, but HTTPS server should still work');
-            } else {
-                console.log('> HTTP redirect server ready');
+        // Set up error handlers
+        httpsServer.on('error', (err) => {
+            console.error('Server error:', err);
+            if (err.code === 'EACCES') {
+                console.error('Permission denied. Try running with administrator privileges.');
             }
+            if (err.code === 'EADDRINUSE') {
+                console.error('Address already in use. Check if another service is using the port.');
+            }
+            process.exit(1);
         });
 
-        // Set up error handlers for both servers
-        [httpsServer, httpServer].forEach(server => {
-            server.on('error', (err) => {
-                console.error('Server error:', err);
-                if (err.code === 'EACCES') {
-                    console.error('Permission denied. Try running with administrator privileges.');
-                }
-                if (err.code === 'EADDRINUSE') {
-                    console.error('Address already in use. Check if another service is using the port.');
-                }
-            });
-
-            server.on('clientError', (err, socket) => {
-                console.error('Client error:', err);
-                socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
-            });
+        httpsServer.on('clientError', (err, socket) => {
+            console.error('Client error:', err);
+            socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
         });
 
     }).catch(err => {

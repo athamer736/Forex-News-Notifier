@@ -156,6 +156,8 @@ $null = netsh http delete urlacl url=http://+:3000/
 $null = netsh http delete urlacl url=https://+:3000/
 $null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
 $null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
+$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
+$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
 
 # Configure SSL certificate binding
 Write-Host "Configuring SSL certificate binding..."
@@ -199,7 +201,7 @@ Write-Host "Installing service..."
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
-& $nssm set $serviceName ObjectName "LocalSystem"
+& $nssm set $serviceName ObjectName "NT AUTHORITY\NETWORK SERVICE"
 
 # Set environment variables including SSL configuration
 $envString = "NODE_ENV=production;"
@@ -231,9 +233,9 @@ foreach ($line in $envContent) {
 & $nssm set $serviceName AppThrottle 0
 & $nssm set $serviceName DependOnService "FlaskBackend"
 
-# Set directory permissions for LocalSystem
+# Set directory permissions for Network Service
 $acl = Get-Acl $appDirectory
-$identity = "NT AUTHORITY\SYSTEM"
+$identity = "NT AUTHORITY\NETWORK SERVICE"
 $fileSystemRights = "FullControl"
 $type = "Allow"
 $fileSystemAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, $fileSystemRights, "ContainerInherit,ObjectInherit", "None", $type)
@@ -256,15 +258,15 @@ if (Test-Path $certDir) {
     Set-Acl $certDir $certAcl
 }
 
-# Add permissions for Network Service account
-$networkServiceRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-    "NT AUTHORITY\NETWORK SERVICE",
+# Add permissions for System account
+$systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+    "NT AUTHORITY\SYSTEM",
     "FullControl",
     "ContainerInherit,ObjectInherit",
     "None",
     "Allow"
 )
-$acl.AddAccessRule($networkServiceRule)
+$acl.AddAccessRule($systemRule)
 Set-Acl $appDirectory $acl
 
 Write-Host "Starting service..."
