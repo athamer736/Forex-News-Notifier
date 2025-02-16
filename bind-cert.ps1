@@ -111,67 +111,55 @@ function Bind-SSLCert {
     Write-Host "Binding certificate to port $port..."
     
     # Remove existing binding if it exists
-    try {
-        Write-Host "Removing existing binding for port $port..."
-        $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
-        $deleteResult = Invoke-Expression $deleteCmd 2>&1
-        Start-Sleep -Seconds 2  # Add delay after deletion
-    } catch {
-        $errorMessage = $_.Exception.Message
-        Write-Host "Error removing binding: $errorMessage"
-    }
+    Write-Host "Removing existing binding for port $port..."
+    $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
+    $deleteResult = Invoke-Expression $deleteCmd 2>&1
+    Start-Sleep -Seconds 2  # Add delay after deletion
     
-    try {
-        # Simple binding command with minimal parameters
-        Write-Host "Adding new SSL binding for port $port..."
-        $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
-        $result = Invoke-Expression $bindCmd 2>&1
+    # Simple binding command with minimal parameters
+    Write-Host "Adding new SSL binding for port $port..."
+    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
+    $result = Invoke-Expression $bindCmd 2>&1
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Initial binding successful, verifying..."
+        Start-Sleep -Seconds 2  # Add delay before verification
         
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Initial binding successful, verifying..."
-            Start-Sleep -Seconds 2  # Add delay before verification
-            
-            # Verify the binding
-            $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
-            $verifyResult = Invoke-Expression $verifyCmd 2>&1
-            
-            if ($verifyResult -match $thumbprint) {
-                Write-Host "Successfully verified SSL binding for port $port"
-                return $true
-            }
-        }
+        # Verify the binding
+        $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
+        $verifyResult = Invoke-Expression $verifyCmd 2>&1
         
-        Write-Host "Standard binding failed, trying with additional parameters..."
-        
-        # Try with additional parameters
-        $extendedBindCmd = @"
-        netsh http add sslcert `
-        ipport=0.0.0.0:$port `
-        certhash=$thumbprint `
-        appid={$appid} `
-        certstorename=MY `
-        sslctlstorename=MY
-"@
-        
-        $extResult = Invoke-Expression $extendedBindCmd 2>&1
-        Start-Sleep -Seconds 2  # Add delay after binding
-        
-        # Final verification
-        $finalVerifyResult = Invoke-Expression $verifyCmd 2>&1
-        if ($finalVerifyResult -match $thumbprint) {
-            Write-Host "Successfully verified SSL binding for port $port using extended parameters"
+        if ($verifyResult -match $thumbprint) {
+            Write-Host "Successfully verified SSL binding for port $port"
             return $true
         }
-        
-        Write-Host "Failed to create SSL binding for port $port"
-        Write-Host "Command output: $extResult"
-        return $false
-        
-    } catch {
-        $errorMessage = $_.Exception.Message
-        Write-Host "Error during SSL binding process for port $port: $errorMessage"
-        return $false
     }
+    
+    Write-Host "Standard binding failed, trying with additional parameters..."
+    
+    # Try with additional parameters
+    $extendedBindCmd = @"
+    netsh http add sslcert `
+    ipport=0.0.0.0:$port `
+    certhash=$thumbprint `
+    appid={$appid} `
+    certstorename=MY `
+    sslctlstorename=MY
+"@
+    
+    $extResult = Invoke-Expression $extendedBindCmd 2>&1
+    Start-Sleep -Seconds 2  # Add delay after binding
+    
+    # Final verification
+    $finalVerifyResult = Invoke-Expression $verifyCmd 2>&1
+    if ($finalVerifyResult -match $thumbprint) {
+        Write-Host "Successfully verified SSL binding for port $port using extended parameters"
+        return $true
+    }
+    
+    Write-Host "Failed to create SSL binding for port $port"
+    Write-Host "Command output: $extResult"
+    return $false
 }
 
 # Bind certificates to each port
