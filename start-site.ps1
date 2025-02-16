@@ -91,9 +91,27 @@ function Restart-IISServices {
     Write-Host "IIS services restarted"
 }
 
+# Stop all services and processes first
+Write-Host "`nStopping all services and processes..."
+$services = @(
+    "FlaskBackend",
+    "NextJSFrontend",
+    "W3SVC",
+    "WAS",
+    "WMSVC",
+    "IISADMIN"
+)
+
+foreach ($service in $services) {
+    if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
+        Write-Host "Stopping $service..."
+        Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
+    }
+}
+
 # Stop all related processes
 Write-Host "`nStopping all related processes..."
-Stop-ProcessesAggressively @("w3wp", "node", "python", "flask", "waitress")
+Stop-ProcessesAggressively @("w3wp", "node", "python", "flask", "waitress", "WAS", "WWAHost")
 Start-Sleep -Seconds 5
 
 # Check and release ports
@@ -118,36 +136,22 @@ foreach ($port in $ports) {
     }
 }
 
-# Start Backend Service
-Write-Host "`nStarting Flask Backend Service..."
-$backendService = Get-Service -Name "FlaskBackend" -ErrorAction SilentlyContinue
-if ($backendService) {
-    Write-Host "Stopping existing Flask Backend service..."
-    Stop-Service -Name "FlaskBackend" -Force
-    Start-Sleep -Seconds 2
+# Clean up IIS temporary files
+Write-Host "`nCleaning up IIS temporary files..."
+Remove-Item -Path "C:\inetpub\temp\IIS Temporary Compressed Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "C:\Windows\Microsoft.NET\Framework\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+# Start IIS services in correct order
+Write-Host "`nStarting IIS services..."
+$iisServices = @("IISADMIN", "WAS", "W3SVC")
+foreach ($service in $iisServices) {
+    if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
+        Write-Host "Starting $service..."
+        Start-Service -Name $service -ErrorAction Continue
+        Start-Sleep -Seconds 2
+    }
 }
-
-Write-Host "Installing Flask Backend service..."
-Set-Location $backendPath
-& "$backendPath\backend\install-service.ps1"
-Start-Sleep -Seconds 5
-
-# Start Frontend Service
-Write-Host "`nStarting Next.js Frontend Service..."
-$frontendService = Get-Service -Name "NextJSFrontend" -ErrorAction SilentlyContinue
-if ($frontendService) {
-    Write-Host "Stopping existing Next.js Frontend service..."
-    Stop-Service -Name "NextJSFrontend" -Force
-    Start-Sleep -Seconds 2
-}
-
-Write-Host "Installing Next.js Frontend service..."
-Set-Location $physicalPath
-& "$physicalPath\install-service.ps1"
-Start-Sleep -Seconds 5
-
-# Restart IIS and related services
-Restart-IISServices
 
 # Remove and recreate application pool
 Write-Host "`nRecreating application pool..."
@@ -222,6 +226,26 @@ $ports = @(443, 3000, 5000)
 foreach ($port in $ports) {
     & "netsh" http delete sslcert ipport=0.0.0.0:$port
     & "netsh" http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid="{$([Guid]::NewGuid().ToString())}" certstorename=MY
+}
+
+# Start Backend Service
+Write-Host "`nStarting Flask Backend Service..."
+$backendService = Get-Service -Name "FlaskBackend" -ErrorAction SilentlyContinue
+if ($backendService) {
+    Write-Host "Installing Flask Backend service..."
+    Set-Location $backendPath
+    & "$backendPath\backend\install-service.ps1"
+    Start-Sleep -Seconds 5
+}
+
+# Start Frontend Service
+Write-Host "`nStarting Next.js Frontend Service..."
+$frontendService = Get-Service -Name "NextJSFrontend" -ErrorAction SilentlyContinue
+if ($frontendService) {
+    Write-Host "Installing Next.js Frontend service..."
+    Set-Location $physicalPath
+    & "$physicalPath\install-service.ps1"
+    Start-Sleep -Seconds 5
 }
 
 # Start the website
