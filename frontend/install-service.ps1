@@ -174,6 +174,26 @@ Write-Host "Adding URL ACL for port 3000..."
 $null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM"
 $null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM"
 
+# Configure SSL certificate binding
+Write-Host "Configuring SSL certificate binding..."
+$certPath = "C:\Certbot\live\fxalert.co.uk\fullchain.pem"
+$keyPath = "C:\Certbot\live\fxalert.co.uk\privkey.pem"
+
+# Verify certificate files exist
+if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
+    Write-Error "SSL certificate files not found. Please ensure they exist at the specified paths."
+    exit 1
+}
+
+# Remove existing SSL binding for port 3000
+$null = netsh http delete sslcert ipport=0.0.0.0:3000
+$null = netsh http delete sslcert ipport=[::]:3000
+
+# Create new SSL binding
+$appGuid = [System.Guid]::NewGuid().ToString("B")
+$certHash = (Get-PfxCertificate -FilePath $certPath).Thumbprint
+$null = netsh http add sslcert ipport=0.0.0.0:3000 certhash=$certHash appid="{$appGuid}" certstorename=MY
+
 Write-Host "Installing service..."
 & $nssm install $serviceName $nodeExe
 & $nssm set $serviceName AppDirectory $appDirectory
@@ -182,6 +202,26 @@ Write-Host "Installing service..."
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
 & $nssm set $serviceName ObjectName "LocalSystem"
+
+# Set environment variables including SSL configuration
+$envString = "NODE_ENV=production;"
+$envString += "HTTPS=true;"
+$envString += "SSL_CRT_FILE=$certPath;"
+$envString += "SSL_KEY_FILE=$keyPath;"
+$envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"
+
+# Add other environment variables from .env file
+$envContent = Get-Content $frontendEnvFile
+foreach ($line in $envContent) {
+    if ($line -match '^\s*([^#][^=]+)=(.+)$') {
+        $key = $matches[1].Trim()
+        $value = $matches[2].Trim()
+        if ($key -notin @("NODE_ENV", "HTTPS", "SSL_CRT_FILE", "SSL_KEY_FILE", "NODE_TLS_REJECT_UNAUTHORIZED")) {
+            $envString += "$key=$value;"
+        }
+    }
+}
+
 & $nssm set $serviceName AppEnvironmentExtra $envString
 & $nssm set $serviceName AppStdout "$appDirectory\logs\service-output.log"
 & $nssm set $serviceName AppStderr "$appDirectory\logs\service-error.log"
@@ -209,6 +249,14 @@ if (Test-Path $nextDir) {
     Set-Acl $nextDir $nextAcl
 }
 
+# Set permissions for SSL certificate directory
+$certDir = "C:\Certbot\live\fxalert.co.uk"
+if (Test-Path $certDir) {
+    $certAcl = Get-Acl $certDir
+    $certAcl.AddAccessRule($fileSystemAccessRule)
+    Set-Acl $certDir $certAcl
+}
+
 Write-Host "Starting service..."
 & $nssm stop $serviceName 2>$null
 Start-Sleep -Seconds 2
@@ -230,7 +278,16 @@ while ($attempt -lt $maxAttempts) {
         if ($portCheck) {
             $serviceStarted = $true
             Write-Host "Port 3000 is now listening"
-            break
+            
+            # Test HTTPS access
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $response = Invoke-WebRequest -Uri "https://localhost:3000" -UseBasicParsing
+                Write-Host "HTTPS access test successful: $($response.StatusCode)"
+                break
+            } catch {
+                Write-Host "HTTPS access test failed: $_"
+            }
         } else {
             Write-Host "Service is running but port 3000 is not yet listening"
         }
