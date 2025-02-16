@@ -1,9 +1,9 @@
 const { createServer: createHttpsServer } = require('https');
-const { createServer: createHttpServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const fs = require('fs');
 const path = require('path');
+const tls = require('tls');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -45,18 +45,12 @@ try {
     const sslOptions = {
         key: privateKey,
         cert: certificate,
-        secureProtocol: 'TLSv1_2_method',
-        secureOptions: require('constants').SSL_OP_NO_TLSv1 | 
-                      require('constants').SSL_OP_NO_TLSv1_1,
-        ciphers: [
-            "ECDHE-RSA-AES128-GCM-SHA256",
-            "ECDHE-ECDSA-AES128-GCM-SHA256",
-            "ECDHE-RSA-AES256-GCM-SHA384",
-            "ECDHE-ECDSA-AES256-GCM-SHA384",
-            "DHE-RSA-AES128-GCM-SHA256"
-        ].join(':'),
+        minVersion: tls.DEFAULT_MIN_VERSION,
+        ciphers: tls.DEFAULT_CIPHERS,
         honorCipherOrder: true,
-        minVersion: 'TLSv1.2'
+        handshakeTimeout: 120000,
+        requestCert: false,
+        rejectUnauthorized: false
     };
 
     app.prepare().then(() => {
@@ -90,6 +84,7 @@ try {
             }
             console.log(`> HTTPS Server ready on port ${PORT}`);
             console.log('> Listening on all interfaces (0.0.0.0)');
+            console.log('> TLS version:', tls.DEFAULT_MIN_VERSION);
         });
 
         // Set up error handlers
@@ -109,6 +104,13 @@ try {
             console.error('Client IP:', socket.remoteAddress);
             console.error('Client Port:', socket.remotePort);
             socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+        });
+
+        // Log successful TLS connections
+        httpsServer.on('secureConnection', (tlsSocket) => {
+            console.log('New TLS connection established');
+            console.log('TLS Protocol Version:', tlsSocket.getProtocol());
+            console.log('Cipher:', tlsSocket.getCipher().name);
         });
 
     }).catch(err => {
