@@ -13,15 +13,19 @@ if (-not $isAdmin) {
 # Certificate paths and settings
 $certPath = "C:\Certbot\live\fxalert.co.uk\fullchain.pem"
 $keyPath = "C:\Certbot\live\fxalert.co.uk\privkey.pem"
-$tempPfxPath = [System.IO.Path]::GetTempFileName() + ".pfx"
+$tempDir = [System.IO.Path]::GetTempPath()
+$tempCombinedPem = Join-Path $tempDir "combined.pem"
+$tempPfxPath = Join-Path $tempDir "certificate.pfx"
 $pfxPassword = [System.Guid]::NewGuid().ToString("N")
 $siteName = "ForexNewsNotifier"
 
 # Verify certificate files exist
-if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
-    Write-Host "Certificate files not found. Please ensure they exist at:"
-    Write-Host "Certificate: $certPath"
-    Write-Host "Private Key: $keyPath"
+if (-not (Test-Path $certPath)) {
+    Write-Host "Certificate file not found at: $certPath"
+    exit 1
+}
+if (-not (Test-Path $keyPath)) {
+    Write-Host "Private key file not found at: $keyPath"
     exit 1
 }
 
@@ -40,11 +44,22 @@ try {
     }
     $store.Close()
 
-    # Use certutil to create PFX from PEM files
-    Write-Host "Converting certificate to PFX format..."
-    $result = certutil -f -p $pfxPassword -mergepfx $certPath $tempPfxPath
+    # Combine certificate and private key into a single PEM file
+    Write-Host "Combining certificate and private key..."
+    $key = Get-Content -Path $keyPath -Raw
+    $cert = Get-Content -Path $certPath -Raw
+    Set-Content -Path $tempCombinedPem -Value $key,$cert
+
+    # Convert combined PEM to PFX
+    Write-Host "Converting to PFX format..."
+    $result = & "C:\Windows\System32\certutil.exe" -f -p $pfxPassword -mergepfx $tempCombinedPem $tempPfxPath
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to create PFX file: $result"
+    }
+
+    # Verify PFX file was created
+    if (-not (Test-Path $tempPfxPath)) {
+        throw "PFX file was not created"
     }
 
     # Import the PFX
@@ -57,7 +72,10 @@ try {
     Write-Host "Failed to import certificate: $_"
     exit 1
 } finally {
-    # Clean up temporary PFX file
+    # Clean up temporary files
+    if (Test-Path $tempCombinedPem) {
+        Remove-Item -Path $tempCombinedPem -Force
+    }
     if (Test-Path $tempPfxPath) {
         Remove-Item -Path $tempPfxPath -Force
     }
