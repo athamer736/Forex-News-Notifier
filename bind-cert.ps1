@@ -14,7 +14,9 @@ if (-not $isAdmin) {
 $certPath = "C:\Certbot\live\fxalert.co.uk\fullchain.pem"
 $keyPath = "C:\Certbot\live\fxalert.co.uk\privkey.pem"
 $tempDir = [System.IO.Path]::GetTempPath()
-$tempCombinedPem = Join-Path $tempDir "combined.pem"
+$opensslDir = "C:\OpenSSL"
+$opensslZip = Join-Path $tempDir "openssl.zip"
+$opensslExe = Join-Path $opensslDir "openssl.exe"
 $tempPfxPath = Join-Path $tempDir "certificate.pfx"
 $pfxPassword = [System.Guid]::NewGuid().ToString("N")
 $siteName = "ForexNewsNotifier"
@@ -27,6 +29,33 @@ if (-not (Test-Path $certPath)) {
 if (-not (Test-Path $keyPath)) {
     Write-Host "Private key file not found at: $keyPath"
     exit 1
+}
+
+# Download and setup OpenSSL if not present
+if (-not (Test-Path $opensslExe)) {
+    Write-Host "OpenSSL not found. Downloading and setting up..."
+    try {
+        # Create OpenSSL directory
+        New-Item -ItemType Directory -Force -Path $opensslDir | Out-Null
+        
+        # Download OpenSSL
+        $webClient = New-Object System.Net.WebClient
+        $webClient.Headers.Add("User-Agent", "PowerShell Script")
+        $opensslUrl = "https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.1.3.zip"
+        $webClient.DownloadFile($opensslUrl, $opensslZip)
+        
+        # Extract OpenSSL
+        Write-Host "Extracting OpenSSL..."
+        Expand-Archive -Path $opensslZip -DestinationPath $opensslDir -Force
+        
+        # Clean up zip file
+        Remove-Item $opensslZip -Force
+        
+        Write-Host "OpenSSL setup complete"
+    } catch {
+        Write-Host "Failed to setup OpenSSL: $_"
+        exit 1
+    }
 }
 
 # Import certificate to store
@@ -44,17 +73,12 @@ try {
     }
     $store.Close()
 
-    # Combine certificate and private key into a single PEM file
-    Write-Host "Combining certificate and private key..."
-    $key = Get-Content -Path $keyPath -Raw
-    $cert = Get-Content -Path $certPath -Raw
-    Set-Content -Path $tempCombinedPem -Value $key,$cert
-
-    # Convert combined PEM to PFX
-    Write-Host "Converting to PFX format..."
-    $result = & "C:\Windows\System32\certutil.exe" -f -p $pfxPassword -mergepfx $tempCombinedPem $tempPfxPath
+    # Convert PEM to PFX using OpenSSL
+    Write-Host "Converting to PFX format using OpenSSL..."
+    $opensslCmd = "& '$opensslExe' pkcs12 -export -out '$tempPfxPath' -inkey '$keyPath' -in '$certPath' -password pass:$pfxPassword"
+    $result = Invoke-Expression $opensslCmd
     if ($LASTEXITCODE -ne 0) {
-        throw "Failed to create PFX file: $result"
+        throw "Failed to create PFX file using OpenSSL: $result"
     }
 
     # Verify PFX file was created
@@ -73,9 +97,6 @@ try {
     exit 1
 } finally {
     # Clean up temporary files
-    if (Test-Path $tempCombinedPem) {
-        Remove-Item -Path $tempCombinedPem -Force
-    }
     if (Test-Path $tempPfxPath) {
         Remove-Item -Path $tempPfxPath -Force
     }
