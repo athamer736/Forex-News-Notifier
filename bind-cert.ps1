@@ -98,7 +98,7 @@ Set-ItemProperty "IIS:\Sites\$siteName" -Name "physicalPath" -Value "C:\FlaskApp
 
 Write-Host "Configuring SSL certificates..."
 # Create a new GUID for the application
-$appid = [System.Guid]::NewGuid().ToString("B")
+$appid = [System.Guid]::NewGuid().ToString("D")  # Using "D" format for standard GUID format
 
 # Function to bind SSL certificate
 function Bind-SSLCert {
@@ -116,9 +116,10 @@ function Bind-SSLCert {
     $deleteResult = Invoke-Expression $deleteCmd 2>&1
     Start-Sleep -Seconds 2  # Add delay after deletion
     
-    # Simple binding command with correct syntax
+    # Format the command with proper GUID format
     Write-Host "Adding new SSL binding for port $port..."
-    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY"
+    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
+    Write-Host "Executing command: $bindCmd"
     $result = Invoke-Expression $bindCmd 2>&1
     
     if ($LASTEXITCODE -eq 0) {
@@ -137,9 +138,9 @@ function Bind-SSLCert {
     
     Write-Host "Standard binding failed, trying with additional parameters..."
     
-    # Try with additional parameters based on netsh help
-    $extendedBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY sslctlstorename=MY clientcertnegotiation=disable"
-    
+    # Try with additional parameters
+    $extendedBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY clientcertnegotiation=disable"
+    Write-Host "Executing extended command: $extendedBindCmd"
     $extResult = Invoke-Expression $extendedBindCmd 2>&1
     Start-Sleep -Seconds 2  # Add delay after binding
     
