@@ -14,33 +14,62 @@ const CERT_PATH = process.env.SSL_CRT_FILE || 'C:/Certbot/live/fxalert.co.uk/ful
 const KEY_PATH = process.env.SSL_KEY_FILE || 'C:/Certbot/live/fxalert.co.uk/privkey.pem';
 const PORT = process.env.PORT || 3000;
 
-console.log('Starting server with following configuration:');
-console.log('Environment:', process.env.NODE_ENV);
-console.log('Certificate path:', CERT_PATH);
-console.log('Key path:', KEY_PATH);
-console.log('Port:', PORT);
+// Enhanced logging function
+function log(message, error = null) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `${timestamp} - ${message}`;
+    console.log(logMessage);
+    if (error) {
+        console.error(`${timestamp} - Error Details:`, error);
+        console.error(`${timestamp} - Stack:`, error.stack);
+    }
+}
 
 // Function to verify certificate files
 function verifyCertificates() {
+    log('Verifying certificate files...');
+    
     if (!fs.existsSync(CERT_PATH)) {
         throw new Error(`Certificate file not found at: ${CERT_PATH}`);
     }
     if (!fs.existsSync(KEY_PATH)) {
         throw new Error(`Private key file not found at: ${KEY_PATH}`);
     }
-    console.log('Certificate files verified');
+    
+    // Get file stats for additional verification
+    const certStats = fs.statSync(CERT_PATH);
+    const keyStats = fs.statSync(KEY_PATH);
+    
+    log(`Certificate file (${CERT_PATH}):
+    Size: ${certStats.size} bytes
+    Permissions: ${certStats.mode}
+    Last modified: ${certStats.mtime}`);
+    
+    log(`Key file (${KEY_PATH}):
+    Size: ${keyStats.size} bytes
+    Permissions: ${keyStats.mode}
+    Last modified: ${keyStats.mtime}`);
+    
+    log('Certificate files verified successfully');
 }
 
 try {
-    // Verify certificate files exist
+    // Log startup configuration
+    log('Starting server with following configuration:');
+    log(`Environment: ${process.env.NODE_ENV}`);
+    log(`Process ID: ${process.pid}`);
+    log(`Working Directory: ${process.cwd()}`);
+    log(`Memory Usage: ${JSON.stringify(process.memoryUsage())}`);
+    
+    // Verify certificate files
     verifyCertificates();
 
-    // Read certificates synchronously
-    console.log('Reading SSL certificates...');
+    // Read certificates
+    log('Reading SSL certificates...');
     const privateKey = fs.readFileSync(KEY_PATH, 'utf8');
-    console.log('Private key loaded successfully, length:', privateKey.length);
+    log(`Private key loaded successfully, length: ${privateKey.length}`);
     const certificate = fs.readFileSync(CERT_PATH, 'utf8');
-    console.log('Certificate loaded successfully, length:', certificate.length);
+    log(`Certificate loaded successfully, length: ${certificate.length}`);
 
     const sslOptions = {
         key: privateKey,
@@ -54,28 +83,20 @@ try {
             'ECDHE-RSA-AES256-GCM-SHA384'
         ].join(':'),
         honorCipherOrder: true,
-        handshakeTimeout: 120000,
-        requestCert: false,
-        rejectUnauthorized: false
+        handshakeTimeout: 120000
     };
 
-    console.log('SSL options configured:', {
-        minVersion: sslOptions.minVersion,
-        maxVersion: sslOptions.maxVersion,
-        ciphers: sslOptions.ciphers,
-        handshakeTimeout: sslOptions.handshakeTimeout
-    });
+    log('SSL options configured successfully');
 
     app.prepare().then(() => {
-        console.log('Creating HTTPS server...');
-        const httpsServer = createHttpsServer(sslOptions, (req, res) => {
-            console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - ${req.socket.getPeerCertificate().subject || 'No client cert'}`);
-            
+        log('Creating HTTPS server...');
+        const httpsServer = createHttpsServer(sslOptions, async (req, res) => {
             try {
                 const parsedUrl = parse(req.url, true);
-                handle(req, res, parsedUrl);
+                log(`Incoming request: ${req.method} ${req.url} from ${req.socket.remoteAddress}`);
+                await handle(req, res, parsedUrl);
             } catch (err) {
-                console.error('Error handling HTTPS request:', err);
+                log('Error handling request:', err);
                 res.statusCode = 500;
                 res.end('Internal Server Error');
             }
@@ -83,94 +104,71 @@ try {
 
         // Enhanced error handling for TLS handshake
         httpsServer.on('tlsClientError', (err, tlsSocket) => {
-            console.error('TLS Client Error:', err.message);
-            console.error('Error code:', err.code);
-            console.error('Error stack:', err.stack);
-            console.error('Client IP:', tlsSocket.remoteAddress);
-            console.error('Client Port:', tlsSocket.remotePort);
+            log('TLS Client Error:', err);
+            log(`Client Info - IP: ${tlsSocket.remoteAddress}, Port: ${tlsSocket.remotePort}`);
         });
 
         // Listen on all interfaces
         httpsServer.listen(PORT, '0.0.0.0', (err) => {
             if (err) {
-                console.error('Failed to start HTTPS server:', err);
+                log('Failed to start HTTPS server:', err);
                 throw err;
             }
-            console.log(`> HTTPS Server ready on port ${PORT}`);
-            console.log('> Listening on all interfaces (0.0.0.0)');
-            console.log('> TLS version:', sslOptions.minVersion);
-            console.log('> Process running as:', process.getuid?.() || 'N/A');
-        });
-
-        // Set up error handlers
-        httpsServer.on('error', (err) => {
-            console.error('Server error:', err.message);
-            console.error('Error code:', err.code);
-            console.error('Error stack:', err.stack);
-            if (err.code === 'EACCES') {
-                console.error('Permission denied. Try running with administrator privileges.');
-                console.error('Current user:', process.getuid?.() || 'N/A');
-            }
-            if (err.code === 'EADDRINUSE') {
-                console.error('Address already in use. Check if another service is using the port.');
-            }
-            process.exit(1);
+            log(`> Server ready on port ${PORT}`);
+            log('> Process running as:', process.getuid?.() || 'N/A');
         });
 
         // Log successful TLS connections
         httpsServer.on('secureConnection', (tlsSocket) => {
-            console.log('New TLS connection established');
-            console.log('TLS Protocol Version:', tlsSocket.getProtocol());
-            console.log('Cipher:', tlsSocket.getCipher().name);
-            console.log('Client IP:', tlsSocket.remoteAddress);
-            console.log('Client Port:', tlsSocket.remotePort);
+            log('New TLS connection established');
+            log(`Protocol: ${tlsSocket.getProtocol()}`);
+            log(`Cipher: ${tlsSocket.getCipher().name}`);
+            log(`Client: ${tlsSocket.remoteAddress}:${tlsSocket.remotePort}`);
+        });
+
+        // Monitor server events
+        httpsServer.on('error', (err) => {
+            log('Server error:', err);
+        });
+
+        httpsServer.on('close', () => {
+            log('Server is shutting down');
         });
 
     }).catch(err => {
-        console.error('Error during app preparation:', err.message);
-        console.error('Stack trace:', err.stack);
+        log('Error during app preparation:', err);
         process.exit(1);
     });
+
 } catch (err) {
-    console.error('Critical error during server startup:', err.message);
-    console.error('Error code:', err.code);
-    console.error('Error stack:', err.stack);
-    if (err.code === 'EACCES') {
-        console.error('Permission denied accessing certificate files');
-        console.error('Current user:', process.getuid?.() || 'N/A');
-        console.error('File permissions:');
-        try {
-            console.error('Cert file:', fs.statSync(CERT_PATH));
-            console.error('Key file:', fs.statSync(KEY_PATH));
-        } catch (e) {
-            console.error('Could not read file stats:', e.message);
-        }
-    }
+    log('Critical error during server startup:', err);
     process.exit(1);
 }
 
-// Add error handlers for the process
+// Process event handlers
 process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-    console.error('Stack trace:', err.stack);
-    process.exit(1);
+    log('Uncaught Exception:', err);
+    // Give time for logs to be written before exiting
+    setTimeout(() => process.exit(1), 1000);
 });
 
 process.on('unhandledRejection', (err) => {
-    console.error('Unhandled Rejection:', err);
-    if (err instanceof Error) {
-        console.error('Stack trace:', err.stack);
-    }
-    process.exit(1);
+    log('Unhandled Rejection:', err);
 });
 
 // Handle shutdown gracefully
 process.on('SIGTERM', () => {
-    console.log('Received SIGTERM. Performing graceful shutdown...');
+    log('Received SIGTERM signal');
     process.exit(0);
 });
 
 process.on('SIGINT', () => {
-    console.log('Received SIGINT. Performing graceful shutdown...');
+    log('Received SIGINT signal');
     process.exit(0);
-}); 
+});
+
+// Monitor memory usage
+setInterval(() => {
+    const used = process.memoryUsage();
+    log(`Memory usage - heapTotal: ${Math.round(used.heapTotal / 1024 / 1024)}MB, heapUsed: ${Math.round(used.heapUsed / 1024 / 1024)}MB`);
+}, 300000); // Every 5 minutes 
