@@ -154,14 +154,12 @@ if ($portInUse) {
 Write-Host "Configuring URL ACLs..."
 $null = netsh http delete urlacl url=http://+:3000/
 $null = netsh http delete urlacl url=https://+:3000/
-$null = netsh http delete urlacl url=http://+:80/
-$null = netsh http delete urlacl url=https://+:80/
 
-# Add URL ACLs with proper permissions
+# Add URL ACLs with proper permissions for both SYSTEM and NETWORK SERVICE
 $null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
 $null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
-$null = netsh http add urlacl url=http://+:80/ user="NT AUTHORITY\SYSTEM" listen=yes
-$null = netsh http add urlacl url=https://+:80/ user="NT AUTHORITY\SYSTEM" listen=yes
+$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
+$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
 
 # Configure SSL certificate binding
 Write-Host "Configuring SSL certificate binding..."
@@ -207,9 +205,9 @@ Write-Host "Installing service..."
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
-& $nssm set $serviceName ObjectName "LocalSystem"
+& $nssm set $serviceName ObjectName "NT AUTHORITY\NETWORK SERVICE"
 
-# Set environment variables including SSL configuration
+# Set environment variables
 $envString = "NODE_ENV=production;"
 $envString += "HTTPS=true;"
 $envString += "SSL_CRT_FILE=$certPath;"
@@ -241,7 +239,7 @@ foreach ($line in $envContent) {
 
 # Set directory permissions
 $acl = Get-Acl $appDirectory
-$identity = "NT AUTHORITY\SYSTEM"
+$identity = "NT AUTHORITY\NETWORK SERVICE"
 $fileSystemRights = "FullControl"
 $type = "Allow"
 $fileSystemAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, $fileSystemRights, "ContainerInherit,ObjectInherit", "None", $type)
