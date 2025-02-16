@@ -3,9 +3,10 @@ Import-Module WebAdministration
 
 $siteName = "ForexNewsNotifier"
 $physicalPath = "C:\FlaskApps\forex_news_notifier\frontend"
+$backendPath = "C:\FlaskApps\forex_news_notifier"
 
-Write-Host "Configuring and starting website: $siteName"
-Write-Host "======================================"
+Write-Host "Starting Forex News Notifier Services"
+Write-Host "===================================="
 
 # Function to check if a port is in use
 function Test-PortInUse {
@@ -46,9 +47,9 @@ function Stop-ProcessUsingPort {
     }
 }
 
-# Aggressively stop all related processes
+# Stop all related processes
 Write-Host "`nStopping all related processes..."
-Stop-ProcessesAggressively @("w3wp", "node", "iisexpress", "dotnet")
+Stop-ProcessesAggressively @("w3wp", "node", "python", "flask", "waitress")
 Start-Sleep -Seconds 5
 
 # Check and release ports
@@ -72,6 +73,34 @@ foreach ($port in $ports) {
         Write-Host "Port $port is available" -ForegroundColor Green
     }
 }
+
+# Start Backend Service
+Write-Host "`nStarting Flask Backend Service..."
+$backendService = Get-Service -Name "FlaskBackend" -ErrorAction SilentlyContinue
+if ($backendService) {
+    Write-Host "Stopping existing Flask Backend service..."
+    Stop-Service -Name "FlaskBackend" -Force
+    Start-Sleep -Seconds 2
+}
+
+Write-Host "Installing Flask Backend service..."
+Set-Location $backendPath
+& "$backendPath\backend\install-service.ps1"
+Start-Sleep -Seconds 5
+
+# Start Frontend Service
+Write-Host "`nStarting Next.js Frontend Service..."
+$frontendService = Get-Service -Name "NextJSFrontend" -ErrorAction SilentlyContinue
+if ($frontendService) {
+    Write-Host "Stopping existing Next.js Frontend service..."
+    Stop-Service -Name "NextJSFrontend" -Force
+    Start-Sleep -Seconds 2
+}
+
+Write-Host "Installing Next.js Frontend service..."
+Set-Location $physicalPath
+& "$physicalPath\install-service.ps1"
+Start-Sleep -Seconds 5
 
 # Stop IIS completely
 Write-Host "`nStopping IIS completely..."
@@ -129,9 +158,8 @@ if (-not (Test-Path $physicalPath)) {
 # Set directory permissions
 Write-Host "Setting directory permissions..."
 $acl = Get-Acl $physicalPath
-$acl.SetAccessRuleProtection($true, $false)  # Disable inheritance and remove inherited permissions
+$acl.SetAccessRuleProtection($true, $false)
 
-# Add required permissions
 $permissions = @(
     @{Identity = "SYSTEM"; Rights = "FullControl"},
     @{Identity = "Administrators"; Rights = "FullControl"},
@@ -153,22 +181,6 @@ foreach ($perm in $permissions) {
 
 $acl | Set-Acl $physicalPath
 
-# Create test index.html
-$indexPath = Join-Path $physicalPath "index.html"
-@"
-<!DOCTYPE html>
-<html>
-<head>
-    <title>ForexNewsNotifier Test Page</title>
-</head>
-<body>
-    <h1>ForexNewsNotifier</h1>
-    <p>If you can see this page, the web server is running correctly.</p>
-    <p>Server Time: <script>document.write(new Date().toLocaleString())</script></p>
-</body>
-</html>
-"@ | Out-File -FilePath $indexPath -Encoding UTF8 -Force
-
 # Create the website using appcmd
 Write-Host "Creating website using appcmd..."
 $appCmd = "$env:windir\system32\inetsrv\appcmd.exe"
@@ -186,14 +198,18 @@ foreach ($port in $ports) {
     & "netsh" http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid="{$([Guid]::NewGuid().ToString())}" certstorename=MY
 }
 
-# Start the website using appcmd
-Write-Host "`nStarting website using appcmd..."
-& $appCmd start site /site.name:$siteName
+# Start the website
+Write-Host "`nStarting website..."
+Start-Website -Name $siteName
 
 # Display current status
 Write-Host "`nCurrent Status:"
 Write-Host "---------------"
-Write-Host "Application Pool Status:"
+
+Write-Host "`nService Status:"
+Get-Service -Name "FlaskBackend", "NextJSFrontend" | Format-Table Name, Status, StartType
+
+Write-Host "`nApplication Pool Status:"
 Get-IISAppPool -Name $siteName | Format-Table Name, State, ManagedRuntimeVersion, ManagedPipelineMode
 
 Write-Host "`nWebsite Status:"
@@ -223,4 +239,6 @@ foreach ($url in $testUrls) {
     } catch {
         Write-Host "$url is not accessible: $_" -ForegroundColor Red
     }
-} 
+}
+
+Write-Host "`nSetup complete. Please check the services are running correctly." 
