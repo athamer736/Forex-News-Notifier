@@ -110,16 +110,27 @@ foreach ($port in $ports) {
     }
 }
 
-# Add the new certificate bindings
+# Add the new certificate bindings with additional parameters
 foreach ($port in $ports) {
     Write-Host "Binding certificate to port $port..."
-    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid"
+    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid certstore=MY sslctlstorename=MY"
     $bindResult = Invoke-Expression $bindCmd
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Successfully bound certificate to port $port"
     } else {
         Write-Host "Failed to bind certificate to port $port. Error: $bindResult"
+        
+        # Try alternative binding method
+        Write-Host "Trying alternative binding method for port $port..."
+        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid=$appid certstore=MY sslctlstorename=MY clientcertnegotiation=enable"
+        $altBindResult = Invoke-Expression $altBindCmd
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Successfully bound certificate to port $port using alternative method"
+        } else {
+            Write-Host "Failed to bind certificate to port $port using alternative method. Error: $altBindResult"
+        }
     }
 }
 
