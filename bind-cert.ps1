@@ -110,16 +110,21 @@ function Bind-SSLCert {
     
     Write-Host "Binding certificate to port $port..."
     
-    # Remove existing binding
-    $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
-    Invoke-Expression $deleteCmd | Out-Null
+    # Remove existing binding if it exists
+    try {
+        $deleteCmd = "netsh http delete sslcert ipport=0.0.0.0:$port"
+        $deleteResult = Invoke-Expression $deleteCmd 2>&1
+        Write-Host "Removed existing binding (if any)"
+    } catch {
+        Write-Host "No existing binding to remove"
+    }
     
     # Add new binding with full parameters
     $bindCmd = @"
     netsh http add sslcert `
     ipport=0.0.0.0:$port `
     certhash=$thumbprint `
-    appid="$appid" `
+    appid="{$appid}" `
     certstorename=MY `
     verifyclientcertrevocation=enable `
     verifyrevocationwithcachedclientcertonly=disable `
@@ -130,33 +135,39 @@ function Bind-SSLCert {
     sslctlstorename=MY
 "@
     
+    Write-Host "Executing binding command..."
     $result = Invoke-Expression $bindCmd 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Successfully bound certificate to port $port"
+    
+    # Verify the binding was created
+    $verifyCmd = "netsh http show sslcert ipport=0.0.0.0:$port"
+    $verifyResult = Invoke-Expression $verifyCmd 2>&1
+    
+    if ($verifyResult -match $thumbprint) {
+        Write-Host "Successfully verified SSL binding for port $port"
         return $true
-    }
-    
-    Write-Host "Failed to bind certificate to port $port. Error: $result"
-    
-    # Try alternative binding
-    $altBindCmd = @"
-    netsh http add sslcert `
-    ipport=0.0.0.0:$port `
-    certhash=$thumbprint `
-    appid="$appid" `
-    certstorename=MY `
-    sslctlstorename=MY `
-    clientcertnegotiation=enable
+    } else {
+        Write-Host "Failed to verify SSL binding for port $port. Trying alternative method..."
+        
+        # Try alternative binding method
+        $altBindCmd = @"
+        netsh http add sslcert `
+        ipport=0.0.0.0:$port `
+        certhash=$thumbprint `
+        appid="{$appid}" `
+        certstorename=MY
 "@
-    
-    $altResult = Invoke-Expression $altBindCmd 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Successfully bound certificate to port $port using alternative method"
-        return $true
+        
+        $altResult = Invoke-Expression $altBindCmd 2>&1
+        $verifyResult = Invoke-Expression $verifyCmd 2>&1
+        
+        if ($verifyResult -match $thumbprint) {
+            Write-Host "Successfully verified SSL binding for port $port using alternative method"
+            return $true
+        }
+        
+        Write-Host "Failed to create SSL binding for port $port"
+        return $false
     }
-    
-    Write-Host "Failed to bind certificate to port $port using alternative method. Error: $altResult"
-    return $false
 }
 
 # Bind certificates to each port
