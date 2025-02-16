@@ -119,9 +119,9 @@ function Bind-SSLCert {
     $deleteResult = Invoke-Expression $deleteCmd 2>&1
     Start-Sleep -Seconds 2  # Add delay after deletion
     
-    # Format the command with proper GUID format and all required parameters
+    # Simplified binding command
     Write-Host "Adding new SSL binding for port $port..."
-    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY clientcertnegotiation=disable"
+    $bindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid}"
     Write-Host "Executing command: $bindCmd"
     
     try {
@@ -140,7 +140,7 @@ function Bind-SSLCert {
         Write-Host "Initial binding failed, trying alternative parameters..."
         
         # Try alternative parameters
-        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY sslctlstorename=MY clientcertnegotiation=disable verifyclientcertrevocation=disable"
+        $altBindCmd = "netsh http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid={$appid} certstorename=MY"
         Write-Host "Executing alternative command: $altBindCmd"
         
         $altResult = Invoke-Expression $altBindCmd 2>&1
