@@ -152,10 +152,11 @@ New-Item -ItemType Directory -Force -Path "$appDirectory\logs" | Out-Null
 Write-Host "Installing service..."
 & $nssm install $serviceName $nodeExe
 & $nssm set $serviceName AppDirectory $appDirectory
-& $nssm set $serviceName AppParameters ".\node_modules\next\dist\bin\next start -p 3000"
+& $nssm set $serviceName AppParameters "node_modules\next\dist\bin\next start -p 3000"
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
+& $nssm set $serviceName ObjectName "LocalSystem"
 & $nssm set $serviceName AppEnvironmentExtra $envString
 & $nssm set $serviceName AppStdout "$appDirectory\logs\service-output.log"
 & $nssm set $serviceName AppStderr "$appDirectory\logs\service-error.log"
@@ -166,7 +167,18 @@ Write-Host "Installing service..."
 & $nssm set $serviceName AppThrottle 0
 & $nssm set $serviceName DependOnService "FlaskBackend"
 
+# Set directory permissions for LocalSystem
+$acl = Get-Acl $appDirectory
+$identity = "NT AUTHORITY\SYSTEM"
+$fileSystemRights = "FullControl"
+$type = "Allow"
+$fileSystemAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, $fileSystemRights, "ContainerInherit,ObjectInherit", "None", $type)
+$acl.AddAccessRule($fileSystemAccessRule)
+Set-Acl $appDirectory $acl
+
 Write-Host "Starting service..."
+& $nssm stop $serviceName 2>$null
+Start-Sleep -Seconds 2
 & $nssm start $serviceName
 
 # Wait for service to start and verify its status
@@ -186,10 +198,17 @@ while ($attempt -lt $maxAttempts) {
     
     if ($service.Status -eq 'Paused') {
         Write-Host "Service is paused, attempting to resume..."
-        Resume-Service $serviceName
+        & $nssm restart $serviceName
+        Start-Sleep -Seconds 5
     } elseif ($service.Status -ne 'Running') {
         Write-Host "Attempting to start service again..."
         & $nssm restart $serviceName
+    }
+    
+    # Check error logs
+    if (Test-Path "$appDirectory\logs\service-error.log") {
+        Write-Host "Recent error log entries:"
+        Get-Content "$appDirectory\logs\service-error.log" -Tail 5
     }
     
     $attempt++
