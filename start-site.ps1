@@ -1,7 +1,8 @@
-# Import required module
+# Import required modules
 Import-Module WebAdministration
 
 $siteName = "ForexNewsNotifier"
+$physicalPath = "C:\FlaskApps\forex_news_notifier\frontend"
 
 Write-Host "Configuring and starting website: $siteName"
 Write-Host "======================================"
@@ -9,9 +10,25 @@ Write-Host "======================================"
 # Function to check if a port is in use
 function Test-PortInUse {
     param($port)
-    
     $connections = netstat -ano | findstr ":$port "
     return $connections -ne $null
+}
+
+# Function to aggressively kill processes
+function Stop-ProcessesAggressively {
+    param($processNames)
+    
+    foreach ($procName in $processNames) {
+        Write-Host "Stopping $procName processes..."
+        Get-Process | Where-Object { $_.ProcessName -like $procName } | ForEach-Object {
+            try {
+                $_ | Stop-Process -Force -ErrorAction SilentlyContinue
+                Write-Host "Stopped process $($_.Id)"
+            } catch {
+                Write-Host "Could not stop process $($_.Id): $_" -ForegroundColor Yellow
+            }
+        }
+    }
 }
 
 # Function to kill process using a port
@@ -29,6 +46,11 @@ function Stop-ProcessUsingPort {
     }
 }
 
+# Aggressively stop all related processes
+Write-Host "`nStopping all related processes..."
+Stop-ProcessesAggressively @("w3wp", "node", "iisexpress", "dotnet")
+Start-Sleep -Seconds 5
+
 # Check and release ports
 $ports = @(80, 443, 3000, 5000)
 Write-Host "`nChecking port usage..."
@@ -37,61 +59,53 @@ foreach ($port in $ports) {
         Write-Host "Port $port is in use. Attempting to release..." -ForegroundColor Yellow
         Stop-ProcessUsingPort $port
         Start-Sleep -Seconds 2
+        
+        # Double-check if port is still in use
+        if (Test-PortInUse $port) {
+            Write-Host "Port $port is still in use. Attempting forceful release..." -ForegroundColor Red
+            # Use netsh to force release the port
+            $null = netsh http delete urlacl url=http://+:$port/
+            $null = netsh http delete urlacl url=https://+:$port/
+            Start-Sleep -Seconds 2
+        }
     } else {
         Write-Host "Port $port is available" -ForegroundColor Green
     }
 }
 
-# Stop the site first if it exists
-Write-Host "`nStopping website if it exists..."
-Stop-Website -Name $siteName -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 2
-
-# Stop the application pool if it exists
-Write-Host "Stopping application pool if it exists..."
-if (Test-Path "IIS:\AppPools\$siteName") {
-    Stop-WebAppPool -Name $siteName -ErrorAction SilentlyContinue
-}
-Start-Sleep -Seconds 2
-
-# Stop any Node.js processes that might be running
-Write-Host "Stopping any Node.js processes..."
-Get-Process | Where-Object { $_.ProcessName -eq "node" } | Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 2
-
-# Reset IIS with cleanup
-Write-Host "Resetting IIS with cleanup..."
+# Stop IIS completely
+Write-Host "`nStopping IIS completely..."
 try {
-    # Stop IIS
-    iisreset /stop
+    Stop-Service -Name W3SVC -Force
+    Stop-Service -Name WAS -Force
     Start-Sleep -Seconds 5
     
-    # Clean up IIS worker processes
-    Get-Process | Where-Object { $_.ProcessName -like "w3wp*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    # Kill any remaining IIS-related processes
+    Stop-ProcessesAggressively @("w3wp", "WAS", "WWAHost")
+    Start-Sleep -Seconds 5
     
-    # Delete temporary IIS files
+    # Clean up IIS temporary files
+    Write-Host "Cleaning up IIS temporary files..."
     Remove-Item -Path "C:\inetpub\temp\IIS Temporary Compressed Files\*" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "C:\Windows\Microsoft.NET\Framework\v4.0.30319\Temporary ASP.NET Files\*" -Recurse -Force -ErrorAction SilentlyContinue
     
-    # Start IIS
-    iisreset /start
+    # Start IIS services
+    Start-Service -Name WAS
+    Start-Service -Name W3SVC
     Start-Sleep -Seconds 5
-    Write-Host "IIS reset completed" -ForegroundColor Green
+    
+    Write-Host "IIS services restarted successfully" -ForegroundColor Green
 } catch {
-    Write-Host "Error resetting IIS: $_" -ForegroundColor Red
+    Write-Host "Error managing IIS services: $_" -ForegroundColor Red
 }
 
-# Ensure the application pool exists and is configured correctly
-Write-Host "`nChecking application pool..."
-$pool = Get-IISAppPool -Name $siteName -ErrorAction SilentlyContinue
-if (-not $pool) {
-    Write-Host "Creating application pool..." -ForegroundColor Yellow
-    New-WebAppPool -Name $siteName
-    $pool = Get-IISAppPool -Name $siteName
-}
+# Remove and recreate application pool
+Write-Host "`nRecreating application pool..."
+Remove-WebAppPool -Name $siteName -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
 
-# Configure application pool settings
-Write-Host "Configuring application pool..."
+New-WebAppPool -Name $siteName
 Set-ItemProperty IIS:\AppPools\$siteName -name "managedRuntimeVersion" -value "v4.0"
 Set-ItemProperty IIS:\AppPools\$siteName -name "managedPipelineMode" -value "Integrated"
 Set-ItemProperty IIS:\AppPools\$siteName -name "startMode" -value "AlwaysRunning"
@@ -99,47 +113,49 @@ Set-ItemProperty IIS:\AppPools\$siteName -name "autoStart" -value $true
 Set-ItemProperty IIS:\AppPools\$siteName -name "processModel.identityType" -value "LocalSystem"
 
 # Start the application pool
-Write-Host "Starting application pool..."
 Start-WebAppPool -Name $siteName
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 5
 
-# Remove and recreate the website
-Write-Host "`nRemoving existing website configuration..."
+# Remove and recreate website
+Write-Host "`nRecreating website..."
 Remove-Website -Name $siteName -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
-Write-Host "Creating new website..."
-$physicalPath = "C:\FlaskApps\forex_news_notifier\frontend"
-New-Website -Name $siteName -PhysicalPath $physicalPath -ApplicationPool $siteName -Force
-
-# Configure website settings
-Write-Host "Configuring website settings..."
-Set-ItemProperty "IIS:\Sites\$siteName" -name "applicationPool" -value $siteName
-Set-ItemProperty "IIS:\Sites\$siteName" -name "serverAutoStart" -value $true
-
-# Verify physical path exists and set permissions
+# Ensure physical path exists and set permissions
 if (-not (Test-Path $physicalPath)) {
-    Write-Host "Creating physical path directory..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $physicalPath -Force | Out-Null
 }
 
 # Set directory permissions
 Write-Host "Setting directory permissions..."
 $acl = Get-Acl $physicalPath
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("IIS_IUSRS", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-$acl.SetAccessRule($accessRule)
+$acl.SetAccessRuleProtection($true, $false)  # Disable inheritance and remove inherited permissions
+
+# Add required permissions
+$permissions = @(
+    @{Identity = "SYSTEM"; Rights = "FullControl"},
+    @{Identity = "Administrators"; Rights = "FullControl"},
+    @{Identity = "IIS_IUSRS"; Rights = "FullControl"},
+    @{Identity = "NETWORK SERVICE"; Rights = "FullControl"},
+    @{Identity = "LOCAL SERVICE"; Rights = "FullControl"}
+)
+
+foreach ($perm in $permissions) {
+    $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $perm.Identity,
+        $perm.Rights,
+        "ContainerInherit,ObjectInherit",
+        "None",
+        "Allow"
+    )
+    $acl.AddAccessRule($accessRule)
+}
+
 $acl | Set-Acl $physicalPath
 
-# Also grant permissions to NETWORK SERVICE
-$networkServiceRule = New-Object System.Security.AccessControl.FileSystemAccessRule("NETWORK SERVICE", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-$acl.SetAccessRule($networkServiceRule)
-$acl | Set-Acl $physicalPath
-
-# Create a test index.html if it doesn't exist
+# Create test index.html
 $indexPath = Join-Path $physicalPath "index.html"
-if (-not (Test-Path $indexPath)) {
-    Write-Host "Creating test index.html..." -ForegroundColor Yellow
-    @"
+@"
 <!DOCTYPE html>
 <html>
 <head>
@@ -151,45 +167,28 @@ if (-not (Test-Path $indexPath)) {
     <p>Server Time: <script>document.write(new Date().toLocaleString())</script></p>
 </body>
 </html>
-"@ | Out-File -FilePath $indexPath -Encoding UTF8
+"@ | Out-File -FilePath $indexPath -Encoding UTF8 -Force
+
+# Create the website using appcmd
+Write-Host "Creating website using appcmd..."
+$appCmd = "$env:windir\system32\inetsrv\appcmd.exe"
+
+& $appCmd add site /name:$siteName /physicalPath:$physicalPath /bindings:"http/*:80:fxalert.co.uk,http/*:80:www.fxalert.co.uk,https/*:443:fxalert.co.uk,https/*:443:www.fxalert.co.uk,https/*:3000:fxalert.co.uk,https/*:5000:fxalert.co.uk"
+& $appCmd set site /site.name:$siteName /[path='/'].applicationPool:$siteName
+
+# Configure SSL bindings
+Write-Host "Configuring SSL bindings..."
+$thumbprint = "AA79E98B5F0900A7B04586CF87126EE5F8695F0B"
+$ports = @(443, 3000, 5000)
+
+foreach ($port in $ports) {
+    & "netsh" http delete sslcert ipport=0.0.0.0:$port
+    & "netsh" http add sslcert ipport=0.0.0.0:$port certhash=$thumbprint appid="{$([Guid]::NewGuid().ToString())}" certstorename=MY
 }
 
-# Add bindings
-Write-Host "`nConfiguring bindings..."
-New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "fxalert.co.uk"
-New-WebBinding -Name $siteName -Protocol "http" -Port 80 -HostHeader "www.fxalert.co.uk"
-New-WebBinding -Name $siteName -Protocol "https" -Port 443 -HostHeader "fxalert.co.uk" -SslFlags 1
-New-WebBinding -Name $siteName -Protocol "https" -Port 443 -HostHeader "www.fxalert.co.uk" -SslFlags 1
-New-WebBinding -Name $siteName -Protocol "https" -Port 3000 -HostHeader "fxalert.co.uk" -SslFlags 1
-New-WebBinding -Name $siteName -Protocol "https" -Port 5000 -HostHeader "fxalert.co.uk" -SslFlags 1
-
-# Start the website with retry logic
-Write-Host "`nStarting website..."
-$maxRetries = 3
-$retryCount = 0
-$started = $false
-
-while (-not $started -and $retryCount -lt $maxRetries) {
-    try {
-        $retryCount++
-        Write-Host "Attempt $retryCount of $maxRetries..."
-        Start-Website -Name $siteName
-        Start-Sleep -Seconds 5  # Give it time to fully start
-        $site = Get-Website -Name $siteName
-        if ($site.State -eq "Started") {
-            $started = $true
-            Write-Host "Website started successfully" -ForegroundColor Green
-        } else {
-            throw "Website is in $($site.State) state"
-        }
-    } catch {
-        Write-Host "Error starting website: $_" -ForegroundColor Red
-        if ($retryCount -lt $maxRetries) {
-            Write-Host "Waiting 5 seconds before retry..." -ForegroundColor Yellow
-            Start-Sleep -Seconds 5
-        }
-    }
-}
+# Start the website using appcmd
+Write-Host "`nStarting website using appcmd..."
+& $appCmd start site /site.name:$siteName
 
 # Display current status
 Write-Host "`nCurrent Status:"
