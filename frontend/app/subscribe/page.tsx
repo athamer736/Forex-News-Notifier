@@ -145,7 +145,7 @@ function SubscribePage() {
         setSuccess(null);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/subscribe`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscribe`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
