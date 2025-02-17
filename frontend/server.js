@@ -137,6 +137,23 @@ function verifyCertificates() {
     }
 }
 
+// Create proxy middleware outside of request handler
+const apiProxy = createProxyMiddleware({
+    target: 'http://localhost:5000',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api': ''  // Remove /api prefix when forwarding to backend
+    },
+    logLevel: 'debug',
+    onError: (err, req, res) => {
+        log(`Proxy error: ${err.message}`);
+        res.writeHead(500, {
+            'Content-Type': 'application/json'
+        });
+        res.end(JSON.stringify({ error: 'Proxy error', message: err.message }));
+    }
+});
+
 try {
     // Log startup configuration
     log('Starting server with following configuration:');
@@ -163,7 +180,7 @@ try {
             const { pathname } = parsedUrl;
 
             // Add CORS headers for all responses
-            res.setHeader('Access-Control-Allow-Origin', 'https://fxalert.co.uk');
+            res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
             res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -174,20 +191,23 @@ try {
                 return;
             }
 
-            // Proxy /api requests to Flask backend
-            if (pathname.startsWith('/api')) {
-                const proxy = createProxyMiddleware({
-                    target: 'http://localhost:5000',
-                    changeOrigin: true,
-                    pathRewrite: {
-                        '^/api': '/'
-                    }
-                });
-                return proxy(req, res);
-            }
+            // Log incoming requests
+            log(`${req.method} ${pathname}`);
 
-            // Handle all other requests with Next.js
-            return handle(req, res, parsedUrl);
+            try {
+                // Proxy /api requests to Flask backend
+                if (pathname.startsWith('/api')) {
+                    log(`Proxying request to backend: ${pathname}`);
+                    return apiProxy(req, res);
+                }
+
+                // Handle all other requests with Next.js
+                return handle(req, res, parsedUrl);
+            } catch (err) {
+                log('Error handling request:', err);
+                res.writeHead(500);
+                res.end('Internal Server Error');
+            }
         });
 
         httpsServer.listen(PORT, '0.0.0.0', (err) => {
