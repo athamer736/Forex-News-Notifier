@@ -12,7 +12,7 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-// SSL certificate paths with absolute paths
+// SSL certificate paths with absolute paths and forward slashes
 const CERT_PATH = process.env.SSL_CRT_FILE || 'C:/Certbot/live/fxalert.co.uk/fullchain.pem';
 const KEY_PATH = process.env.SSL_KEY_FILE || 'C:/Certbot/live/fxalert.co.uk/privkey.pem';
 const PORT = process.env.PORT || 3000;
