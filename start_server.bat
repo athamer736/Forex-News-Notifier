@@ -11,6 +11,11 @@ set "YELLOW=[93m"
 set "RED=[91m"
 set "RESET=[0m"
 
+:: Store the current directory
+set "PROJECT_ROOT=%~dp0"
+set "VENV_PATH=%PROJECT_ROOT%venv"
+set "SCRIPTS_PATH=%PROJECT_ROOT%scripts"
+
 echo %BLUE%=======================================
 echo    Forex News Notifier Server Manager
 echo =======================================%RESET%
@@ -52,10 +57,10 @@ if %errorlevel% neq 0 (
 )
 
 :: Create logs directory if it doesn't exist
-if not exist "logs" mkdir logs
+if not exist "%PROJECT_ROOT%logs" mkdir "%PROJECT_ROOT%logs"
 
 :: Check if we're in the right directory
-if not exist "frontend" (
+if not exist "%PROJECT_ROOT%frontend" (
     echo %RED%Error: Could not find frontend directory%RESET%
     echo Please run this batch file from the project root directory
     pause
@@ -81,9 +86,9 @@ echo %GREEN%[✓]%RESET% SSL certificates found
 echo.
 
 :: Create and activate virtual environment if it doesn't exist
-if not exist "venv" (
+if not exist "%VENV_PATH%" (
     echo %YELLOW%Creating virtual environment...%RESET%
-    python -m venv venv
+    python -m venv "%VENV_PATH%"
     if %errorlevel% neq 0 (
         echo %RED%Error creating virtual environment%RESET%
         pause
@@ -93,11 +98,12 @@ if not exist "venv" (
 
 :: Install required Python packages
 echo %YELLOW%Installing/Updating Python packages...%RESET%
-call venv\Scripts\activate && pip install -r requirements.txt
+call "%VENV_PATH%\Scripts\activate.bat" && pip install -r requirements.txt
 
 :: Start Backend Service Configuration in a new PowerShell 7 window
 echo %YELLOW%Configuring and starting backend service...%RESET%
 start "Backend Service Configuration" pwsh -NoExit -Command "^
+    $ErrorActionPreference = 'Stop';^
     $host.ui.RawUI.WindowTitle = 'Backend Service Configuration';^
     Write-Host 'Configuring Flask Backend Service...' -ForegroundColor Cyan;^
     Stop-Service FlaskBackend -Force;^
@@ -120,8 +126,9 @@ timeout /t 10 /nobreak > nul
 :: Start Frontend Build and Server in a new PowerShell 7 window
 echo %YELLOW%Building and starting frontend...%RESET%
 start "Frontend Server" pwsh -NoExit -Command "^
+    $ErrorActionPreference = 'Stop';^
     $host.ui.RawUI.WindowTitle = 'Frontend Server';^
-    Set-Location -Path frontend;^
+    Set-Location -Path '%PROJECT_ROOT%frontend';^
     Write-Host 'Building frontend...' -ForegroundColor Cyan;^
     npm run build;^
     Write-Host 'Starting frontend server...' -ForegroundColor Cyan;^
@@ -130,29 +137,31 @@ start "Frontend Server" pwsh -NoExit -Command "^
 :: Start Event Scheduler in a new PowerShell 7 window
 echo %YELLOW%Starting event scheduler...%RESET%
 start "Event Scheduler" pwsh -NoExit -Command "^
+    $ErrorActionPreference = 'Stop';^
     $host.ui.RawUI.WindowTitle = 'Event Scheduler';^
     Write-Host 'Starting Event Scheduler...' -ForegroundColor Yellow;^
-    Set-Location -Path '%~dp0';^
-    .\venv\Scripts\activate;^
-    python scripts\run_scheduler.py;^
+    Set-Location -Path '%PROJECT_ROOT%';^
+    & '%VENV_PATH%\Scripts\activate.ps1';^
+    python '%SCRIPTS_PATH%\run_scheduler.py';^
     while ($true) {^
         if ($LASTEXITCODE -ne 0) {^
             Write-Host 'Event Scheduler crashed, restarting...' -ForegroundColor Red;^
             Start-Sleep -Seconds 5;^
-            python scripts\run_scheduler.py;^
+            python '%SCRIPTS_PATH%\run_scheduler.py';^
         }^
     }"
 
 :: Start AI Summary Generator in a new PowerShell 7 window
 echo %YELLOW%Starting AI summary generator...%RESET%
 start "AI Summary Generator" pwsh -NoExit -Command "^
+    $ErrorActionPreference = 'Stop';^
     $host.ui.RawUI.WindowTitle = 'AI Summary Generator';^
     Write-Host 'Starting AI Summary Generator...' -ForegroundColor Magenta;^
-    Set-Location -Path '%~dp0';^
-    .\venv\Scripts\activate;^
+    Set-Location -Path '%PROJECT_ROOT%';^
+    & '%VENV_PATH%\Scripts\activate.ps1';^
     while ($true) {^
         Write-Host (Get-Date) 'Running AI summary generation...' -ForegroundColor Cyan;^
-        python scripts\generate_summaries.py;^
+        python '%SCRIPTS_PATH%\generate_summaries.py';^
         Write-Host 'Waiting for next run cycle (1 hour)...' -ForegroundColor Yellow;^
         Start-Sleep -Seconds 3600;^
     }"
@@ -160,22 +169,24 @@ start "AI Summary Generator" pwsh -NoExit -Command "^
 :: Start Email Scheduler in a new PowerShell 7 window
 echo %YELLOW%Starting email scheduler...%RESET%
 start "Email Scheduler" pwsh -NoExit -Command "^
+    $ErrorActionPreference = 'Stop';^
     $host.ui.RawUI.WindowTitle = 'Email Scheduler';^
     Write-Host 'Starting Email Scheduler...' -ForegroundColor Blue;^
-    Set-Location -Path '%~dp0';^
-    .\venv\Scripts\activate;^
-    python scripts\email_scheduler.py;^
+    Set-Location -Path '%PROJECT_ROOT%';^
+    & '%VENV_PATH%\Scripts\activate.ps1';^
+    python '%SCRIPTS_PATH%\email_scheduler.py';^
     while ($true) {^
         if ($LASTEXITCODE -ne 0) {^
             Write-Host 'Email Scheduler crashed, restarting...' -ForegroundColor Red;^
             Start-Sleep -Seconds 5;^
-            python scripts\email_scheduler.py;^
+            python '%SCRIPTS_PATH%\email_scheduler.py';^
         }^
     }"
 
 :: Test backend connectivity in a new PowerShell 7 window
 echo %YELLOW%Testing backend connectivity...%RESET%
 start "Backend Test" pwsh -NoExit -Command "^
+    $ErrorActionPreference = 'Stop';^
     $host.ui.RawUI.WindowTitle = 'Backend Connectivity Test';^
     Write-Host 'Testing backend connectivity...' -ForegroundColor Cyan;^
     while ($true) {^
@@ -197,7 +208,7 @@ echo.
 echo %YELLOW%Services Status:%RESET%
 pwsh -Command "Get-Service FlaskBackend | Format-List Name, Status, StartType"
 echo.
-echo %YELLOW%Close this window to stop all services...%RESET%
+echo %YELLOW%Press any key to stop all services...%RESET%
 pause > nul
 
 :: Kill all the processes when the user closes the window
