@@ -5,6 +5,8 @@ from waitress import serve
 from paste.translogger import TransLogger
 import logging
 from logging.handlers import RotatingFileHandler
+from cheroot.wsgi import Server as WSGIServer
+from cheroot.ssl.builtin import BuiltinSSLAdapter
 
 # Add the project root to Python path
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -75,10 +77,10 @@ except Exception as e:
     logger.error('Failed to import Flask application', exc_info=True)
     sys.exit(1)
 
-def create_ssl_context():
-    """Create SSL context for HTTPS"""
+def create_ssl_adapter():
+    """Create SSL adapter for HTTPS"""
     try:
-        logger.info('Creating SSL context...')
+        logger.info('Creating SSL adapter...')
         cert_file = 'C:/Certbot/live/fxalert.co.uk/fullchain.pem'
         key_file = 'C:/Certbot/live/fxalert.co.uk/privkey.pem'
         
@@ -88,15 +90,11 @@ def create_ssl_context():
         if not os.path.exists(key_file):
             raise FileNotFoundError(f'Key file not found: {key_file}')
             
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.load_cert_chain(
-            certfile=cert_file,
-            keyfile=key_file
-        )
-        logger.info('SSL context created successfully')
-        return context
+        ssl_adapter = BuiltinSSLAdapter(cert_file, key_file)
+        logger.info('SSL adapter created successfully')
+        return ssl_adapter
     except Exception as e:
-        logger.error('Failed to create SSL context', exc_info=True)
+        logger.error('Failed to create SSL adapter', exc_info=True)
         return None
 
 if __name__ == '__main__':
@@ -104,12 +102,6 @@ if __name__ == '__main__':
         # Set environment variables
         os.environ['FLASK_ENV'] = 'production'
         os.environ['FLASK_DEBUG'] = '0'
-        
-        # Create SSL context
-        ssl_context = create_ssl_context()
-        if not ssl_context:
-            logger.error("Failed to create SSL context. Exiting.")
-            sys.exit(1)
         
         # Wrap the Flask app with TransLogger
         logger.info('Configuring request logging...')
@@ -119,18 +111,29 @@ if __name__ == '__main__':
             logger_name='waitress.requests'
         )
         
-        # Start the server
-        logger.info('Starting Waitress server...')
-        serve(
+        # Create and configure the WSGI server
+        logger.info('Starting WSGI server with SSL...')
+        server = WSGIServer(
+            ('0.0.0.0', 5000),
             app_with_logging,
-            host='0.0.0.0',
-            port=5000,
-            threads=4,
-            url_scheme='https',
-            channel_timeout=30,
-            cleanup_interval=30,
-            _ssl_context=ssl_context
+            numthreads=4,
+            request_queue_size=100,
+            timeout=30
         )
+        
+        # Set up SSL
+        ssl_adapter = create_ssl_adapter()
+        if ssl_adapter:
+            server.ssl_adapter = ssl_adapter
+            logger.info('SSL configured successfully')
+        else:
+            logger.error("Failed to configure SSL. Exiting.")
+            sys.exit(1)
+        
+        # Start the server
+        logger.info('Starting server...')
+        server.start()
+        
     except Exception as e:
         logger.error('Failed to start server', exc_info=True)
         sys.exit(1) 
