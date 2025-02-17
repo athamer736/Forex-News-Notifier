@@ -100,30 +100,47 @@ if not exist "%VENV_PATH%" (
 echo %YELLOW%Installing/Updating Python packages...%RESET%
 call "%VENV_PATH%\Scripts\activate.bat"
 
-:: First, try to install pywin32 separately
-echo Installing pywin32...
-pip install pywin32 --upgrade
+:: First, ensure pip is up to date
+python -m pip install --upgrade pip
+
+:: Install packages with relaxed version constraints
+echo Installing core packages...
+pip install flask flask-cors waitress pywin32 pyOpenSSL certifi --upgrade
+
+:: Then install remaining requirements
+echo Installing remaining requirements...
+pip install -r requirements.txt --upgrade --no-deps
+
+:: Verify critical packages individually
+echo Verifying critical packages...
+set "VERIFIED=true"
+
+python -c "import flask" 2>nul
 if %errorlevel% neq 0 (
-    echo %RED%Error: Failed to install pywin32%RESET%
+    echo %RED%Error: Flask is not properly installed%RESET%
+    set "VERIFIED=false"
+)
+
+python -c "import waitress" 2>nul
+if %errorlevel% neq 0 (
+    echo %RED%Error: Waitress is not properly installed%RESET%
+    set "VERIFIED=false"
+)
+
+python -c "import win32api" 2>nul
+if %errorlevel% neq 0 (
+    echo %RED%Error: pywin32 is not properly installed%RESET%
+    set "VERIFIED=false"
+)
+
+if "%VERIFIED%"=="false" (
+    echo %RED%One or more critical packages failed verification%RESET%
+    echo Please check the error messages above
     pause
     exit /b 1
 )
 
-:: Then install other requirements, ignoring version conflicts
-echo Installing other requirements...
-pip install -r requirements.txt --no-deps
-pip install -r requirements.txt --upgrade
-
-:: Verify critical packages are installed
-python -c "import flask, waitress, pywin32" 2>nul
-if %errorlevel% neq 0 (
-    echo %RED%Error: One or more critical packages are not properly installed%RESET%
-    echo Please check your Python environment and try again
-    pause
-    exit /b 1
-)
-
-echo %GREEN%Python packages installed successfully%RESET%
+echo %GREEN%Python packages installed and verified successfully%RESET%
 echo.
 
 :: Start Backend Service Configuration in a new PowerShell 7 window
