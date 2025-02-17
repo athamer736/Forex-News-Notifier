@@ -5,7 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const tls = require('tls');
 
+// Set development environment if not set
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 const dev = process.env.NODE_ENV !== 'production';
+
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
