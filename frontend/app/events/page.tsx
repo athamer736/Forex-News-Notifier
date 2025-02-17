@@ -343,10 +343,10 @@ function EventsPage() {
                 } else if (window.location.hostname === '192.168.0.144') {
                     baseUrl = 'https://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
+                    baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
                 }
             } else {
-                baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
+                baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
             }
 
             // Add selected date to query parameters if applicable
@@ -455,10 +455,10 @@ function EventsPage() {
                     } else if (window.location.hostname === '192.168.0.144') {
                         baseUrl = 'https://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
+                        baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
                     }
                 } else {
-                    baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
+                    baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
                 }
                 
                 console.log('Using base URL:', baseUrl);
