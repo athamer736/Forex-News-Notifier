@@ -16,24 +16,61 @@ try {
         throw "This script must be run as Administrator. Please right-click and select 'Run as Administrator'."
     }
 
-    # Check if IIS is installed
-    Write-Host "Checking IIS installation..." -ForegroundColor Cyan
-    $iisInstalled = Get-WindowsFeature -Name Web-Server
-    if (-not $iisInstalled.Installed) {
-        Write-Host "Installing IIS..." -ForegroundColor Yellow
-        Install-WindowsFeature -Name Web-Server -IncludeManagementTools
+    # Install IIS and required features
+    Write-Host "Installing IIS and required features..." -ForegroundColor Cyan
+    $features = @(
+        "Web-Server",
+        "Web-WebServer",
+        "Web-Common-Http",
+        "Web-Default-Doc",
+        "Web-Dir-Browsing",
+        "Web-Http-Errors",
+        "Web-Static-Content",
+        "Web-Http-Redirect",
+        "Web-Health",
+        "Web-Http-Logging",
+        "Web-Custom-Logging",
+        "Web-Log-Libraries",
+        "Web-Request-Monitor",
+        "Web-Http-Tracing",
+        "Web-Performance",
+        "Web-Stat-Compression",
+        "Web-Dyn-Compression",
+        "Web-Security",
+        "Web-Filtering",
+        "Web-Basic-Auth",
+        "Web-Windows-Auth",
+        "Web-App-Dev",
+        "Web-Net-Ext45",
+        "Web-ASP",
+        "Web-Asp-Net45",
+        "Web-ISAPI-Ext",
+        "Web-ISAPI-Filter",
+        "Web-Mgmt-Tools",
+        "Web-Mgmt-Console",
+        "Web-Scripting-Tools",
+        "Web-Mgmt-Service"
+    )
+
+    foreach ($feature in $features) {
+        Write-Host "Installing feature: $feature" -ForegroundColor Yellow
+        try {
+            $result = Enable-WindowsOptionalFeature -Online -FeatureName $feature -All -NoRestart
+            if ($result.RestartNeeded) {
+                Write-Host "Note: A system restart will be required after installation" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host "Warning: Could not install $feature. Continuing..." -ForegroundColor Yellow
+        }
     }
+
+    Write-Host "IIS features installation completed" -ForegroundColor Green
 
     # Install URL Rewrite Module if not present
     $urlRewriteDownloadUrl = "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi"
     $urlRewritePath = "$env:temp\rewrite_amd64_en-US.msi"
 
     Write-Host "Checking IIS Administration module..." -ForegroundColor Cyan
-    if (!(Get-Module -ListAvailable -Name IISAdministration)) {
-        Write-Host "Installing IIS Administration module..." -ForegroundColor Yellow
-        Install-WindowsFeature -Name Web-Scripting-Tools
-    }
-
     Import-Module IISAdministration -ErrorAction Stop
     Write-Host "IIS Administration module loaded successfully" -ForegroundColor Green
 
@@ -44,6 +81,20 @@ try {
         Invoke-WebRequest -Uri $urlRewriteDownloadUrl -OutFile $urlRewritePath
         Write-Host "Installing URL Rewrite Module..." -ForegroundColor Yellow
         Start-Process msiexec.exe -ArgumentList "/i $urlRewritePath /quiet /norestart" -Wait
+    }
+
+    # Download and install Application Request Routing
+    Write-Host "Downloading Application Request Routing..." -ForegroundColor Cyan
+    $arrDownloadUrl = "https://download.microsoft.com/download/E/9/8/E9849D6A-020E-47E4-9FD0-A023E99B54EB/requestRouter_amd64.msi"
+    $arrPath = "$env:temp\requestRouter_amd64.msi"
+    
+    try {
+        Invoke-WebRequest -Uri $arrDownloadUrl -OutFile $arrPath
+        Write-Host "Installing Application Request Routing..." -ForegroundColor Yellow
+        Start-Process msiexec.exe -ArgumentList "/i $arrPath /quiet /norestart" -Wait
+    } catch {
+        Write-Host "Warning: Could not install ARR automatically. Please install manually from:" -ForegroundColor Yellow
+        Write-Host "https://www.microsoft.com/web/downloads/platform.aspx" -ForegroundColor Yellow
     }
 
     # Create the site directory if it doesn't exist
@@ -110,25 +161,17 @@ try {
     Set-Content -Path "$sitePath\web.config" -Value $config
     Write-Host "URL Rewrite rules configured" -ForegroundColor Green
 
-    # Install Application Request Routing
-    Write-Host "Installing Application Request Routing..." -ForegroundColor Cyan
+    # Enable modules and configure proxy
+    Write-Host "Configuring modules and proxy settings..." -ForegroundColor Cyan
     try {
         Enable-WebGlobalModule -Name "ApplicationRequestRouting"
         Enable-WebGlobalModule -Name "UrlRewrite"
-        Write-Host "Modules enabled successfully" -ForegroundColor Green
-    } catch {
-        Write-Host "Warning: Could not enable some modules. You may need to install Application Request Routing manually." -ForegroundColor Yellow
-        Write-Host "Download ARR from: https://www.microsoft.com/web/downloads/platform.aspx" -ForegroundColor Yellow
-    }
-
-    # Configure proxy settings
-    Write-Host "Configuring proxy settings..." -ForegroundColor Cyan
-    try {
+        
         $adminConfig = Get-IISConfigSection -SectionPath "system.webServer/proxy"
         $adminConfig.SetAttributeValue("enabled", $true)
-        Write-Host "Proxy settings configured successfully" -ForegroundColor Green
+        Write-Host "Modules and proxy settings configured successfully" -ForegroundColor Green
     } catch {
-        Write-Host "Warning: Could not configure proxy settings. You may need to install ARR first." -ForegroundColor Yellow
+        Write-Host "Warning: Could not configure some settings. Please ensure ARR is installed." -ForegroundColor Yellow
     }
 
     Write-Host "`nIIS configuration complete!" -ForegroundColor Green
@@ -137,6 +180,8 @@ try {
     Write-Host "Backend: http://localhost:5000" -ForegroundColor White
     Write-Host "The site should now be accessible at: https://fxalert.co.uk" -ForegroundColor White
     Write-Host "`nCheck the log file at $logFile for details" -ForegroundColor Cyan
+
+    Write-Host "`nNOTE: You may need to restart your computer to complete the installation." -ForegroundColor Yellow
 
 } catch {
     Write-Host "`nAn error occurred:" -ForegroundColor Red
