@@ -1,12 +1,10 @@
 import os
 import sys
-import ssl
-from waitress import serve
-from paste.translogger import TransLogger
 import logging
 from logging.handlers import RotatingFileHandler
 from cheroot.wsgi import Server as WSGIServer
 from cheroot.ssl.builtin import BuiltinSSLAdapter
+from paste.translogger import TransLogger
 
 # Add the project root to Python path
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -61,7 +59,7 @@ logger.addHandler(console_handler)
 
 # Log initial startup message
 logger.info('='*50)
-logger.info('Starting Waitress server initialization')
+logger.info('Starting server initialization')
 logger.info(f'Python version: {sys.version}')
 logger.info(f'Current working directory: {os.getcwd()}')
 logger.info(f'Root directory: {root_dir}')
@@ -112,7 +110,7 @@ if __name__ == '__main__':
         )
         
         # Create and configure the WSGI server
-        logger.info('Starting WSGI server with SSL...')
+        logger.info('Creating WSGI server...')
         server = WSGIServer(
             ('0.0.0.0', 5000),
             app_with_logging,
