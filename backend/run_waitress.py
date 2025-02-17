@@ -88,7 +88,11 @@ def create_ssl_adapter():
         if not os.path.exists(key_file):
             raise FileNotFoundError(f'Key file not found: {key_file}')
             
-        ssl_adapter = BuiltinSSLAdapter(cert_file, key_file)
+        ssl_adapter = BuiltinSSLAdapter(
+            cert_file,
+            key_file,
+            certificate_chain=cert_file
+        )
         logger.info('SSL adapter created successfully')
         return ssl_adapter
     except Exception as e:
@@ -124,13 +128,14 @@ if __name__ == '__main__':
         if ssl_adapter:
             server.ssl_adapter = ssl_adapter
             logger.info('SSL configured successfully')
+            logger.info('Server will be available at https://0.0.0.0:5000')
         else:
             logger.error("Failed to configure SSL. Exiting.")
             sys.exit(1)
         
         # Start the server
         logger.info('Starting server...')
-        server.start()
+        server.safe_start()
         
     except Exception as e:
         logger.error('Failed to start server', exc_info=True)
