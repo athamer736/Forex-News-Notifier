@@ -150,14 +150,16 @@ def get_filtered_events(
         
         # Apply currency filter
         if currencies:
-            query = query.filter(ForexEvent.currency.in_([c.upper() for c in currencies]))
+            # Convert both the database values and input to uppercase for comparison
+            query = query.filter(ForexEvent.currency.in_([c.strip().upper() for c in currencies if c.strip()]))
         
         # Apply impact filter
         if impact_levels:
-            # Handle non-economic events specially
-            if 'Non-Economic' in impact_levels:
+            # Handle non-economic events specially and normalize case
+            normalized_impacts = [imp.strip().title() for imp in impact_levels if imp.strip()]
+            if 'Non-Economic' in normalized_impacts:
                 # Create a list of all other impact levels
-                other_impacts = [imp for imp in impact_levels if imp != 'Non-Economic']
+                other_impacts = [imp for imp in normalized_impacts if imp != 'Non-Economic']
                 
                 # Build an OR condition for non-economic events and other selected impacts
                 conditions = []
@@ -167,7 +169,7 @@ def get_filtered_events(
                 
                 query = query.filter(or_(*conditions))
             else:
-                query = query.filter(ForexEvent.impact.in_(impact_levels))
+                query = query.filter(ForexEvent.impact.in_(normalized_impacts))
         
         # Order by time
         query = query.order_by(ForexEvent.time)

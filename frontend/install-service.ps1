@@ -5,21 +5,16 @@ if (-not (Test-Path "C:\nssm\win64\nssm.exe")) {
     # Create NSSM directory
     New-Item -ItemType Directory -Path "C:\nssm\win64" -Force | Out-Null
 
-    # Download pre-compiled NSSM executable directly
+    # Download pre-compiled NSSM executable
     $nssmUrl = "https://archive.org/download/nssm-2.24/nssm-2.24.zip"
     $nssmZip = "$env:TEMP\nssm.zip"
     $nssmPath = "C:\nssm\win64\nssm.exe"
 
-    Write-Host "Downloading NSSM from archive.org..."
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $webClient = New-Object System.Net.WebClient
         $webClient.Headers.Add("User-Agent", "PowerShell Script")
         $webClient.DownloadFile($nssmUrl, $nssmZip)
-        
-        if (-not (Test-Path $nssmZip)) {
-            throw "Download failed - ZIP file not created"
-        }
         
         Write-Host "Extracting NSSM..."
         Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -27,20 +22,14 @@ if (-not (Test-Path "C:\nssm\win64\nssm.exe")) {
         if (Test-Path $tempDir) {
             Remove-Item -Path $tempDir -Recurse -Force
         }
-        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-        
         [System.IO.Compression.ZipFile]::ExtractToDirectory($nssmZip, $tempDir)
         
         $nssmFile = Get-ChildItem -Path $tempDir -Recurse -Filter "nssm.exe" | 
                     Where-Object { $_.FullName -like "*win64*" } | 
                     Select-Object -First 1
 
-        if ($nssmFile) {
-            Copy-Item -Path $nssmFile.FullName -Destination $nssmPath -Force
-            Write-Host "NSSM installed successfully"
-        } else {
-            throw "Could not find nssm.exe in the downloaded package"
-        }
+        Copy-Item -Path $nssmFile.FullName -Destination $nssmPath -Force
+        Write-Host "NSSM installed successfully"
 
         Remove-Item -Path $nssmZip -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -74,10 +63,9 @@ try {
 
 Write-Host "Stopping and removing existing service if it exists..."
 & $nssm stop $serviceName 2>$null
+Start-Sleep -Seconds 2
 & $nssm remove $serviceName confirm 2>$null
-
-Write-Host "Installing new service..."
-& $nssm install $serviceName $nodeExe
+Start-Sleep -Seconds 2
 
 Write-Host "Installing dependencies and building the application..."
 Set-Location $appDirectory
@@ -98,24 +86,6 @@ if (Test-Path $frontendEnvFile) {
     Write-Error "Could not find any .env file"
     exit 1
 }
-
-# Load environment variables from .env
-$envContent = Get-Content $frontendEnvFile
-$envString = "NODE_ENV=production;"
-$envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"
-
-foreach ($line in $envContent) {
-    if ($line -match '^\s*([^#][^=]+)=(.+)$') {
-        $key = $matches[1].Trim()
-        $value = $matches[2].Trim()
-        if ($key -ne "NODE_TLS_REJECT_UNAUTHORIZED") {
-            $envString += "$key=$value;"
-        }
-    }
-}
-
-Write-Host "Setting environment variables for the service..."
-& $nssm set $serviceName AppEnvironmentExtra $envString
 
 Write-Host "Cleaning previous build..."
 if (Test-Path ".next") {
@@ -145,15 +115,12 @@ try {
 Write-Host "Building application..."
 try {
     $env:NODE_ENV = "production"
-    # Run npm run build directly
-    Write-Host "Running build command..."
     npm run build
     
     if ($LASTEXITCODE -ne 0) {
         throw "npm run build failed with exit code $LASTEXITCODE"
     }
 
-    # Verify the build was created
     if (-not (Test-Path ".next")) {
         throw "Build failed - .next directory not created"
     }
@@ -161,51 +128,205 @@ try {
     Write-Host "Build completed successfully"
 } catch {
     Write-Error "Build failed: $_"
-    # Get the npm error log if it exists
-    $npmLog = Join-Path $env:TEMP "npm-debug.log"
-    if (Test-Path $npmLog) {
-        Write-Host "NPM Debug Log:"
-        Get-Content $npmLog | ForEach-Object { Write-Host $_ }
-    }
     exit 1
 }
 
-Write-Host "Configuring service..."
-# Set the correct path to node and the start script
-$nodePath = (Get-Command node).Path
-$startScript = Join-Path $appDirectory "node_modules\next\dist\bin\next"
-$startParams = "start -p 3000"
+Write-Host "Creating log directory..."
+New-Item -ItemType Directory -Force -Path "$appDirectory\logs" | Out-Null
 
-& $nssm set $serviceName Application $nodePath
-& $nssm set $serviceName AppParameters "$startScript $startParams"
+# Release port 3000 if it's in use
+Write-Host "Checking port 3000..."
+$portInUse = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+if ($portInUse) {
+    Write-Host "Port 3000 is in use. Attempting to release..."
+    # Only try to stop non-system processes
+    $portInUse | Where-Object { $_.OwningProcess -ne 4 } | ForEach-Object {
+        $process = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
+        if ($process) {
+            Write-Host "Stopping process: $($process.ProcessName) (PID: $($process.Id))"
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Start-Sleep -Seconds 2
+}
+
+# Remove existing URL ACLs and add new ones
+Write-Host "Configuring URL ACLs..."
+$null = netsh http delete urlacl url=http://+:3000/
+$null = netsh http delete urlacl url=https://+:3000/
+
+# Add URL ACLs with proper permissions for both SYSTEM and NETWORK SERVICE
+$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
+$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\SYSTEM" listen=yes
+$null = netsh http add urlacl url=http://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
+$null = netsh http add urlacl url=https://+:3000/ user="NT AUTHORITY\NETWORK SERVICE" listen=yes
+
+# Configure SSL certificate binding
+Write-Host "Configuring SSL certificate binding..."
+$certPath = "C:\Certbot\live\fxalert.co.uk\fullchain.pem"
+$keyPath = "C:\Certbot\live\fxalert.co.uk\privkey.pem"
+
+# Verify certificate files exist
+if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
+    Write-Error "SSL certificate files not found. Please ensure they exist at the specified paths."
+    exit 1
+}
+
+# Get certificate from store
+$cert = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*fxalert.co.uk*" } | Select-Object -First 1
+
+if (-not $cert) {
+    Write-Host "Certificate not found in store. Importing..."
+    # Import certificate using import-cert.ps1
+    & "$appDirectory\..\import-cert.ps1"
+    Start-Sleep -Seconds 2
+    $cert = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*fxalert.co.uk*" } | Select-Object -First 1
+}
+
+if ($cert) {
+    Write-Host "Using certificate with thumbprint: $($cert.Thumbprint)"
+    # Remove existing bindings
+    $null = netsh http delete sslcert ipport=0.0.0.0:3000
+    $null = netsh http delete sslcert ipport=0.0.0.0:80
+    
+    # Add new bindings without password prompt
+    $guid = [System.Guid]::NewGuid().ToString("B")
+    $null = netsh http add sslcert ipport=0.0.0.0:3000 certhash=$($cert.Thumbprint) appid="{$guid}" certstorename=MY
+    $null = netsh http add sslcert ipport=0.0.0.0:80 certhash=$($cert.Thumbprint) appid="{$guid}" certstorename=MY
+} else {
+    Write-Error "Could not find or import SSL certificate"
+    exit 1
+}
+
+Write-Host "Installing service..."
+& $nssm install $serviceName $nodeExe
 & $nssm set $serviceName AppDirectory $appDirectory
+& $nssm set $serviceName AppParameters "server.js"
 & $nssm set $serviceName DisplayName "Next.js Frontend Service"
 & $nssm set $serviceName Description "Forex News Notifier Frontend Service"
 & $nssm set $serviceName Start SERVICE_AUTO_START
-& $nssm set $serviceName ObjectName LocalSystem
+& $nssm set $serviceName ObjectName "NT AUTHORITY\NETWORK SERVICE"
+
+# Set environment variables
+$envString = "NODE_ENV=production;"
+$envString += "HTTPS=true;"
+$envString += "SSL_CRT_FILE=$certPath;"
+$envString += "SSL_KEY_FILE=$keyPath;"
+$envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"  # Enable TLS verification in production
+$envString += "PORT=3000;"
+$envString += "NEXT_PUBLIC_API_URL=https://fxalert.co.uk:5000;"  # Production API URL
+$envString += "NEXT_PUBLIC_BASE_URL=https://fxalert.co.uk;"  # Production base URL
+
+# Add other environment variables from .env.production file if it exists
+$prodEnvFile = Join-Path $appDirectory ".env.production"
+if (Test-Path $prodEnvFile) {
+    Write-Host "Using production environment file..."
+    $envContent = Get-Content $prodEnvFile
+} elseif (Test-Path $frontendEnvFile) {
+    Write-Host "Production env file not found, using default .env file..."
+    $envContent = Get-Content $frontendEnvFile
+} else {
+    Write-Error "Could not find any .env file"
+    exit 1
+}
+
+foreach ($line in $envContent) {
+    if ($line -match '^\s*([^#][^=]+)=(.+)$') {
+        $key = $matches[1].Trim()
+        $value = $matches[2].Trim()
+        if ($key -notin @("NODE_ENV", "HTTPS", "SSL_CRT_FILE", "SSL_KEY_FILE", "NODE_TLS_REJECT_UNAUTHORIZED", "PORT", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_BASE_URL")) {
+            $envString += "$key=$value;"
+        }
+    }
+}
+
+& $nssm set $serviceName AppEnvironmentExtra $envString
 & $nssm set $serviceName AppStdout "$appDirectory\logs\service-output.log"
 & $nssm set $serviceName AppStderr "$appDirectory\logs\service-error.log"
+& $nssm set $serviceName AppRotateFiles 1
+& $nssm set $serviceName AppRotateOnline 1
+& $nssm set $serviceName AppRotateSeconds 86400
+& $nssm set $serviceName AppRotateBytes 10485760
+& $nssm set $serviceName AppThrottle 0
 
-Write-Host "Creating log directory..."
-New-Item -ItemType Directory -Force -Path "$appDirectory\logs" | Out-Null
+# Set directory permissions
+$acl = Get-Acl $appDirectory
+$identity = "NT AUTHORITY\NETWORK SERVICE"
+$fileSystemRights = "FullControl"
+$type = "Allow"
+$fileSystemAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, $fileSystemRights, "ContainerInherit,ObjectInherit", "None", $type)
+$acl.AddAccessRule($fileSystemAccessRule)
+Set-Acl $appDirectory $acl
+
+# Also set permissions for the .next directory specifically
+$nextDir = Join-Path $appDirectory ".next"
+if (Test-Path $nextDir) {
+    $nextAcl = Get-Acl $nextDir
+    $nextAcl.AddAccessRule($fileSystemAccessRule)
+    Set-Acl $nextDir $nextAcl
+}
+
+# Set permissions for SSL certificate directory
+$certDir = "C:\Certbot\live\fxalert.co.uk"
+if (Test-Path $certDir) {
+    $certAcl = Get-Acl $certDir
+    $certAcl.AddAccessRule($fileSystemAccessRule)
+    Set-Acl $certDir $certAcl
+}
 
 Write-Host "Starting service..."
 & $nssm stop $serviceName 2>$null
 Start-Sleep -Seconds 2
 & $nssm start $serviceName
 
-Start-Sleep -Seconds 5
-$service = Get-Service $serviceName
-Write-Host "Service Status: $($service.Status)"
+# Wait for service to start and verify its status
+$maxAttempts = 5
+$attempt = 0
+$serviceStarted = $false
 
-if ($service.Status -ne 'Running') {
-    Write-Warning "Service is not running. Attempting to start again..."
-    Stop-Service $serviceName -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
-    Start-Service $serviceName
+while ($attempt -lt $maxAttempts) {
     Start-Sleep -Seconds 5
     $service = Get-Service $serviceName
-    Write-Host "Final Service Status: $($service.Status)"
+    Write-Host "Service Status: $($service.Status)"
+    
+    if ($service.Status -eq 'Running') {
+        # Additional check to verify if the port is actually listening
+        $portCheck = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+        if ($portCheck) {
+            $serviceStarted = $true
+            Write-Host "Port 3000 is now listening"
+            break
+        } else {
+            Write-Host "Service is running but port 3000 is not yet listening"
+        }
+    }
+    
+    if ($service.Status -eq 'Paused') {
+        Write-Host "Service is paused, attempting to resume..."
+        & $nssm restart $serviceName
+        Start-Sleep -Seconds 5
+    } elseif ($service.Status -ne 'Running') {
+        Write-Host "Attempting to start service again..."
+        & $nssm restart $serviceName
+    }
+    
+    # Check error logs
+    if (Test-Path "$appDirectory\logs\service-error.log") {
+        Write-Host "Recent error log entries:"
+        Get-Content "$appDirectory\logs\service-error.log" -Tail 5
+    }
+    
+    $attempt++
+}
+
+if (-not $serviceStarted) {
+    Write-Host "Service failed to start after $maxAttempts attempts. Checking error logs..."
+    if (Test-Path "$appDirectory\logs\service-error.log") {
+        Write-Host "Error log contents:"
+        Get-Content "$appDirectory\logs\service-error.log" -Tail 20
+    }
+    Write-Error "Service failed to start properly"
+    exit 1
 }
 
 Write-Host "Service installation complete. Check Windows Services to verify the service is running."

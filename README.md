@@ -119,8 +119,12 @@ The application will be available at:
 
 - Python 3.10 or higher
 - Node.js v20.x (LTS) - Using package-lock.json for dependency management, but it's gitignored for solo development
+- PowerShell 7.0 or higher (for enhanced SSL certificate management and service deployment)
 - MySQL 8.0 or higher
 - Redis (optional, falls back to memory storage if not available)
+- Git (for OpenSSL access)
+- Windows 10/11 with latest updates
+- NSSM (Non-Sucking Service Manager) - automatically installed by setup scripts
 
 ## Quick Start
 
@@ -266,9 +270,7 @@ HIGH_IMPACT_ONLY=true  # Set to false to receive all events
    BASIC_PLAN_ID=your_basic_plan_id
    PREMIUM_PLAN_ID=your_premium_plan_id
    PRO_PLAN_ID=your_pro_plan_id
-   ```
-
-4. The system will automatically:
+   ```4. The system will automatically:
    - Handle subscription creation and management
    - Process recurring payments
    - Manage subscription status updates
@@ -293,6 +295,63 @@ HIGH_IMPACT_ONLY=true  # Set to false to receive all events
    - Scenario analysis for market outcomes
    - Volatility expectations
    - Key price levels and trading timeframes
+
+## SSL Certificate Requirements
+
+The application requires proper SSL certificates for secure HTTPS communication:
+
+- Valid SSL certificates stored in `C:\Certbot\live\fxalert.co.uk\`:
+  - `fullchain.pem` - Full certificate chain
+  - `privkey.pem` - Private key
+- Certificates must be properly imported into Windows certificate store
+- Required permissions for certificate access by NETWORK SERVICE account
+
+## SSL Certificate Management
+
+Certificates are managed using PowerShell scripts:
+- `import-cert.ps1` - Imports certificates into Windows certificate store
+- `bind-cert.ps1` - Configures SSL bindings for IIS and services
+- `test-ssl.ps1` - Tests SSL endpoints
+- `check-firewall.ps1` - Verifies firewall rules and SSL bindings
+
+## Service Management
+
+The application runs as two Windows services:
+
+1. **FlaskBackend** - Python Flask backend service
+   - Port: 5000
+   - SSL enabled
+   - Handles API requests and data processing
+
+2. **NextJSFrontend** - Next.js frontend service
+   - Port: 3000
+   - SSL enabled
+   - Serves the web interface
+
+To manage services:
+```powershell
+# Start services
+Start-Service FlaskBackend
+Start-Service NextJSFrontend
+
+# Stop services
+Stop-Service FlaskBackend
+Stop-Service NextJSFrontend
+
+# Restart services
+Restart-Service FlaskBackend
+Restart-Service NextJSFrontend
+```
+
+## Recent Updates
+
+### February 2025
+- Added PowerShell 7.0 requirement for enhanced SSL certificate management
+- Improved SSL certificate handling in Next.js frontend
+- Enhanced error logging for SSL/TLS connections
+- Added new SSL management scripts
+- Updated service installation scripts for better reliability
+- Added support for modern TLS 1.3 with strong cipher suites
 
 ## Running the Application
 
@@ -469,3 +528,49 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Disclaimer
 
 This is a personal solo project, not a business venture. Any bugs or feature requests are welcome through the contact information provided above.
+
+## Issues and Solutions
+
+### SSL Configuration Issues
+
+#### Problem: SSL Protocol Error with Waitress Server
+When attempting to access the backend API endpoints (e.g., https://fxalert.co.uk:5000/cache/status), users encountered SSL protocol errors:
+```
+POST https://fxalert.co.uk:5000/timezone net::ERR_SSL_PROTOCOL_ERROR
+```
+
+The error occurred because Waitress server doesn't directly support SSL configuration through its `serve` function, resulting in the error:
+```
+ValueError: Unknown adjustment '_ssl_context'
+```
+
+#### Solution:
+1. Replaced Waitress's SSL configuration with Cheroot's SSL adapter
+2. Updated `run_waitress.py` to use `WSGIServer` from Cheroot with proper SSL configuration:
+   ```python
+   from cheroot.wsgi import Server as WSGIServer
+   from cheroot.ssl.builtin import BuiltinSSLAdapter
+
+   # Create SSL adapter with proper certificate chain
+   ssl_adapter = BuiltinSSLAdapter(
+       cert_file,
+       key_file,
+       certificate_chain=cert_file
+   )
+   
+   # Configure server with SSL
+   server = WSGIServer(
+       ('0.0.0.0', 5000),
+       app_with_logging,
+       numthreads=4,
+       request_queue_size=100,
+       timeout=30
+   )
+   server.ssl_adapter = ssl_adapter
+   ```
+3. Ensured the Windows service was configured to use `run_waitress.py` instead of `app.py`
+4. Properly configured SSL certificates and key paths
+
+This solution enabled secure HTTPS communication between the frontend and backend services.
+
+

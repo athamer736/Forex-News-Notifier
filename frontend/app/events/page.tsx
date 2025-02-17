@@ -335,18 +335,18 @@ function EventsPage() {
 
             const userId = localStorage.getItem('userId') || 'default';
             
-            // Use IP address directly for production with HTTP
+            // Use HTTPS for all environments
             let baseUrl;
             if (typeof window !== 'undefined') {
                 if (window.location.hostname === 'localhost') {
-                    baseUrl = 'http://localhost:5000';
+                    baseUrl = 'https://localhost:5000';
                 } else if (window.location.hostname === '192.168.0.144') {
-                    baseUrl = 'http://192.168.0.144:5000';
+                    baseUrl = 'https://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                    baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
                 }
             } else {
-                baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
             }
 
             // Add selected date to query parameters if applicable
@@ -354,7 +354,7 @@ function EventsPage() {
             const currencyParam = selectedCurrencies.length > 0 ? `&currencies=${selectedCurrencies.join(',')}` : '';
             const impactParam = selectedImpacts.length > 0 ? `&impacts=${selectedImpacts.join(',')}` : '';
             
-            const response = await fetch(`${baseUrl}/events?userId=${userId}&range=${timeRange}${dateParam}${currencyParam}${impactParam}`, {
+            const response = await fetch(`${baseUrl}/events?userId=${userId}&time_range=${timeRange}${dateParam}${currencyParam}${impactParam}`, {
                 mode: 'cors',
                 credentials: 'include',
                 headers: {
@@ -451,14 +451,14 @@ function EventsPage() {
                 let baseUrl;
                 if (typeof window !== 'undefined') {
                     if (window.location.hostname === 'localhost') {
-                        baseUrl = 'http://localhost:5000';
+                        baseUrl = 'https://localhost:5000';
                     } else if (window.location.hostname === '192.168.0.144') {
-                        baseUrl = 'http://192.168.0.144:5000';
+                        baseUrl = 'https://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                        baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
                     }
                 } else {
-                    baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                    baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
                 }
                 
                 console.log('Using base URL:', baseUrl);

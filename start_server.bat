@@ -53,12 +53,21 @@ if not exist "frontend" (
     exit /b 1
 )
 
+:: Check for SSL certificates
+if not exist "C:\Certbot\live\fxalert.co.uk\fullchain.pem" (
+    echo %RED%Error: SSL certificates not found%RESET%
+    echo Please ensure SSL certificates are installed at C:\Certbot\live\fxalert.co.uk\
+    pause
+    exit /b 1
+)
+
 :: Display startup message
 echo %YELLOW%Starting Forex News Notifier Server...%RESET%
 echo.
 echo %GREEN%[✓]%RESET% Python detected
 echo %GREEN%[✓]%RESET% Node.js detected
 echo %GREEN%[✓]%RESET% Project files found
+echo %GREEN%[✓]%RESET% SSL certificates found
 echo.
 
 :: Create and activate virtual environment if it doesn't exist
@@ -72,89 +81,55 @@ if not exist "venv" (
     )
 )
 
-:: Start Flask backend in a new window
-start "Flask Backend" cmd /c "color 09 && echo Starting Flask Backend... && call venv\Scripts\activate && python app.py"
+:: Install required Python packages
+echo %YELLOW%Installing/Updating Python packages...%RESET%
+call venv\Scripts\activate && pip install -r requirements.txt
+
+:: Force remove existing services if they exist
+echo %YELLOW%Removing existing services if present...%RESET%
+powershell -Command "Stop-Service FlaskBackend -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 5; sc.exe delete FlaskBackend"
+powershell -Command "Stop-Service NextJSFrontend -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 5; sc.exe delete NextJSFrontend"
+timeout /t 5 /nobreak > nul
+
+:: Start Backend Service Installation in a new window
+echo %YELLOW%Installing and starting backend service...%RESET%
+start "Backend Service Installation" cmd /c "color 0C && echo Installing Flask Backend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd backend; .\install-service.ps1; pause"""
+
+:: Wait for backend service to start
+echo %YELLOW%Waiting for backend service to initialize...%RESET%
+timeout /t 10 /nobreak > nul
+
+:: Start Frontend Service Installation in a new window
+echo %YELLOW%Installing and starting frontend service...%RESET%
+start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.js Frontend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd frontend; .\install-service.ps1; pause"""
 
 :: Start event scheduler in a new window
+echo %YELLOW%Starting event scheduler...%RESET%
 start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && call venv\Scripts\activate && python scripts\run_scheduler.py"
 
-:: Start email scheduler in a new window
-start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && call venv\Scripts\activate && python scripts\email_scheduler.py"
+:: Start AI summary generator in a new window with hourly scheduling
+echo %YELLOW%Starting AI summary generator...%RESET%
+start "AI Summary Generator" cmd /c "color 0D && echo Starting AI Summary Generator... && call venv\Scripts\activate && (for /l %%x in () do ( python scripts\generate_summaries.py && timeout /t 3600 /nobreak )) && pause"
 
-:: Start frontend in a new window with production mode
-start "Frontend Server" cmd /c "color 0D && echo Starting Frontend in Production Mode... && cd frontend && npm run build && echo Build complete, starting server... && npm run start && pause"
+:: Start email scheduler in a new window
+echo %YELLOW%Starting email scheduler...%RESET%
+start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && call venv\Scripts\activate && python scripts\email_scheduler.py"
 
 echo.
 echo %GREEN%All components started in separate windows!%RESET%
-echo %BLUE%Backend running on https://localhost:5000%RESET%
-echo %BLUE%Frontend running on https://localhost:3000%RESET%
+echo %BLUE%Backend running on https://fxalert.co.uk:5000%RESET%
+echo %BLUE%Frontend running on https://fxalert.co.uk:3000%RESET%
+echo.
+echo %YELLOW%Services Status:%RESET%
+powershell -Command "Write-Host 'Backend Service: ' -NoNewline; Get-Service FlaskBackend | Select-Object -ExpandProperty Status"
+powershell -Command "Write-Host 'Frontend Service: ' -NoNewline; Get-Service NextJSFrontend | Select-Object -ExpandProperty Status"
 echo.
 echo %YELLOW%Close this window to stop all services...%RESET%
 pause > nul
 
 :: Kill all the processes when the user closes the window
-taskkill /F /FI "WINDOWTITLE eq Flask Backend*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Frontend Service Installation*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Backend Service Installation*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Frontend Server*" > nul 2>&1
-
-:MENU
-echo Choose startup mode:
-echo 1) Development Mode (separate windows)
-echo 2) Production Mode (Windows Services)
-set /p mode="Enter choice (1 or 2): "
-
-if "%mode%"=="2" (
-    echo %YELLOW%Starting Production Mode (Windows Services)...%RESET%
-    
-    :: Start the Flask Backend Service
-    echo %YELLOW%Starting Flask Backend Service...%RESET%
-    net start FlaskBackend
-    if %errorLevel% neq 0 (
-        echo %RED%Failed to start Flask Backend Service%RESET%
-        pause
-        exit /b 1
-    )
-
-    :: Start the Next.js Frontend Service
-    echo %YELLOW%Starting Next.js Frontend Service...%RESET%
-    net start NextJSFrontend
-    if %errorLevel% neq 0 (
-        echo %RED%Failed to start Next.js Frontend Service%RESET%
-        pause
-        exit /b 1
-    )
-
-    echo.
-    echo %GREEN%Services started successfully!%RESET%
-    echo %BLUE%Backend running on https://localhost:5000%RESET%
-    echo %BLUE%Frontend running on https://localhost:3000%RESET%
-    echo.
-    echo %YELLOW%Press any key to exit...%RESET%
-    pause > nul
-    goto :EOF
-)
-
-if "%mode%"=="1" (
-    :: Development Mode
-    echo %YELLOW%Starting Development Mode...%RESET%
-
-    echo.
-    echo %GREEN%All components started in separate windows!%RESET%
-    echo %BLUE%Backend running on https://localhost:5000%RESET%
-    echo %BLUE%Frontend running on https://localhost:3000%RESET%
-    echo.
-    echo %YELLOW%Close this window to stop all services...%RESET%
-    pause > nul
-    
-    :: Kill all the processes when the user closes the window
-    taskkill /F /FI "WINDOWTITLE eq Flask Backend*" > nul 2>&1
-    taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
-    taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1
-    taskkill /F /FI "WINDOWTITLE eq Frontend Server*" > nul 2>&1
-    goto :EOF
-) else (
-    echo %RED%Invalid choice. Please enter 1 or 2.%RESET%
-    echo.
-    goto :MENU
-) 
+taskkill /F /FI "WINDOWTITLE eq AI Summary Generator*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1 

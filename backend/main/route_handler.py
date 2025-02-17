@@ -32,46 +32,17 @@ def handle_timezone_request() -> Tuple[Dict, int]:
 def handle_events_request() -> Tuple[Union[Dict, List], int]:
     """Handle event retrieval requests"""
     try:
-        # Get request parameters
-        user_id = request.args.get('userId', 'default')
-        time_range = request.args.get('range', '24h')
-        currencies = request.args.get('currencies', '')
-        impacts = request.args.get('impacts', '')
+        # Get query parameters
+        time_range = request.args.get('time_range', '24h')
+        user_timezone = request.args.get('timezone', 'UTC')
+        selected_currencies = request.args.get('currencies', '').split(',') if request.args.get('currencies') else None
+        selected_impacts = request.args.get('impacts', '').split(',') if request.args.get('impacts') else None
         specific_date = request.args.get('date')
-        
-        # Parse currencies and impacts into lists
-        selected_currencies = [c.strip().upper() for c in currencies.split(',')] if currencies else []
-        selected_impacts = [i.strip().capitalize() for i in impacts.split(',')] if impacts else []
-        
-        # Validate time range
-        if time_range not in VALID_TIME_RANGES:
-            return {
-                'error': f'Invalid time range. Must be one of: {", ".join(VALID_TIME_RANGES)}'
-            }, 400
 
-        # Validate specific date format if provided
-        if time_range == 'specific_date':
-            if not specific_date:
-                return {'error': 'Date parameter is required for specific_date time range'}, 400
-            try:
-                date_obj = datetime.strptime(specific_date, '%Y-%m-%d')
-                # Check if date is before Feb 2, 2025
-                if date_obj < datetime(2025, 2, 2):
-                    return {'error': 'Sorry, we do not have data from before February 2, 2025'}, 400
-            except ValueError:
-                return {'error': 'Invalid date format. Use YYYY-MM-DD'}, 400
-
-        # Get user's timezone from storage
-        user_timezone = get_user_timezone(user_id)
-        if not user_timezone:
-            logger.warning(f"No timezone found for user {user_id}, defaulting to UTC")
-            user_timezone = 'UTC'
-
-        # Calculate time range for database query
+        # Get current time in UTC
         now = datetime.now(pytz.UTC)
-        start_time = None
-        end_time = None
 
+        # Calculate time range
         if time_range == '24h':
             start_time = now
             end_time = now + timedelta(days=1)
@@ -85,8 +56,15 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             start_time = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = start_time + timedelta(days=1)
         elif time_range == 'week':
-            start_time = now
-            end_time = now + timedelta(days=7)
+            # Calculate days to previous Sunday for current week
+            if now.weekday() == 6:  # If today is Sunday
+                days_to_start = 0
+            else:
+                days_to_start = -(now.weekday() + 1)  # Go back to previous Sunday
+            week_start = now + timedelta(days=days_to_start)
+            start_time = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+            week_end = week_start + timedelta(days=6)  # Saturday
+            end_time = week_end.replace(hour=23, minute=59, second=59, microsecond=999999)
         elif time_range == 'previous_week':
             start_time = (now - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = now
@@ -94,8 +72,25 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             start_time = (now + timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = start_time + timedelta(days=7)
         elif time_range == 'specific_date':
-            start_time = datetime.strptime(specific_date, '%Y-%m-%d').replace(tzinfo=pytz.UTC)
-            end_time = start_time + timedelta(days=1)
+            if not specific_date:
+                raise ValueError("No date provided for specific date filter")
+            try:
+                # Parse and validate the date
+                start_time = datetime.strptime(specific_date, '%Y-%m-%d')
+                if start_time.tzinfo is None:
+                    start_time = pytz.UTC.localize(start_time)
+                
+                # Check if date is before our data start date
+                min_date = datetime(2025, 2, 2, tzinfo=pytz.UTC)
+                if start_time < min_date:
+                    raise ValueError("Sorry, we do not have data from before February 2, 2025")
+                
+                # Set end time to end of the selected day
+                end_time = start_time + timedelta(days=1) - timedelta(microseconds=1)
+            except ValueError as e:
+                if "does not match format" in str(e):
+                    raise ValueError("Invalid date format. Please use YYYY-MM-DD")
+                raise
 
         # Get filtered events from database
         filtered_events = db_get_filtered_events(
