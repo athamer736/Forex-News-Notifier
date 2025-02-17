@@ -21,6 +21,9 @@ echo    Forex News Notifier Server Manager
 echo =======================================%RESET%
 echo.
 
+:: Pause to show initial status
+pause
+
 :: Check if running as administrator
 net session >nul 2>&1
 if %errorLevel% neq 0 (
@@ -99,17 +102,39 @@ if not exist "%VENV_PATH%" (
 :: Install required Python packages with better error handling
 echo %YELLOW%Installing/Updating Python packages...%RESET%
 call "%VENV_PATH%\Scripts\activate.bat"
+if %errorlevel% neq 0 (
+    echo %RED%Error activating virtual environment%RESET%
+    echo Current directory: %CD%
+    echo Virtual environment path: %VENV_PATH%
+    pause
+    exit /b 1
+)
 
 :: First, ensure pip is up to date
 python -m pip install --upgrade pip
+if %errorlevel% neq 0 (
+    echo %RED%Error upgrading pip%RESET%
+    pause
+    exit /b 1
+)
 
 :: Install packages with relaxed version constraints
 echo Installing core packages...
 pip install flask flask-cors waitress pywin32 pyOpenSSL certifi --upgrade
+if %errorlevel% neq 0 (
+    echo %RED%Error installing core packages%RESET%
+    pause
+    exit /b 1
+)
 
 :: Then install remaining requirements
 echo Installing remaining requirements...
 pip install -r requirements.txt --upgrade --no-deps
+if %errorlevel% neq 0 (
+    echo %RED%Error installing requirements%RESET%
+    pause
+    exit /b 1
+)
 
 :: Verify critical packages individually
 echo Verifying critical packages...
@@ -147,19 +172,16 @@ echo.
 echo %YELLOW%Configuring and starting backend service...%RESET%
 start "Backend Service Configuration" pwsh -NoExit -Command "^
     $ErrorActionPreference = 'Stop';^
-    $host.ui.RawUI.WindowTitle = 'Backend Service Configuration';^
-    Write-Host 'Configuring Flask Backend Service...' -ForegroundColor Cyan;^
-    Stop-Service FlaskBackend -Force;^
-    Start-Sleep -Seconds 2;^
-    C:\nssm\win64\nssm.exe set FlaskBackend AppParameters 'C:\FlaskApps\forex_news_notifier\backend\run_waitress.py';^
-    Start-Sleep -Seconds 2;^
-    Start-Service FlaskBackend;^
-    Start-Sleep -Seconds 5;^
-    Get-Service FlaskBackend | Format-List Name, Status;^
-    Write-Host 'Backend service configured and started' -ForegroundColor Green;^
-    while ($true) {^
-        Get-Service FlaskBackend | Format-List Name, Status;^
-        Start-Sleep -Seconds 30^
+    try {^
+        $host.ui.RawUI.WindowTitle = 'Backend Service Configuration';^
+        Write-Host 'Configuring Flask Backend Service...' -ForegroundColor Cyan;^
+        Set-Location -Path '%PROJECT_ROOT%';^
+        & '%VENV_PATH%\Scripts\activate.ps1';^
+        python app.py;^
+    } catch {^
+        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
+        Read-Host 'Press Enter to exit';^
+        exit 1;^
     }"
 
 :: Wait for backend to start
@@ -170,77 +192,70 @@ timeout /t 10 /nobreak > nul
 echo %YELLOW%Building and starting frontend...%RESET%
 start "Frontend Server" pwsh -NoExit -Command "^
     $ErrorActionPreference = 'Stop';^
-    $host.ui.RawUI.WindowTitle = 'Frontend Server';^
-    Set-Location -Path '%PROJECT_ROOT%frontend';^
-    Write-Host 'Building frontend...' -ForegroundColor Cyan;^
-    npm run build;^
-    Write-Host 'Starting frontend server...' -ForegroundColor Cyan;^
-    npm run start"
+    try {^
+        $host.ui.RawUI.WindowTitle = 'Frontend Server';^
+        Set-Location -Path '%PROJECT_ROOT%frontend';^
+        Write-Host 'Building frontend...' -ForegroundColor Cyan;^
+        npm run build;^
+        Write-Host 'Starting frontend server...' -ForegroundColor Cyan;^
+        npm run start;^
+    } catch {^
+        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
+        Read-Host 'Press Enter to exit';^
+        exit 1;^
+    }"
 
 :: Start Event Scheduler in a new PowerShell 7 window
 echo %YELLOW%Starting event scheduler...%RESET%
 start "Event Scheduler" pwsh -NoExit -Command "^
     $ErrorActionPreference = 'Stop';^
-    $host.ui.RawUI.WindowTitle = 'Event Scheduler';^
-    Write-Host 'Starting Event Scheduler...' -ForegroundColor Yellow;^
-    Set-Location -Path '%PROJECT_ROOT%';^
-    & '%VENV_PATH%\Scripts\activate.ps1';^
-    python '%SCRIPTS_PATH%\run_scheduler.py';^
-    while ($true) {^
-        if ($LASTEXITCODE -ne 0) {^
-            Write-Host 'Event Scheduler crashed, restarting...' -ForegroundColor Red;^
-            Start-Sleep -Seconds 5;^
-            python '%SCRIPTS_PATH%\run_scheduler.py';^
-        }^
+    try {^
+        $host.ui.RawUI.WindowTitle = 'Event Scheduler';^
+        Write-Host 'Starting Event Scheduler...' -ForegroundColor Yellow;^
+        Set-Location -Path '%PROJECT_ROOT%';^
+        & '%VENV_PATH%\Scripts\activate.ps1';^
+        python '%SCRIPTS_PATH%\run_scheduler.py';^
+    } catch {^
+        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
+        Read-Host 'Press Enter to exit';^
+        exit 1;^
     }"
 
 :: Start AI Summary Generator in a new PowerShell 7 window
 echo %YELLOW%Starting AI summary generator...%RESET%
 start "AI Summary Generator" pwsh -NoExit -Command "^
     $ErrorActionPreference = 'Stop';^
-    $host.ui.RawUI.WindowTitle = 'AI Summary Generator';^
-    Write-Host 'Starting AI Summary Generator...' -ForegroundColor Magenta;^
-    Set-Location -Path '%PROJECT_ROOT%';^
-    & '%VENV_PATH%\Scripts\activate.ps1';^
-    while ($true) {^
-        Write-Host (Get-Date) 'Running AI summary generation...' -ForegroundColor Cyan;^
-        python '%SCRIPTS_PATH%\generate_summaries.py';^
-        Write-Host 'Waiting for next run cycle (1 hour)...' -ForegroundColor Yellow;^
-        Start-Sleep -Seconds 3600;^
+    try {^
+        $host.ui.RawUI.WindowTitle = 'AI Summary Generator';^
+        Write-Host 'Starting AI Summary Generator...' -ForegroundColor Magenta;^
+        Set-Location -Path '%PROJECT_ROOT%';^
+        & '%VENV_PATH%\Scripts\activate.ps1';^
+        while ($true) {^
+            Write-Host (Get-Date) 'Running AI summary generation...' -ForegroundColor Cyan;^
+            python '%SCRIPTS_PATH%\generate_summaries.py';^
+            Write-Host 'Waiting for next run cycle (1 hour)...' -ForegroundColor Yellow;^
+            Start-Sleep -Seconds 3600;^
+        }^
+    } catch {^
+        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
+        Read-Host 'Press Enter to exit';^
+        exit 1;^
     }"
 
 :: Start Email Scheduler in a new PowerShell 7 window
 echo %YELLOW%Starting email scheduler...%RESET%
 start "Email Scheduler" pwsh -NoExit -Command "^
     $ErrorActionPreference = 'Stop';^
-    $host.ui.RawUI.WindowTitle = 'Email Scheduler';^
-    Write-Host 'Starting Email Scheduler...' -ForegroundColor Blue;^
-    Set-Location -Path '%PROJECT_ROOT%';^
-    & '%VENV_PATH%\Scripts\activate.ps1';^
-    python '%SCRIPTS_PATH%\email_scheduler.py';^
-    while ($true) {^
-        if ($LASTEXITCODE -ne 0) {^
-            Write-Host 'Email Scheduler crashed, restarting...' -ForegroundColor Red;^
-            Start-Sleep -Seconds 5;^
-            python '%SCRIPTS_PATH%\email_scheduler.py';^
-        }^
-    }"
-
-:: Test backend connectivity in a new PowerShell 7 window
-echo %YELLOW%Testing backend connectivity...%RESET%
-start "Backend Test" pwsh -NoExit -Command "^
-    $ErrorActionPreference = 'Stop';^
-    $host.ui.RawUI.WindowTitle = 'Backend Connectivity Test';^
-    Write-Host 'Testing backend connectivity...' -ForegroundColor Cyan;^
-    while ($true) {^
-        try {^
-            $ProgressPreference = 'SilentlyContinue';^
-            $response = Invoke-WebRequest -Uri 'https://fxalert.co.uk:5000/cache/status' -Method GET -UseBasicParsing;^
-            Write-Host (Get-Date) 'Backend is accessible. Status:' $response.StatusCode -ForegroundColor Green;^
-        } catch {^
-            Write-Host (Get-Date) 'Backend is not accessible:' $_.Exception.Message -ForegroundColor Red;^
-        }^
-        Start-Sleep -Seconds 30^
+    try {^
+        $host.ui.RawUI.WindowTitle = 'Email Scheduler';^
+        Write-Host 'Starting Email Scheduler...' -ForegroundColor Blue;^
+        Set-Location -Path '%PROJECT_ROOT%';^
+        & '%VENV_PATH%\Scripts\activate.ps1';^
+        python '%SCRIPTS_PATH%\email_scheduler.py';^
+    } catch {^
+        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
+        Read-Host 'Press Enter to exit';^
+        exit 1;^
     }"
 
 echo.
@@ -248,9 +263,8 @@ echo %GREEN%All components started in separate windows!%RESET%
 echo %BLUE%Backend running on https://fxalert.co.uk:5000%RESET%
 echo %BLUE%Frontend running on https://fxalert.co.uk:3000%RESET%
 echo.
-echo %YELLOW%Services Status:%RESET%
-pwsh -Command "Get-Service FlaskBackend | Format-List Name, Status, StartType"
-echo.
+
+:: Final pause to keep the window open
 echo %YELLOW%Press any key to stop all services...%RESET%
 pause > nul
 
@@ -260,4 +274,7 @@ taskkill /F /FI "WINDOWTITLE eq Backend Service Configuration*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Backend Connectivity Test*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq AI Summary Generator*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1 
+taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1
+
+:: Final pause to show any cleanup messages
+pause 
