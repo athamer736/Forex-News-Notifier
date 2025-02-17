@@ -3,6 +3,7 @@ const { parse } = require('url');
 const next = require('next');
 const fs = require('fs');
 const path = require('path');
+const tls = require('tls');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Set development environment if not set
@@ -149,69 +150,37 @@ try {
     // Verify certificate files
     verifyCertificates();
 
-    // Read certificates with explicit error handling
-    log('Reading SSL certificates...');
-    let privateKey, certificate;
-    
-    try {
-        privateKey = fs.readFileSync(KEY_PATH, 'utf8');
-        log(`Private key loaded successfully, length: ${privateKey.length}`);
-    } catch (keyErr) {
-        throw new Error(`Failed to read private key: ${keyErr.message}`);
-    }
-    
-    try {
-        certificate = fs.readFileSync(CERT_PATH, 'utf8');
-        log(`Certificate loaded successfully, length: ${certificate.length}`);
-    } catch (certErr) {
-        throw new Error(`Failed to read certificate: ${certErr.message}`);
-    }
-
+    // Read SSL certificates
     const sslOptions = {
-        key: privateKey,
-        cert: certificate,
-        minVersion: 'TLSv1.2',
-        maxVersion: 'TLSv1.3',
-        secureOptions: tls.SSL_OP_NO_SSLv2 | tls.SSL_OP_NO_SSLv3 | tls.SSL_OP_NO_TLSv1 | tls.SSL_OP_NO_TLSv1_1,
-        ciphers: [
-            'ECDHE-ECDSA-AES128-GCM-SHA256',
-            'ECDHE-RSA-AES128-GCM-SHA256',
-            'ECDHE-ECDSA-AES256-GCM-SHA384',
-            'ECDHE-RSA-AES256-GCM-SHA384',
-            'ECDHE-ECDSA-CHACHA20-POLY1305',
-            'ECDHE-RSA-CHACHA20-POLY1305',
-            'DHE-RSA-AES128-GCM-SHA256',
-            'DHE-RSA-AES256-GCM-SHA384'
-        ].join(':'),
-        honorCipherOrder: true,
-        handshakeTimeout: 120000,
-        rejectUnauthorized: true,
-        requestCert: false,
-        sessionTimeout: 600
+        key: fs.readFileSync(KEY_PATH),
+        cert: fs.readFileSync(CERT_PATH),
+        minVersion: 'TLSv1.2'
     };
 
-    log('SSL options configured successfully');
-
     app.prepare().then(() => {
-        log('Creating HTTPS server...');
         const httpsServer = createServer(sslOptions, async (req, res) => {
             const parsedUrl = parse(req.url, true);
             const { pathname } = parsedUrl;
 
+            // Add CORS headers for all responses
+            res.setHeader('Access-Control-Allow-Origin', 'https://fxalert.co.uk');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+            // Handle OPTIONS requests
+            if (req.method === 'OPTIONS') {
+                res.writeHead(200);
+                res.end();
+                return;
+            }
+
             // Proxy /api requests to Flask backend
             if (pathname.startsWith('/api')) {
                 const proxy = createProxyMiddleware({
-                    target: 'https://localhost:5000',
+                    target: 'http://localhost:5000',
                     changeOrigin: true,
-                    secure: false,
                     pathRewrite: {
                         '^/api': '/'
-                    },
-                    onProxyRes: (proxyRes) => {
-                        // Handle CORS headers
-                        proxyRes.headers['Access-Control-Allow-Origin'] = 'https://fxalert.co.uk';
-                        proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
-                        proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
                     }
                 });
                 return proxy(req, res);
@@ -221,32 +190,9 @@ try {
             return handle(req, res, parsedUrl);
         });
 
-        // Enhanced error handling for TLS handshake
-        httpsServer.on('tlsClientError', (err, tlsSocket) => {
-            log('TLS Client Error:', err);
-            log(`Client Info - IP: ${tlsSocket.remoteAddress}, Port: ${tlsSocket.remotePort}`);
-        });
-
-        // Listen on all interfaces
         httpsServer.listen(PORT, '0.0.0.0', (err) => {
-            if (err) {
-                log('Failed to start HTTPS server:', err);
-                throw err;
-            }
-            log(`> Server ready on https://localhost:${PORT}`);
-        });
-
-        // Log successful TLS connections
-        httpsServer.on('secureConnection', (tlsSocket) => {
-            log('New TLS connection established');
-            log(`Protocol: ${tlsSocket.getProtocol()}`);
-            log(`Cipher: ${tlsSocket.getCipher().name}`);
-            log(`Client: ${tlsSocket.remoteAddress}:${tlsSocket.remotePort}`);
-        });
-
-        // Monitor server events
-        httpsServer.on('error', (err) => {
-            log('Server error:', err);
+            if (err) throw err;
+            log(`> Ready on https://localhost:${PORT}`);
         });
 
     }).catch(err => {
