@@ -138,11 +138,14 @@ function SubscribePage() {
         setSuccess(null);
 
         try {
-            const response = await fetch('/api/subscribe', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/subscribe`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Origin': typeof window !== 'undefined' ? window.location.origin : '',
                 },
+                credentials: 'include',
                 body: JSON.stringify(form),
             });
 
