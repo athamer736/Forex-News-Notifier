@@ -5,13 +5,19 @@ const fs = require('fs');
 const path = require('path');
 const tls = require('tls');
 
+// Set development environment if not set
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 const dev = process.env.NODE_ENV !== 'production';
+
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-// SSL certificate paths with absolute paths
-const CERT_PATH = process.env.SSL_CRT_FILE || 'C:/Certbot/live/fxalert.co.uk/fullchain_new.pem';
-const KEY_PATH = process.env.SSL_KEY_FILE || 'C:/Certbot/live/fxalert.co.uk/privkey_new.pem';
+// Normalize paths for Windows
+const normalizePath = (p) => path.normalize(p.replace(/\//g, '\\'));
+
+// SSL certificate paths with normalized Windows paths
+const CERT_PATH = normalizePath(process.env.SSL_CRT_FILE || 'C:\\Certbot\\live\\fxalert.co.uk\\fullchain.pem');
+const KEY_PATH = normalizePath(process.env.SSL_KEY_FILE || 'C:\\Certbot\\live\\fxalert.co.uk\\privkey.pem');
 const PORT = process.env.PORT || 3000;
 
 // Enhanced logging function
@@ -136,8 +142,9 @@ try {
     log(`Environment: ${process.env.NODE_ENV}`);
     log(`Process ID: ${process.pid}`);
     log(`Working Directory: ${process.cwd()}`);
+    log(`Certificate Path: ${CERT_PATH}`);
+    log(`Key Path: ${KEY_PATH}`);
     log(`Memory Usage: ${JSON.stringify(process.memoryUsage())}`);
-    log(`User Info: ${process.getuid?.() || 'N/A'}`);
     
     // Verify certificate files
     verifyCertificates();
@@ -165,6 +172,7 @@ try {
         cert: certificate,
         minVersion: 'TLSv1.2',
         maxVersion: 'TLSv1.3',
+        secureOptions: tls.SSL_OP_NO_SSLv2 | tls.SSL_OP_NO_SSLv3 | tls.SSL_OP_NO_TLSv1 | tls.SSL_OP_NO_TLSv1_1,
         ciphers: [
             'ECDHE-ECDSA-AES128-GCM-SHA256',
             'ECDHE-RSA-AES128-GCM-SHA256',
@@ -177,8 +185,9 @@ try {
         ].join(':'),
         honorCipherOrder: true,
         handshakeTimeout: 120000,
-        rejectUnauthorized: false,
-        requestCert: false
+        rejectUnauthorized: true,
+        requestCert: false,
+        sessionTimeout: 600
     };
 
     log('SSL options configured successfully');
@@ -187,6 +196,12 @@ try {
         log('Creating HTTPS server...');
         const httpsServer = createHttpsServer(sslOptions, async (req, res) => {
             try {
+                // Set secure headers
+                res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+                res.setHeader('X-Content-Type-Options', 'nosniff');
+                res.setHeader('X-Frame-Options', 'DENY');
+                res.setHeader('X-XSS-Protection', '1; mode=block');
+                
                 const parsedUrl = parse(req.url, true);
                 log(`Incoming request: ${req.method} ${req.url} from ${req.socket.remoteAddress}`);
                 await handle(req, res, parsedUrl);
@@ -209,8 +224,7 @@ try {
                 log('Failed to start HTTPS server:', err);
                 throw err;
             }
-            log(`> Server ready on port ${PORT}`);
-            log('> Process running as:', process.getuid?.() || 'N/A');
+            log(`> Server ready on https://localhost:${PORT}`);
         });
 
         // Log successful TLS connections
@@ -224,10 +238,6 @@ try {
         // Monitor server events
         httpsServer.on('error', (err) => {
             log('Server error:', err);
-        });
-
-        httpsServer.on('close', () => {
-            log('Server is shutting down');
         });
 
     }).catch(err => {

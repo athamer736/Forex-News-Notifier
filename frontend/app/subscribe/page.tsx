@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { 
   Box, 
   Container, 
@@ -36,6 +36,11 @@ interface SubscriptionForm {
   weeklyDay: string;
 }
 
+interface ApiResponse {
+  message: string;
+  data?: unknown;
+}
+
 const currencyOptions = [
     { value: 'USD', label: 'USD - US Dollar' },
     { value: 'EUR', label: 'EUR - Euro' },
@@ -65,40 +70,42 @@ const weekDays = [
     { value: 'sunday', label: 'Sunday' }
 ];
 
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.2
+const motionVariants = {
+    container: {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.2
+            }
         }
-    }
-};
+    } as Variants,
 
-const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-        y: 0,
-        opacity: 1,
-        transition: {
-            type: "spring",
-            stiffness: 100,
-            damping: 12
+    item: {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: {
+                type: "spring",
+                stiffness: 100,
+                damping: 12
+            }
         }
-    }
-};
+    } as Variants,
 
-const formVariants = {
-    hidden: { scale: 0.95, opacity: 0 },
-    visible: {
-        scale: 1,
-        opacity: 1,
-        transition: {
-            type: "spring",
-            stiffness: 100,
-            damping: 12
+    form: {
+        hidden: { scale: 0.95, opacity: 0 },
+        visible: {
+            scale: 1,
+            opacity: 1,
+            transition: {
+                type: "spring",
+                stiffness: 100,
+                damping: 12
+            }
         }
-    }
+    } as Variants
 };
 
 function SubscribePage() {
@@ -131,22 +138,25 @@ function SubscribePage() {
         }));
     };
 
-    const handleSubmit = async (event: React.FormEvent) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setLoading(true);
         setError(null);
         setSuccess(null);
 
         try {
-            const response = await fetch('/api/subscribe', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscribe`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                },
+                    'Accept': 'application/json',
+                    'Origin': typeof window !== 'undefined' ? window.location.origin : '',
+                } as HeadersInit,
+                credentials: 'include',
                 body: JSON.stringify(form),
             });
 
-            const data = await response.json();
+            const data = await response.json() as ApiResponse;
 
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to subscribe');
@@ -178,11 +188,11 @@ function SubscribePage() {
         >
             <Container maxWidth="md">
                 <motion.div
-                    variants={containerVariants}
+                    variants={motionVariants.container}
                     initial="hidden"
                     animate="visible"
                 >
-                    <motion.div variants={itemVariants}>
+                    <motion.div variants={motionVariants.item}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
                             <IconButton
                                 onClick={() => router.push('/')}
@@ -198,7 +208,7 @@ function SubscribePage() {
                         </Box>
                     </motion.div>
 
-                    <motion.div variants={itemVariants}>
+                    <motion.div variants={motionVariants.item}>
                         <Typography
                             variant="h1"
                             sx={{
@@ -215,7 +225,7 @@ function SubscribePage() {
                         </Typography>
                     </motion.div>
 
-                    <motion.div variants={itemVariants}>
+                    <motion.div variants={motionVariants.item}>
                         <Typography
                             variant="h2"
                             sx={{
@@ -229,7 +239,7 @@ function SubscribePage() {
                         </Typography>
                     </motion.div>
 
-                    <motion.div variants={formVariants}>
+                    <motion.div variants={motionVariants.form}>
                         <Box
                             component="form"
                             onSubmit={handleSubmit}
