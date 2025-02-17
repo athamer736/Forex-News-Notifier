@@ -10,8 +10,8 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 // SSL certificate paths with absolute paths
-const CERT_PATH = process.env.SSL_CRT_FILE || 'C:/Certbot/live/fxalert.co.uk/fullchain.pem';
-const KEY_PATH = process.env.SSL_KEY_FILE || 'C:/Certbot/live/fxalert.co.uk/privkey.pem';
+const CERT_PATH = process.env.SSL_CRT_FILE || 'C:/Certbot/live/fxalert.co.uk/fullchain_new.pem';
+const KEY_PATH = process.env.SSL_KEY_FILE || 'C:/Certbot/live/fxalert.co.uk/privkey_new.pem';
 const PORT = process.env.PORT || 3000;
 
 // Enhanced logging function
@@ -41,6 +41,7 @@ function verifyCertificates() {
             err.path = CERT_PATH;
             throw err;
         }
+        log(`Certificate file exists at: ${CERT_PATH}`);
         
         // Check key file
         if (!fs.existsSync(KEY_PATH)) {
@@ -49,12 +50,16 @@ function verifyCertificates() {
             err.path = KEY_PATH;
             throw err;
         }
+        log(`Key file exists at: ${KEY_PATH}`);
         
         // Get file stats and check permissions
         let certStats, keyStats;
         try {
             certStats = fs.statSync(CERT_PATH);
             log(`Certificate stats: Size=${certStats.size}, Mode=${certStats.mode.toString(8)}, UID=${certStats.uid}, GID=${certStats.gid}`);
+            if (certStats.size === 0) {
+                throw new Error(`Certificate file is empty: ${CERT_PATH}`);
+            }
         } catch (statErr) {
             log('Error getting certificate stats:', statErr);
             throw statErr;
@@ -63,6 +68,9 @@ function verifyCertificates() {
         try {
             keyStats = fs.statSync(KEY_PATH);
             log(`Key stats: Size=${keyStats.size}, Mode=${keyStats.mode.toString(8)}, UID=${keyStats.uid}, GID=${keyStats.gid}`);
+            if (keyStats.size === 0) {
+                throw new Error(`Private key file is empty: ${KEY_PATH}`);
+            }
         } catch (statErr) {
             log('Error getting key stats:', statErr);
             throw statErr;
@@ -72,6 +80,7 @@ function verifyCertificates() {
         try {
             fs.accessSync(CERT_PATH, fs.constants.R_OK);
             fs.accessSync(KEY_PATH, fs.constants.R_OK);
+            log('Both certificate files are readable');
         } catch (accessErr) {
             log('Permission denied accessing certificate files:', accessErr);
             throw accessErr;
@@ -80,16 +89,18 @@ function verifyCertificates() {
         // Try to read the first few bytes of each file
         let certTest, keyTest;
         try {
-            certTest = fs.readFileSync(CERT_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
-            log('Successfully read certificate file');
+            certTest = fs.readFileSync(CERT_PATH, { encoding: 'utf8', flag: 'r' });
+            log(`Successfully read certificate file (${certTest.length} bytes)`);
+            log('Certificate file starts with:', certTest.slice(0, 100));
         } catch (readErr) {
             log('Error reading certificate file:', readErr);
             throw readErr;
         }
         
         try {
-            keyTest = fs.readFileSync(KEY_PATH, { encoding: 'utf8', flag: 'r' }).slice(0, 100);
-            log('Successfully read key file');
+            keyTest = fs.readFileSync(KEY_PATH, { encoding: 'utf8', flag: 'r' });
+            log(`Successfully read key file (${keyTest.length} bytes)`);
+            log('Key file starts with:', keyTest.slice(0, 100));
         } catch (readErr) {
             log('Error reading key file:', readErr);
             throw readErr;
@@ -101,6 +112,7 @@ function verifyCertificates() {
             err.path = CERT_PATH;
             throw err;
         }
+        log('Certificate file has valid format');
         
         if (!keyTest.includes('-----BEGIN PRIVATE KEY-----')) {
             const err = new Error('Invalid private key file format');
@@ -108,6 +120,7 @@ function verifyCertificates() {
             err.path = KEY_PATH;
             throw err;
         }
+        log('Private key file has valid format');
         
         log('Certificate files verified successfully');
         return true;
