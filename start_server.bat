@@ -118,22 +118,30 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: Install packages with relaxed version constraints
+:: Install packages that don't require compilation first
 echo Installing core packages...
-pip install flask flask-cors waitress pywin32 pyOpenSSL certifi --upgrade
+pip install --no-deps ^
+    flask==3.0.2 ^
+    flask-cors==5.0.0 ^
+    waitress==2.1.2 ^
+    requests==2.31.0 ^
+    httpx==0.27.0 ^
+    pywin32==308 ^
+    pyOpenSSL==24.0.0 ^
+    certifi==2024.2.2
 if %errorlevel% neq 0 (
     echo %RED%Error installing core packages%RESET%
     pause
     exit /b 1
 )
 
-:: Then install remaining requirements
+:: Then install remaining requirements without dependencies
 echo Installing remaining requirements...
-pip install -r requirements.txt --upgrade --no-deps
+pip install -r requirements.txt --no-deps --no-build-isolation
 if %errorlevel% neq 0 (
-    echo %RED%Error installing requirements%RESET%
+    echo %YELLOW%Some packages failed to install, but we can continue%RESET%
+    echo Please check the error messages above
     pause
-    exit /b 1
 )
 
 :: Verify critical packages individually
