@@ -3,6 +3,14 @@
 Simple Forex News Notifier webpage that scans across multiple pages and highlights key upcoming news events to be displayed in one website.
 Currently scanning for news from ForexFactory and displays it here.
 
+Currently Accessible at:
+
+https://fxalert.co.uk:3000
+
+Aiming to have it working on:
+
+https://fxalert.co.uk/
+
 ## Quick Setup (Windows)
 
 1. **Set Up Directory**:
