@@ -24,6 +24,15 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
+:: Check if PowerShell 7 is installed
+pwsh -Version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo %RED%Error: PowerShell 7 is not installed%RESET%
+    echo Please install PowerShell 7 from: https://github.com/PowerShell/PowerShell/releases
+    pause
+    exit /b 1
+)
+
 :: Check if Python is installed
 python --version > nul 2>&1
 if %errorlevel% neq 0 (
@@ -64,6 +73,7 @@ if not exist "C:\Certbot\live\fxalert.co.uk\fullchain.pem" (
 :: Display startup message
 echo %YELLOW%Starting Forex News Notifier Server...%RESET%
 echo.
+echo %GREEN%[✓]%RESET% PowerShell 7 detected
 echo %GREEN%[✓]%RESET% Python detected
 echo %GREEN%[✓]%RESET% Node.js detected
 echo %GREEN%[✓]%RESET% Project files found
@@ -85,35 +95,99 @@ if not exist "venv" (
 echo %YELLOW%Installing/Updating Python packages...%RESET%
 call venv\Scripts\activate && pip install -r requirements.txt
 
-:: Force remove existing services if they exist
-echo %YELLOW%Removing existing services if present...%RESET%
-powershell -Command "Stop-Service FlaskBackend -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 5; sc.exe delete FlaskBackend"
-powershell -Command "Stop-Service NextJSFrontend -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 5; sc.exe delete NextJSFrontend"
-timeout /t 5 /nobreak > nul
+:: Start Backend Service Configuration in a new PowerShell 7 window
+echo %YELLOW%Configuring and starting backend service...%RESET%
+start "Backend Service Configuration" pwsh -NoExit -Command "^
+    $host.ui.RawUI.WindowTitle = 'Backend Service Configuration';^
+    Write-Host 'Configuring Flask Backend Service...' -ForegroundColor Cyan;^
+    Stop-Service FlaskBackend -Force;^
+    Start-Sleep -Seconds 2;^
+    C:\nssm\win64\nssm.exe set FlaskBackend AppParameters 'C:\FlaskApps\forex_news_notifier\backend\run_waitress.py';^
+    Start-Sleep -Seconds 2;^
+    Start-Service FlaskBackend;^
+    Start-Sleep -Seconds 5;^
+    Get-Service FlaskBackend | Format-List Name, Status;^
+    Write-Host 'Backend service configured and started' -ForegroundColor Green;^
+    while ($true) {^
+        Get-Service FlaskBackend | Format-List Name, Status;^
+        Start-Sleep -Seconds 30^
+    }"
 
-:: Start Backend Service Installation in a new window
-echo %YELLOW%Installing and starting backend service...%RESET%
-start "Backend Service Installation" cmd /c "color 0C && echo Installing Flask Backend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd backend; .\install-service.ps1; pause"""
-
-:: Wait for backend service to start
+:: Wait for backend to start
 echo %YELLOW%Waiting for backend service to initialize...%RESET%
 timeout /t 10 /nobreak > nul
 
-:: Start Frontend Service Installation in a new window
-echo %YELLOW%Installing and starting frontend service...%RESET%
-start "Frontend Service Installation" cmd /c "color 0B && echo Installing Next.js Frontend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd frontend; .\install-service.ps1; pause"""
+:: Start Frontend Build and Server in a new PowerShell 7 window
+echo %YELLOW%Building and starting frontend...%RESET%
+start "Frontend Server" pwsh -NoExit -Command "^
+    $host.ui.RawUI.WindowTitle = 'Frontend Server';^
+    Set-Location -Path frontend;^
+    Write-Host 'Building frontend...' -ForegroundColor Cyan;^
+    npm run build;^
+    Write-Host 'Starting frontend server...' -ForegroundColor Cyan;^
+    npm run start"
 
-:: Start event scheduler in a new window
+:: Start Event Scheduler in a new PowerShell 7 window
 echo %YELLOW%Starting event scheduler...%RESET%
-start "Event Scheduler" cmd /c "color 0A && echo Starting Event Scheduler... && call venv\Scripts\activate && python scripts\run_scheduler.py"
+start "Event Scheduler" pwsh -NoExit -Command "^
+    $host.ui.RawUI.WindowTitle = 'Event Scheduler';^
+    Write-Host 'Starting Event Scheduler...' -ForegroundColor Yellow;^
+    Set-Location -Path '%~dp0';^
+    .\venv\Scripts\activate;^
+    python scripts\run_scheduler.py;^
+    while ($true) {^
+        if ($LASTEXITCODE -ne 0) {^
+            Write-Host 'Event Scheduler crashed, restarting...' -ForegroundColor Red;^
+            Start-Sleep -Seconds 5;^
+            python scripts\run_scheduler.py;^
+        }^
+    }"
 
-:: Start AI summary generator in a new window with hourly scheduling
+:: Start AI Summary Generator in a new PowerShell 7 window
 echo %YELLOW%Starting AI summary generator...%RESET%
-start "AI Summary Generator" cmd /c "color 0D && echo Starting AI Summary Generator... && call venv\Scripts\activate && (for /l %%x in () do ( python scripts\generate_summaries.py && timeout /t 3600 /nobreak )) && pause"
+start "AI Summary Generator" pwsh -NoExit -Command "^
+    $host.ui.RawUI.WindowTitle = 'AI Summary Generator';^
+    Write-Host 'Starting AI Summary Generator...' -ForegroundColor Magenta;^
+    Set-Location -Path '%~dp0';^
+    .\venv\Scripts\activate;^
+    while ($true) {^
+        Write-Host (Get-Date) 'Running AI summary generation...' -ForegroundColor Cyan;^
+        python scripts\generate_summaries.py;^
+        Write-Host 'Waiting for next run cycle (1 hour)...' -ForegroundColor Yellow;^
+        Start-Sleep -Seconds 3600;^
+    }"
 
-:: Start email scheduler in a new window
+:: Start Email Scheduler in a new PowerShell 7 window
 echo %YELLOW%Starting email scheduler...%RESET%
-start "Email Scheduler" cmd /c "color 0E && echo Starting Email Scheduler... && call venv\Scripts\activate && python scripts\email_scheduler.py"
+start "Email Scheduler" pwsh -NoExit -Command "^
+    $host.ui.RawUI.WindowTitle = 'Email Scheduler';^
+    Write-Host 'Starting Email Scheduler...' -ForegroundColor Blue;^
+    Set-Location -Path '%~dp0';^
+    .\venv\Scripts\activate;^
+    python scripts\email_scheduler.py;^
+    while ($true) {^
+        if ($LASTEXITCODE -ne 0) {^
+            Write-Host 'Email Scheduler crashed, restarting...' -ForegroundColor Red;^
+            Start-Sleep -Seconds 5;^
+            python scripts\email_scheduler.py;^
+        }^
+    }"
+
+:: Test backend connectivity in a new PowerShell 7 window
+echo %YELLOW%Testing backend connectivity...%RESET%
+start "Backend Test" pwsh -NoExit -Command "^
+    $host.ui.RawUI.WindowTitle = 'Backend Connectivity Test';^
+    Write-Host 'Testing backend connectivity...' -ForegroundColor Cyan;^
+    while ($true) {^
+        try {^
+            $ProgressPreference = 'SilentlyContinue';^
+            $response = Invoke-WebRequest -Uri 'https://fxalert.co.uk:5000/cache/status' -Method GET -UseBasicParsing;^
+            Write-Host (Get-Date) 'Backend is accessible. Status:' $response.StatusCode -ForegroundColor Green;^
+        } catch {^
+            Write-Host (Get-Date) 'Backend is not accessible:' $_.Exception.Message -ForegroundColor Red;^
+        }^
+        Start-Sleep -Seconds 30^
+    }"
 
 echo.
 echo %GREEN%All components started in separate windows!%RESET%
@@ -121,15 +195,15 @@ echo %BLUE%Backend running on https://fxalert.co.uk:5000%RESET%
 echo %BLUE%Frontend running on https://fxalert.co.uk:3000%RESET%
 echo.
 echo %YELLOW%Services Status:%RESET%
-powershell -Command "Write-Host 'Backend Service: ' -NoNewline; Get-Service FlaskBackend | Select-Object -ExpandProperty Status"
-powershell -Command "Write-Host 'Frontend Service: ' -NoNewline; Get-Service NextJSFrontend | Select-Object -ExpandProperty Status"
+pwsh -Command "Get-Service FlaskBackend | Format-List Name, Status, StartType"
 echo.
 echo %YELLOW%Close this window to stop all services...%RESET%
 pause > nul
 
 :: Kill all the processes when the user closes the window
-taskkill /F /FI "WINDOWTITLE eq Frontend Service Installation*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq Backend Service Installation*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Frontend Server*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Backend Service Configuration*" > nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Backend Connectivity Test*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Event Scheduler*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq AI Summary Generator*" > nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq Email Scheduler*" > nul 2>&1 
