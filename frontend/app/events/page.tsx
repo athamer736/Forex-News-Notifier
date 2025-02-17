@@ -335,18 +335,18 @@ function EventsPage() {
 
             const userId = localStorage.getItem('userId') || 'default';
             
-            // Use IP address directly for production with HTTP
+            // Use HTTPS for all environments
             let baseUrl;
             if (typeof window !== 'undefined') {
                 if (window.location.hostname === 'localhost') {
-                    baseUrl = 'http://localhost:5000';
+                    baseUrl = 'https://localhost:5000';
                 } else if (window.location.hostname === '192.168.0.144') {
-                    baseUrl = 'http://192.168.0.144:5000';
+                    baseUrl = 'https://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                    baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
                 }
             } else {
-                baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
             }
 
             // Add selected date to query parameters if applicable
@@ -451,14 +451,14 @@ function EventsPage() {
                 let baseUrl;
                 if (typeof window !== 'undefined') {
                     if (window.location.hostname === 'localhost') {
-                        baseUrl = 'http://localhost:5000';
+                        baseUrl = 'https://localhost:5000';
                     } else if (window.location.hostname === '192.168.0.144') {
-                        baseUrl = 'http://192.168.0.144:5000';
+                        baseUrl = 'https://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                        baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
                     }
                 } else {
-                    baseUrl = 'http://141.95.123.145:5000';  // Use HTTP for IP
+                    baseUrl = 'https://141.95.123.145:5000';  // Use HTTPS for production
                 }
                 
                 console.log('Using base URL:', baseUrl);
