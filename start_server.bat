@@ -96,9 +96,40 @@ if not exist "%VENV_PATH%" (
     )
 )
 
-:: Install required Python packages
+:: Install required Python packages with better error handling
 echo %YELLOW%Installing/Updating Python packages...%RESET%
-call "%VENV_PATH%\Scripts\activate.bat" && pip install -r requirements.txt
+call "%VENV_PATH%\Scripts\activate.bat"
+
+:: First, try to install pywin32 separately
+echo Installing pywin32...
+pip install pywin32==306 --no-cache-dir
+if %errorlevel% neq 0 (
+    echo %YELLOW%Warning: Could not install pywin32 from pip, trying alternative installation...%RESET%
+    pip install pywin32
+)
+
+:: Then install other requirements
+echo Installing other requirements...
+pip install -r requirements.txt
+if %errorlevel% neq 0 (
+    echo %RED%Error: Failed to install some Python packages%RESET%
+    echo Please check the error messages above
+    echo You can try running 'pip install -r requirements.txt' manually
+    pause
+    exit /b 1
+)
+
+:: Verify critical packages are installed
+python -c "import flask" 2>nul
+if %errorlevel% neq 0 (
+    echo %RED%Error: Flask is not properly installed%RESET%
+    echo Please check your Python environment and try again
+    pause
+    exit /b 1
+)
+
+echo %GREEN%Python packages installed successfully%RESET%
+echo.
 
 :: Start Backend Service Configuration in a new PowerShell 7 window
 echo %YELLOW%Configuring and starting backend service...%RESET%
