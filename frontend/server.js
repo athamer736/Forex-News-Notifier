@@ -1,9 +1,9 @@
-const { createServer: createHttpsServer } = require('https');
+const { createServer } = require('https');
 const { parse } = require('url');
 const next = require('next');
 const fs = require('fs');
 const path = require('path');
-const tls = require('tls');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Set development environment if not set
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
@@ -194,22 +194,31 @@ try {
 
     app.prepare().then(() => {
         log('Creating HTTPS server...');
-        const httpsServer = createHttpsServer(sslOptions, async (req, res) => {
-            try {
-                // Set secure headers
-                res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-                res.setHeader('X-Content-Type-Options', 'nosniff');
-                res.setHeader('X-Frame-Options', 'DENY');
-                res.setHeader('X-XSS-Protection', '1; mode=block');
-                
-                const parsedUrl = parse(req.url, true);
-                log(`Incoming request: ${req.method} ${req.url} from ${req.socket.remoteAddress}`);
-                await handle(req, res, parsedUrl);
-            } catch (err) {
-                log('Error handling request:', err);
-                res.statusCode = 500;
-                res.end('Internal Server Error');
+        const httpsServer = createServer(sslOptions, async (req, res) => {
+            const parsedUrl = parse(req.url, true);
+            const { pathname } = parsedUrl;
+
+            // Proxy /api requests to Flask backend
+            if (pathname.startsWith('/api')) {
+                const proxy = createProxyMiddleware({
+                    target: 'https://localhost:5000',
+                    changeOrigin: true,
+                    secure: false,
+                    pathRewrite: {
+                        '^/api': '/'
+                    },
+                    onProxyRes: (proxyRes) => {
+                        // Handle CORS headers
+                        proxyRes.headers['Access-Control-Allow-Origin'] = 'https://fxalert.co.uk';
+                        proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
+                        proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+                    }
+                });
+                return proxy(req, res);
             }
+
+            // Handle all other requests with Next.js
+            return handle(req, res, parsedUrl);
         });
 
         // Enhanced error handling for TLS handshake
