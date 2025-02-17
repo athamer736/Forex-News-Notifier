@@ -215,35 +215,15 @@ start "Frontend Server" pwsh -NoExit -Command "^
 
 :: Start Event Scheduler in a new CMD window
 echo %YELLOW%Starting event scheduler...%RESET%
-start "Event Scheduler" cmd /k "^
-    title Event Scheduler && ^
-    cd /d %PROJECT_ROOT% && ^
-    call %VENV_PATH%\Scripts\activate.bat && ^
-    echo Starting Event Scheduler... && ^
-    python %SCRIPTS_PATH%\run_scheduler.py"
+start "Event Scheduler" cmd /k "cd /d %PROJECT_ROOT% && call %VENV_PATH%\Scripts\activate.bat && python %SCRIPTS_PATH%\run_scheduler.py"
 
 :: Start AI Summary Generator in a new CMD window
 echo %YELLOW%Starting AI summary generator...%RESET%
-start "AI Summary Generator" cmd /k "^
-    title AI Summary Generator && ^
-    cd /d %PROJECT_ROOT% && ^
-    call %VENV_PATH%\Scripts\activate.bat && ^
-    echo Starting AI Summary Generator... && ^
-    :loop && ^
-    echo Running AI summary generation... && ^
-    python %SCRIPTS_PATH%\generate_summaries.py && ^
-    echo Waiting for next run cycle (1 hour)... && ^
-    timeout /t 3600 /nobreak && ^
-    goto loop"
+start "AI Summary Generator" cmd /k "cd /d %PROJECT_ROOT% && call %VENV_PATH%\Scripts\activate.bat && python %SCRIPTS_PATH%\generate_summaries.py && timeout /t 3600 /nobreak && exit"
 
 :: Start Email Scheduler in a new CMD window
 echo %YELLOW%Starting email scheduler...%RESET%
-start "Email Scheduler" cmd /k "^
-    title Email Scheduler && ^
-    cd /d %PROJECT_ROOT% && ^
-    call %VENV_PATH%\Scripts\activate.bat && ^
-    echo Starting Email Scheduler... && ^
-    python %SCRIPTS_PATH%\email_scheduler.py"
+start "Email Scheduler" cmd /k "cd /d %PROJECT_ROOT% && call %VENV_PATH%\Scripts\activate.bat && python %SCRIPTS_PATH%\email_scheduler.py"
 
 echo.
 echo %GREEN%All components started in separate windows!%RESET%
