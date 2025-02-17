@@ -187,8 +187,7 @@ try {
         handshakeTimeout: 120000,
         rejectUnauthorized: true,
         requestCert: false,
-        sessionTimeout: 600,
-        secureProtocol: 'TLSv1_2_method'
+        sessionTimeout: 600
     };
 
     log('SSL options configured successfully');
