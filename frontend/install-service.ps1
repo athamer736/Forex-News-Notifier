@@ -212,16 +212,29 @@ $envString = "NODE_ENV=production;"
 $envString += "HTTPS=true;"
 $envString += "SSL_CRT_FILE=$certPath;"
 $envString += "SSL_KEY_FILE=$keyPath;"
-$envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"
+$envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"  # Enable TLS verification in production
 $envString += "PORT=3000;"
+$envString += "NEXT_PUBLIC_API_URL=https://fxalert.co.uk:5000;"  # Production API URL
+$envString += "NEXT_PUBLIC_BASE_URL=https://fxalert.co.uk;"  # Production base URL
 
-# Add other environment variables from .env file
-$envContent = Get-Content $frontendEnvFile
+# Add other environment variables from .env.production file if it exists
+$prodEnvFile = Join-Path $appDirectory ".env.production"
+if (Test-Path $prodEnvFile) {
+    Write-Host "Using production environment file..."
+    $envContent = Get-Content $prodEnvFile
+} elseif (Test-Path $frontendEnvFile) {
+    Write-Host "Production env file not found, using default .env file..."
+    $envContent = Get-Content $frontendEnvFile
+} else {
+    Write-Error "Could not find any .env file"
+    exit 1
+}
+
 foreach ($line in $envContent) {
     if ($line -match '^\s*([^#][^=]+)=(.+)$') {
         $key = $matches[1].Trim()
         $value = $matches[2].Trim()
-        if ($key -notin @("NODE_ENV", "HTTPS", "SSL_CRT_FILE", "SSL_KEY_FILE", "NODE_TLS_REJECT_UNAUTHORIZED", "PORT")) {
+        if ($key -notin @("NODE_ENV", "HTTPS", "SSL_CRT_FILE", "SSL_KEY_FILE", "NODE_TLS_REJECT_UNAUTHORIZED", "PORT", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_BASE_URL")) {
             $envString += "$key=$value;"
         }
     }
@@ -235,7 +248,6 @@ foreach ($line in $envContent) {
 & $nssm set $serviceName AppRotateSeconds 86400
 & $nssm set $serviceName AppRotateBytes 10485760
 & $nssm set $serviceName AppThrottle 0
-& $nssm set $serviceName DependOnService "FlaskBackend"
 
 # Set directory permissions
 $acl = Get-Acl $appDirectory

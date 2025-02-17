@@ -85,6 +85,12 @@ if not exist "venv" (
 echo %YELLOW%Installing/Updating Python packages...%RESET%
 call venv\Scripts\activate && pip install -r requirements.txt
 
+:: Force remove existing services if they exist
+echo %YELLOW%Removing existing services if present...%RESET%
+powershell -Command "Stop-Service FlaskBackend -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 5; sc.exe delete FlaskBackend"
+powershell -Command "Stop-Service NextJSFrontend -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 5; sc.exe delete NextJSFrontend"
+timeout /t 5 /nobreak > nul
+
 :: Start Backend Service Installation in a new window
 echo %YELLOW%Installing and starting backend service...%RESET%
 start "Backend Service Installation" cmd /c "color 0C && echo Installing Flask Backend Service... && powershell -ExecutionPolicy Bypass -NoExit -Command ""cd backend; .\install-service.ps1; pause"""
