@@ -104,18 +104,59 @@ try {
         New-Item -ItemType Directory -Path $sitePath -Force
     }
 
+    # Check for and remove existing bindings
+    Write-Host "Checking for existing bindings..." -ForegroundColor Cyan
+    $existingBindings = Get-WebBinding | Where-Object { 
+        $_.bindingInformation -like "*:80:fxalert.co.uk" -or 
+        $_.bindingInformation -like "*:443:fxalert.co.uk" -or
+        $_.bindingInformation -like "*:3000:fxalert.co.uk" -or
+        $_.bindingInformation -like "*:5000:fxalert.co.uk"
+    }
+
+    if ($existingBindings) {
+        Write-Host "Found existing bindings. Removing..." -ForegroundColor Yellow
+        foreach ($binding in $existingBindings) {
+            try {
+                $binding | Remove-WebBinding -Verbose
+                Write-Host "Removed binding: $($binding.bindingInformation)" -ForegroundColor Green
+            } catch {
+                Write-Host "Warning: Could not remove binding: $($binding.bindingInformation)" -ForegroundColor Yellow
+                Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
+    }
+
     # Remove existing site if it exists
     Write-Host "Checking for existing site..." -ForegroundColor Cyan
     $site = Get-IISSite -Name "fxalert.co.uk" -ErrorAction SilentlyContinue
     if ($site) {
         Write-Host "Removing existing site..." -ForegroundColor Yellow
-        Remove-IISSite -Name "fxalert.co.uk" -Confirm:$false
+        try {
+            Stop-IISSite -Name "fxalert.co.uk" -Confirm:$false -ErrorAction SilentlyContinue
+            Remove-IISSite -Name "fxalert.co.uk" -Confirm:$false
+            Write-Host "Existing site removed successfully" -ForegroundColor Green
+        } catch {
+            Write-Host "Warning: Could not remove existing site completely" -ForegroundColor Yellow
+            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        }
     }
 
-    # Create new site
+    # Create new site with force parameter
     Write-Host "Creating new IIS site..." -ForegroundColor Cyan
-    New-IISSite -Name "fxalert.co.uk" -PhysicalPath $sitePath -BindingInformation "*:80:fxalert.co.uk"
-    New-WebBinding -Name "fxalert.co.uk" -Protocol "https" -Port 443 -HostHeader "fxalert.co.uk" -SslFlags 1
+    try {
+        New-IISSite -Name "fxalert.co.uk" -PhysicalPath $sitePath -BindingInformation "*:80:fxalert.co.uk" -Force
+        Write-Host "Site created successfully" -ForegroundColor Green
+        
+        Write-Host "Adding HTTPS bindings..." -ForegroundColor Cyan
+        New-WebBinding -Name "fxalert.co.uk" -Protocol "https" -Port 443 -HostHeader "fxalert.co.uk" -SslFlags 1 -Force
+        New-WebBinding -Name "fxalert.co.uk" -Protocol "https" -Port 3000 -HostHeader "fxalert.co.uk" -SslFlags 1 -Force
+        New-WebBinding -Name "fxalert.co.uk" -Protocol "https" -Port 5000 -HostHeader "fxalert.co.uk" -SslFlags 1 -Force
+        Write-Host "HTTPS bindings added successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "Error creating site or bindings:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        throw
+    }
 
     # Configure SSL
     Write-Host "Configuring SSL..." -ForegroundColor Cyan
