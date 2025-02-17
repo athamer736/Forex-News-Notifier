@@ -9,12 +9,14 @@ logger = logging.getLogger(__name__)
 
 def test_connection():
     try:
-        # Connection parameters
-        host = '141.95.123.145'  # Using the server IP directly
-        port = 3306
+        # Test database configuration
         user = 'forex_user'
-        password = 'UltraFX#736'  # Using the password from setup scripts
+        password = 'your_password_here'
+        host = 'fxalert.co.uk'  # Using domain name
         database = 'forex_db'
+        
+        # Create the connection string
+        connection_string = f'mysql+pymysql://{user}:{password}@{host}/{database}'
         
         logger.info(f"Attempting to connect to MySQL at {host}:{port} as {user}")
         

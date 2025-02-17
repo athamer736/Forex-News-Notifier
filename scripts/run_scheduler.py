@@ -40,6 +40,15 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
 
+# Database configuration
+user = 'forex_user'
+password = os.getenv('DB_PASSWORD', 'your_password_here')
+host = 'fxalert.co.uk'  # Using domain name
+database = 'forex_db'
+
+# Create the connection URL
+connection_url = f'mysql+pymysql://{user}:{password}@{host}/{database}'
+
 def test_db_connection():
     """Test the database connection before starting the scheduler."""
     try:

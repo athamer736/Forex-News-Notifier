@@ -112,7 +112,7 @@ limiter = Limiter(
 
 # Get IP addresses and build allowed origins
 LOCAL_IPS = get_local_ip()
-SERVER_IP = get_server_ip() or "141.95.123.145"  # Fallback to known server IP
+SERVER_IP = get_server_ip() or "fxalert.co.uk"  # Fallback to domain name
 DOMAIN = "fxalert.co.uk"
 ALLOWED_ORIGINS = [
     "https://localhost:3000",
@@ -129,20 +129,12 @@ ALLOWED_ORIGINS = [
     "https://141.95.123.145:5000"
 ]
 
-# Enhanced CORS configuration for production
-CORS(app, 
-    resources={
-        r"/*": {
-            "origins": ALLOWED_ORIGINS,
-            "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
-            "supports_credentials": True,
-            "expose_headers": ["Content-Type", "Authorization"],
-            "max_age": 3600
-        }
-    },
-    supports_credentials=True
-)
+# Configure CORS
+CORS(app, resources={r"/*": {"origins": [
+    "https://fxalert.co.uk",
+    "https://fxalert.co.uk:3000",
+    "https://fxalert.co.uk:5000"
+]}}, supports_credentials=True)
 
 @app.after_request
 def add_cors_headers(response):
