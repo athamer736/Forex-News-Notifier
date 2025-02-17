@@ -102,27 +102,22 @@ call "%VENV_PATH%\Scripts\activate.bat"
 
 :: First, try to install pywin32 separately
 echo Installing pywin32...
-pip install pywin32==306 --no-cache-dir
+pip install pywin32 --upgrade
 if %errorlevel% neq 0 (
-    echo %YELLOW%Warning: Could not install pywin32 from pip, trying alternative installation...%RESET%
-    pip install pywin32
-)
-
-:: Then install other requirements
-echo Installing other requirements...
-pip install -r requirements.txt
-if %errorlevel% neq 0 (
-    echo %RED%Error: Failed to install some Python packages%RESET%
-    echo Please check the error messages above
-    echo You can try running 'pip install -r requirements.txt' manually
+    echo %RED%Error: Failed to install pywin32%RESET%
     pause
     exit /b 1
 )
 
+:: Then install other requirements, ignoring version conflicts
+echo Installing other requirements...
+pip install -r requirements.txt --no-deps
+pip install -r requirements.txt --upgrade
+
 :: Verify critical packages are installed
-python -c "import flask" 2>nul
+python -c "import flask, waitress, pywin32" 2>nul
 if %errorlevel% neq 0 (
-    echo %RED%Error: Flask is not properly installed%RESET%
+    echo %RED%Error: One or more critical packages are not properly installed%RESET%
     echo Please check your Python environment and try again
     pause
     exit /b 1
