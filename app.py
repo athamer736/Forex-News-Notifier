@@ -115,28 +115,30 @@ LOCAL_IPS = get_local_ip()
 SERVER_IP = get_server_ip() or "141.95.123.145"  # Fallback to known server IP
 DOMAIN = "fxalert.co.uk"
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5000",
-    "http://192.168.0.144:3000",
-    "http://192.168.0.144:5000",
-    "http://fxalert.co.uk",
-    "http://www.fxalert.co.uk",
-    "http://141.95.123.145:3000",
-    "http://141.95.123.145:5000"
+    "https://localhost:3000",
+    "https://localhost:5000",
+    "https://127.0.0.1:3000",
+    "https://127.0.0.1:5000",
+    "https://192.168.0.144:3000",
+    "https://192.168.0.144:5000",
+    "https://fxalert.co.uk",
+    "https://www.fxalert.co.uk",
+    "https://fxalert.co.uk:3000",
+    "https://fxalert.co.uk:5000",
+    "https://141.95.123.145:3000",
+    "https://141.95.123.145:5000"
 ]
 
-# Simple CORS configuration
+# Enhanced CORS configuration for production
 CORS(app, 
     resources={
         r"/*": {
             "origins": ALLOWED_ORIGINS,
             "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
+            "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
             "supports_credentials": True,
             "expose_headers": ["Content-Type", "Authorization"],
-            "max_age": 600
+            "max_age": 3600
         }
     },
     supports_credentials=True
@@ -149,9 +151,14 @@ def add_cors_headers(response):
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
-        response.headers['Access-Control-Max-Age'] = '600'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
+        response.headers['Access-Control-Max-Age'] = '3600'
         response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+        # Add security headers
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
     return response
 
 @app.before_request
