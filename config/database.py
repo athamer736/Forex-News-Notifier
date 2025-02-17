@@ -11,18 +11,18 @@ import time
 from sqlalchemy import text
 
 # Database configuration
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', '141.95.123.145'),  # Always use IP address
-    'port': int(os.getenv('DB_PORT', 3306)),
+db_config = {
     'user': os.getenv('DB_USER', 'forex_user'),
-    'password': os.getenv('DB_PASSWORD', 'UltraFX#736'),
-    'database': os.getenv('DB_NAME', 'forex_db')
+    'password': os.getenv('DB_PASSWORD', 'your_password_here'),
+    'host': os.getenv('DB_HOST', 'fxalert.co.uk'),  # Use domain name as default
+    'database': os.getenv('DB_NAME', 'forex_db'),
+    'raise_on_warnings': True
 }
 
 # Create database URL using PyMySQL
 DATABASE_URL = (
-    f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}"
-    f"@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+    f"mysql+pymysql://{db_config['user']}:{db_config['password']}"
+    f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
     "?charset=utf8mb4"
 )
 
@@ -79,7 +79,7 @@ def init_db():
 
             if not database_exists(engine.url):
                 create_database(engine.url)
-                print(f"Created new database: {DB_CONFIG['database']}")
+                print(f"Created new database: {db_config['database']}")
             
             Base.metadata.create_all(bind=engine)
             print("Database tables created successfully")

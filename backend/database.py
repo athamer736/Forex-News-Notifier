@@ -32,14 +32,15 @@ def is_running_on_server():
         logger.error(f"Error detecting server status: {str(e)}")
         return False
 
-# Database configuration
-DB_HOST = '141.95.123.145'  # Always use the IP address
-logger.info(f"Using database host: {DB_HOST}")
+def is_server_ip(ip_addresses):
+    """Check if any of the IP addresses match the server IP."""
+    return 'fxalert.co.uk' in ip_addresses or any(ip == get_server_ip() for ip in ip_addresses)
 
-DB_PORT = int(os.getenv('DB_PORT', '3306'))
-DB_NAME = os.getenv('DB_NAME', 'forex_db')
+# Database configuration
 DB_USER = os.getenv('DB_USER', 'forex_user')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'UltraFX#736')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'your_password_here')
+DB_HOST = os.getenv('DB_HOST', 'fxalert.co.uk')  # Use domain name
+DB_NAME = os.getenv('DB_NAME', 'forex_db')
 
 # Create database URL using PyMySQL
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

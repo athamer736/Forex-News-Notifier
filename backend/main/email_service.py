@@ -106,8 +106,8 @@ def send_email(to_email: str, subject: str, html_content: str):
 
 def send_verification_email(email: str, token: str):
     """Send a verification email."""
-    # Use the production server URL
-    verification_url = f"https://141.95.123.145:5000/verify/{token}"
+    # Use the domain name instead of IP
+    verification_url = f"https://fxalert.co.uk:5000/verify/{token}"
     
     html_content = f"""
     <html>
@@ -262,7 +262,7 @@ def send_daily_update(subscription: EmailSubscription):
                 {''.join(format_event_summary(event) for event in events)}
                 <p style="margin-top: 30px; font-size: 12px; color: #666;">
                     To unsubscribe from these updates, 
-                    <a href="https://141.95.123.145:5000/unsubscribe/{subscription.verification_token}">click here</a>
+                    <a href="https://fxalert.co.uk:5000/unsubscribe/{subscription.verification_token}">click here</a>
                 </p>
             </body>
         </html>
@@ -337,7 +337,7 @@ def send_weekly_update(subscription: EmailSubscription):
         html_content += f"""
                 <p style="margin-top: 30px; font-size: 12px; color: #666;">
                     To unsubscribe from these updates, 
-                    <a href="https://141.95.123.145:5000/unsubscribe/{subscription.verification_token}">click here</a>
+                    <a href="https://fxalert.co.uk:5000/unsubscribe/{subscription.verification_token}">click here</a>
                 </p>
             </body>
         </html>
