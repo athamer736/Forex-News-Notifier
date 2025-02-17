@@ -529,4 +529,48 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 This is a personal solo project, not a business venture. Any bugs or feature requests are welcome through the contact information provided above.
 
+## Issues and Solutions
+
+### SSL Configuration Issues
+
+#### Problem: SSL Protocol Error with Waitress Server
+When attempting to access the backend API endpoints (e.g., https://fxalert.co.uk:5000/cache/status), users encountered SSL protocol errors:
+```
+POST https://fxalert.co.uk:5000/timezone net::ERR_SSL_PROTOCOL_ERROR
+```
+
+The error occurred because Waitress server doesn't directly support SSL configuration through its `serve` function, resulting in the error:
+```
+ValueError: Unknown adjustment '_ssl_context'
+```
+
+#### Solution:
+1. Replaced Waitress's SSL configuration with Cheroot's SSL adapter
+2. Updated `run_waitress.py` to use `WSGIServer` from Cheroot with proper SSL configuration:
+   ```python
+   from cheroot.wsgi import Server as WSGIServer
+   from cheroot.ssl.builtin import BuiltinSSLAdapter
+
+   # Create SSL adapter with proper certificate chain
+   ssl_adapter = BuiltinSSLAdapter(
+       cert_file,
+       key_file,
+       certificate_chain=cert_file
+   )
+   
+   # Configure server with SSL
+   server = WSGIServer(
+       ('0.0.0.0', 5000),
+       app_with_logging,
+       numthreads=4,
+       request_queue_size=100,
+       timeout=30
+   )
+   server.ssl_adapter = ssl_adapter
+   ```
+3. Ensured the Windows service was configured to use `run_waitress.py` instead of `app.py`
+4. Properly configured SSL certificates and key paths
+
+This solution enabled secure HTTPS communication between the frontend and backend services.
+
 
