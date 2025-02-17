@@ -8,7 +8,7 @@
     "dev:https": "node server.js",
     "build": "next build",
     "start": "next start -p 3000",
-    "start:https": "cross-env NODE_ENV=production node server.js",
+    "start:https": "node -r cross-env/register server.js",
     "lint": "next lint"
   },
   "dependencies": {
