@@ -213,58 +213,37 @@ start "Frontend Server" pwsh -NoExit -Command "^
         exit 1;^
     }"
 
-:: Start Event Scheduler in a new PowerShell 7 window
+:: Start Event Scheduler in a new CMD window
 echo %YELLOW%Starting event scheduler...%RESET%
-start "Event Scheduler" pwsh -NoExit -Command "^
-    $ErrorActionPreference = 'Stop';^
-    try {^
-        $host.ui.RawUI.WindowTitle = 'Event Scheduler';^
-        Write-Host 'Starting Event Scheduler...' -ForegroundColor Yellow;^
-        Set-Location -Path '%PROJECT_ROOT%';^
-        & '%VENV_PATH%\Scripts\activate.ps1';^
-        python '%SCRIPTS_PATH%\run_scheduler.py';^
-    } catch {^
-        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
-        Read-Host 'Press Enter to exit';^
-        exit 1;^
-    }"
+start "Event Scheduler" cmd /k "^
+    title Event Scheduler && ^
+    cd /d %PROJECT_ROOT% && ^
+    call %VENV_PATH%\Scripts\activate.bat && ^
+    echo Starting Event Scheduler... && ^
+    python %SCRIPTS_PATH%\run_scheduler.py"
 
-:: Start AI Summary Generator in a new PowerShell 7 window
+:: Start AI Summary Generator in a new CMD window
 echo %YELLOW%Starting AI summary generator...%RESET%
-start "AI Summary Generator" pwsh -NoExit -Command "^
-    $ErrorActionPreference = 'Stop';^
-    try {^
-        $host.ui.RawUI.WindowTitle = 'AI Summary Generator';^
-        Write-Host 'Starting AI Summary Generator...' -ForegroundColor Magenta;^
-        Set-Location -Path '%PROJECT_ROOT%';^
-        & '%VENV_PATH%\Scripts\activate.ps1';^
-        while ($true) {^
-            Write-Host (Get-Date) 'Running AI summary generation...' -ForegroundColor Cyan;^
-            python '%SCRIPTS_PATH%\generate_summaries.py';^
-            Write-Host 'Waiting for next run cycle (1 hour)...' -ForegroundColor Yellow;^
-            Start-Sleep -Seconds 3600;^
-        }^
-    } catch {^
-        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
-        Read-Host 'Press Enter to exit';^
-        exit 1;^
-    }"
+start "AI Summary Generator" cmd /k "^
+    title AI Summary Generator && ^
+    cd /d %PROJECT_ROOT% && ^
+    call %VENV_PATH%\Scripts\activate.bat && ^
+    echo Starting AI Summary Generator... && ^
+    :loop && ^
+    echo Running AI summary generation... && ^
+    python %SCRIPTS_PATH%\generate_summaries.py && ^
+    echo Waiting for next run cycle (1 hour)... && ^
+    timeout /t 3600 /nobreak && ^
+    goto loop"
 
-:: Start Email Scheduler in a new PowerShell 7 window
+:: Start Email Scheduler in a new CMD window
 echo %YELLOW%Starting email scheduler...%RESET%
-start "Email Scheduler" pwsh -NoExit -Command "^
-    $ErrorActionPreference = 'Stop';^
-    try {^
-        $host.ui.RawUI.WindowTitle = 'Email Scheduler';^
-        Write-Host 'Starting Email Scheduler...' -ForegroundColor Blue;^
-        Set-Location -Path '%PROJECT_ROOT%';^
-        & '%VENV_PATH%\Scripts\activate.ps1';^
-        python '%SCRIPTS_PATH%\email_scheduler.py';^
-    } catch {^
-        Write-Host 'Error: ' $_.Exception.Message -ForegroundColor Red;^
-        Read-Host 'Press Enter to exit';^
-        exit 1;^
-    }"
+start "Email Scheduler" cmd /k "^
+    title Email Scheduler && ^
+    cd /d %PROJECT_ROOT% && ^
+    call %VENV_PATH%\Scripts\activate.bat && ^
+    echo Starting Email Scheduler... && ^
+    python %SCRIPTS_PATH%\email_scheduler.py"
 
 echo.
 echo %GREEN%All components started in separate windows!%RESET%
