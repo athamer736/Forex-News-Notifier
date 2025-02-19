@@ -37,16 +37,24 @@ def is_server_ip(ip_addresses):
     return 'fxalert.co.uk' in ip_addresses or any(ip == get_server_ip() for ip in ip_addresses)
 
 # Database configuration
-DB_USER = os.getenv('DB_USER', 'forex_user')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'your_password_here')
-DB_HOST = os.getenv('DB_HOST', 'fxalert.co.uk')  # Use domain name
-DB_NAME = os.getenv('DB_NAME', 'forex_db')
+db_config = {
+    'user': os.getenv('DB_USER', 'forex_user'),
+    'password': os.getenv('DB_PASSWORD', 'your_password_here'),
+    'host': os.getenv('DB_HOST', 'fxalert.co.uk'),  # Use domain name as default
+    'database': os.getenv('DB_NAME', 'forex_db'),
+    'port': int(os.getenv('DB_PORT', '3306')),  # Added port with default value
+    'raise_on_warnings': True
+}
 
 # Create database URL using PyMySQL
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = (
+    f"mysql+pymysql://{db_config['user']}:{db_config['password']}"
+    f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
+    "?charset=utf8mb4"
+)
 
 # Log the connection details (without password)
-logger.info(f"Connecting to database at {DB_HOST}:{DB_PORT}/{DB_NAME} as {DB_USER}")
+logger.info(f"Connecting to database at {db_config['host']}:{db_config['port']}/{db_config['database']} as {db_config['user']}")
 
 try:
     # Create engine with PyMySQL and additional settings
@@ -92,7 +100,7 @@ try:
     # Create database if it doesn't exist
     if not database_exists(engine.url):
         create_database(engine.url)
-        logger.info(f"Created database: {DB_NAME}")
+        logger.info(f"Created database: {db_config['database']}")
     
     # Create session factory with improved settings
     SessionLocal = sessionmaker(
@@ -114,7 +122,7 @@ try:
 
 except Exception as e:
     logger.error(f"Error configuring database: {str(e)}")
-    logger.error(f"Database URL (without password): mysql+pymysql://{DB_USER}:***@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+    logger.error(f"Database URL (without password): mysql+pymysql://{db_config['user']}:***@{db_config['host']}:{db_config['port']}/{db_config['database']}")
     raise
 
 def get_filtered_events(
