@@ -7,10 +7,14 @@ from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import pymysql
+from dotenv import load_dotenv
 
 # Add the project root directory to Python path
 project_root = str(Path(__file__).parent.parent)
 sys.path.append(project_root)
+
+# Load environment variables
+load_dotenv(os.path.join(project_root, '.env'))
 
 # Configure logging
 log_dir = os.path.join(project_root, 'logs')
@@ -40,24 +44,15 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
 
-# Database configuration
-user = 'forex_user'
-password = os.getenv('DB_PASSWORD', 'your_password_here')
-host = 'fxalert.co.uk'  # Using domain name
-database = 'forex_db'
-
-# Create the connection URL
-connection_url = f'mysql+pymysql://{user}:{password}@{host}/{database}'
-
 def test_db_connection():
     """Test the database connection before starting the scheduler."""
     try:
-        # Connection parameters
-        host = '141.95.123.145'
-        port = 3306
-        user = 'forex_user'
-        password = 'UltraFX#736'
-        database = 'forex_db'
+        # Get database configuration from environment variables
+        host = os.getenv('DB_HOST', '141.95.123.145')
+        port = int(os.getenv('DB_PORT', '3306'))
+        user = os.getenv('DB_USER', 'forex_user')
+        password = os.getenv('DB_PASSWORD', 'your_password_here')
+        database = os.getenv('DB_NAME', 'forex_db')
         
         logger.info(f"Testing database connection to {host}:{port} as {user}")
         
@@ -68,7 +63,8 @@ def test_db_connection():
             user=user,
             password=password,
             database=database,
-            connect_timeout=10
+            connect_timeout=10,
+            charset='utf8mb4'
         )
         
         # Test the connection
@@ -76,23 +72,37 @@ def test_db_connection():
             cursor.execute("SELECT VERSION()")
             version = cursor.fetchone()
             logger.info(f"Successfully connected to MySQL version: {version[0]}")
+            
+            # Test if we have the necessary permissions
+            cursor.execute("SHOW GRANTS")
+            grants = cursor.fetchall()
+            logger.info("User permissions:")
+            for grant in grants:
+                logger.info(grant[0])
         
         connection.close()
         return True
         
+    except pymysql.Error as e:
+        error_code = e.args[0]
+        error_message = e.args[1] if len(e.args) > 1 else str(e)
+        logger.error(f"MySQL Error [{error_code}]: {error_message}")
+        
+        if error_code == 1045:  # Access denied for user
+            logger.error("Authentication failed - Please check username and password")
+        elif error_code == 2003:  # Can't connect to server
+            logger.error("Cannot connect to the server - Please check if MySQL is running and the host is correct")
+        elif error_code == 1049:  # Unknown database
+            logger.error("Database does not exist - Please check the database name")
+        return False
     except Exception as e:
-        logger.error(f"Database connection test failed: {str(e)}")
+        logger.error(f"Unexpected error during database connection test: {str(e)}")
         return False
 
 def run_update():
     """Run the update_events.py script."""
     try:
         logger.info("Starting scheduled forex events update")
-        
-        # Test database connection first
-        if not test_db_connection():
-            logger.error("Skipping update due to database connection failure")
-            return
         
         # Import and run the update script
         from scripts.update_events import main
@@ -108,8 +118,8 @@ def main():
         
         # Test database connection before starting
         if not test_db_connection():
-            logger.error("Failed to connect to database. Exiting...")
-            return
+            logger.error("Failed to connect to database. Please check your database configuration.")
+            logger.error("The scheduler will continue running but updates may fail.")
         
         # Create and configure the scheduler
         scheduler = BackgroundScheduler()
