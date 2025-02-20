@@ -16,6 +16,7 @@ db_config = {
     'password': os.getenv('DB_PASSWORD', 'your_password_here'),
     'host': os.getenv('DB_HOST', 'fxalert.co.uk'),  # Use domain name as default
     'database': os.getenv('DB_NAME', 'forex_db'),
+    'port': int(os.getenv('DB_PORT', '3306')),  # Added port with default value
     'raise_on_warnings': True
 }
 
@@ -32,7 +33,7 @@ engine = create_engine(
     pool_size=20,  # Larger pool size
     max_overflow=30,  # Larger overflow
     pool_timeout=60,  # Longer pool timeout
-    pool_recycle=300,  # Recycle connections every 5 minutes to stay fresh
+    pool_recycle=300,  # Recycle connections every 5 minutes
     pool_pre_ping=True,  # Enable automatic reconnection
     connect_args={
         'connect_timeout': 60,
