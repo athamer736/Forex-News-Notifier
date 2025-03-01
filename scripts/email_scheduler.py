@@ -3,15 +3,18 @@ from pathlib import Path
 import logging
 from datetime import datetime, timedelta
 import pytz
+import gc
+import time
+import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-import os
+import threading
 
 # Add the project root directory to Python path
 project_root = str(Path(__file__).parent.parent)
 sys.path.append(project_root)
 
-from backend.database import db_session
+from config.database import db_session, cleanup_db_resources
 from models.email_subscription import EmailSubscription
 from backend.main.email_service import send_daily_update, send_weekly_update
 
@@ -19,7 +22,7 @@ from backend.main.email_service import send_daily_update, send_weekly_update
 log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
 os.makedirs(log_dir, exist_ok=True)
 
-log_file = os.path.join(log_dir, 'scheduler.log')
+log_file = os.path.join(log_dir, 'email_scheduler.log')
 logger = logging.getLogger('EmailScheduler')
 
 # Create file handler
@@ -43,106 +46,183 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
 
+# Add threading lock for thread safety
+processing_lock = threading.Lock()
+
+# Track memory usage
+def log_memory_usage():
+    """Log current memory usage"""
+    try:
+        import psutil
+        process = psutil.Process(os.getpid())
+        mem_info = process.memory_info()
+        
+        # Convert bytes to MB for better readability
+        mem_usage_mb = mem_info.rss / 1024 / 1024
+        logger.info(f"Memory usage: {mem_usage_mb:.2f} MB")
+    except ImportError:
+        logger.warning("psutil not installed, cannot log memory usage")
+    except Exception as e:
+        logger.error(f"Error logging memory usage: {str(e)}")
+
+def cleanup_resources():
+    """Clean up database connections and run garbage collection"""
+    try:
+        # Clean up database session
+        cleanup_db_resources()
+        
+        # Run garbage collection
+        gc.collect()
+        logger.info("Garbage collection performed")
+        
+        # Log memory usage
+        log_memory_usage()
+    except Exception as e:
+        logger.error(f"Error during resource cleanup: {str(e)}")
+
 def send_daily_updates():
-    """Send daily updates to subscribed users."""
+    """Send daily updates to subscribed users with resource cleanup."""
+    # Skip if another job is already processing
+    if not processing_lock.acquire(blocking=False):
+        logger.warning("Another email job is already running, skipping this run")
+        return
+    
     try:
         now = datetime.now(pytz.UTC)
         logger.info("Starting daily email updates")
         
-        # Get all verified subscriptions that want daily updates
-        subscriptions = EmailSubscription.query.filter(
-            EmailSubscription.is_verified == True,
-            (EmailSubscription.frequency == 'daily') | (EmailSubscription.frequency == 'both')
+        # Get all daily subscribers
+        subscribers = db_session.query(EmailSubscription).filter(
+            EmailSubscription.frequency == 'daily',
+            EmailSubscription.verified == True,
+            EmailSubscription.unsubscribed == False
         ).all()
         
-        for subscription in subscriptions:
-            try:
-                # Convert current time to user's timezone
-                user_tz = pytz.timezone(subscription.timezone)
-                user_time = now.astimezone(user_tz)
-                
-                # Check if it's the right time to send for this user
-                target_time = datetime.strptime(subscription.daily_time, '%H:%M').time()
-                if user_time.time().hour == target_time.hour and user_time.time().minute == target_time.minute:
-                    logger.info(f"Sending daily update to {subscription.email}")
-                    send_daily_update(subscription)
-                
-            except Exception as e:
-                logger.error(f"Error sending daily update to {subscription.email}: {str(e)}")
-                continue
+        if not subscribers:
+            logger.info("No daily subscribers found")
+            return
+            
+        logger.info(f"Found {len(subscribers)} daily subscribers")
         
-        logger.info("Completed daily email updates")
+        for subscriber in subscribers:
+            try:
+                send_daily_update(subscriber)
+                logger.info(f"Daily update sent to {subscriber.email}")
+            except Exception as e:
+                logger.error(f"Failed to send daily update to {subscriber.email}: {str(e)}")
+                
+        logger.info("Daily email updates completed")
         
     except Exception as e:
-        logger.error(f"Error in daily update job: {str(e)}")
+        logger.error(f"Error in daily email updates: {str(e)}")
+    finally:
+        # Always clean up resources and release lock
+        cleanup_resources()
+        processing_lock.release()
 
 def send_weekly_updates():
-    """Send weekly updates to subscribed users."""
+    """Send weekly updates to subscribed users with resource cleanup."""
+    # Skip if another job is already processing
+    if not processing_lock.acquire(blocking=False):
+        logger.warning("Another email job is already running, skipping this run")
+        return
+    
     try:
         now = datetime.now(pytz.UTC)
         logger.info("Starting weekly email updates")
         
-        # Get all verified subscriptions that want weekly updates
-        subscriptions = EmailSubscription.query.filter(
-            EmailSubscription.is_verified == True,
-            (EmailSubscription.frequency == 'weekly') | (EmailSubscription.frequency == 'both')
+        # Only send on Sundays
+        if now.weekday() != 6:  # 6 = Sunday
+            logger.info(f"Today is not Sunday (weekday={now.weekday()}), skipping weekly emails")
+            return
+            
+        # Get all weekly subscribers
+        subscribers = db_session.query(EmailSubscription).filter(
+            EmailSubscription.frequency == 'weekly',
+            EmailSubscription.verified == True,
+            EmailSubscription.unsubscribed == False
         ).all()
         
-        for subscription in subscriptions:
-            try:
-                # Check if today is the user's preferred day
-                if subscription.weekly_day.lower() == now.strftime('%A').lower():
-                    logger.info(f"Sending weekly update to {subscription.email}")
-                    send_weekly_update(subscription)
-                
-            except Exception as e:
-                logger.error(f"Error sending weekly update to {subscription.email}: {str(e)}")
-                continue
+        if not subscribers:
+            logger.info("No weekly subscribers found")
+            return
+            
+        logger.info(f"Found {len(subscribers)} weekly subscribers")
         
-        logger.info("Completed weekly email updates")
+        for subscriber in subscribers:
+            try:
+                send_weekly_update(subscriber)
+                logger.info(f"Weekly update sent to {subscriber.email}")
+            except Exception as e:
+                logger.error(f"Failed to send weekly update to {subscriber.email}: {str(e)}")
+                
+        logger.info("Weekly email updates completed")
         
     except Exception as e:
-        logger.error(f"Error in weekly update job: {str(e)}")
+        logger.error(f"Error in weekly email updates: {str(e)}")
+    finally:
+        # Always clean up resources and release lock
+        cleanup_resources()
+        processing_lock.release()
 
-def start_email_scheduler():
-    """Start the email scheduler."""
+def main():
     try:
-        scheduler = BackgroundScheduler()
+        logger.info("Starting the email scheduler")
         
-        # Schedule daily updates to run every 30 minutes
-        # (The function will check if it's the right time for each user)
+        # Create scheduler
+        scheduler = BackgroundScheduler(
+            job_defaults={
+                'coalesce': True,
+                'max_instances': 1,
+                'misfire_grace_time': 3600
+            }
+        )
+        
+        # Schedule daily emails to run at 8:00 AM UTC (usually when markets are less active)
         scheduler.add_job(
             send_daily_updates,
-            trigger=CronTrigger(minute='*/30'),  # Every 30 minutes
-            id='daily_updates',
-            name='Send daily forex updates',
-            replace_existing=True
+            CronTrigger(hour=8, minute=0),
+            id='daily_emails',
+            name='Daily Email Updates'
         )
         
-        # Schedule weekly updates to run daily at midnight UTC
-        # (The function will check if it's the right day for each user)
+        # Schedule weekly emails to run on Sunday at 9:00 AM UTC
         scheduler.add_job(
             send_weekly_updates,
-            trigger=CronTrigger(hour=0, minute=0),  # Daily at midnight UTC
-            id='weekly_updates',
-            name='Send weekly forex summaries',
-            replace_existing=True
+            CronTrigger(day_of_week='sun', hour=9, minute=0),
+            id='weekly_emails',
+            name='Weekly Email Updates'
         )
         
+        # Add memory cleanup job to run every 3 hours
+        scheduler.add_job(
+            cleanup_resources,
+            CronTrigger(hour='*/3'),  # Run every 3 hours
+            id='memory_cleanup',
+            name='Memory and Resources Cleanup'
+        )
+        
+        # Start the scheduler
         scheduler.start()
-        logger.info("Email scheduler started successfully")
+        logger.info("Email scheduler started")
         
-        return scheduler
+        # Log initial memory usage
+        log_memory_usage()
         
+        # Keep the script running
+        try:
+            while True:
+                time.sleep(300)  # Sleep for 5 minutes
+                # Log memory usage periodically
+                log_memory_usage()
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Shutting down email scheduler...")
+            scheduler.shutdown()
+            cleanup_resources()
+            
     except Exception as e:
-        logger.error(f"Error starting email scheduler: {str(e)}")
-        raise
+        logger.error(f"Error in email scheduler: {str(e)}")
+        cleanup_resources()
 
 if __name__ == "__main__":
-    scheduler = start_email_scheduler()
-    try:
-        # Keep the script running
-        while True:
-            pass
-    except (KeyboardInterrupt, SystemExit):
-        scheduler.shutdown() 
+    main() 

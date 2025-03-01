@@ -8,6 +8,7 @@ from typing import List, Optional
 import pytz
 import pymysql
 import time
+import gc
 from sqlalchemy import text
 
 # Database configuration
@@ -27,19 +28,19 @@ DATABASE_URL = (
     "?charset=utf8mb4"
 )
 
-# Create engine with security settings
+# Create engine with optimized connection pool settings
 engine = create_engine(
     DATABASE_URL,
-    pool_size=20,  # Larger pool size
-    max_overflow=30,  # Larger overflow
-    pool_timeout=60,  # Longer pool timeout
+    pool_size=10,  # Reduced from 20 to 10
+    max_overflow=15,  # Reduced from 30 to 15
+    pool_timeout=30,  # Reduced from 60 to 30 seconds
     pool_recycle=300,  # Recycle connections every 5 minutes
     pool_pre_ping=True,  # Enable automatic reconnection
     connect_args={
-        'connect_timeout': 60,
-        'read_timeout': 3600,  # 1 hour read timeout
-        'write_timeout': 3600,  # 1 hour write timeout
-        'init_command': 'SET SESSION wait_timeout=28800',  # 8 hour server-side timeout
+        'connect_timeout': 30,  # Reduced from 60 to 30 seconds
+        'read_timeout': 1800,   # Reduced from 3600 to 1800 seconds (30 minutes)
+        'write_timeout': 1800,  # Reduced from 3600 to 1800 seconds (30 minutes)
+        'init_command': 'SET SESSION wait_timeout=7200',  # Reduced from 28800 to 7200 seconds (2 hours)
         'client_flag': pymysql.constants.CLIENT.MULTI_STATEMENTS | 
                      pymysql.constants.CLIENT.CONNECT_WITH_DB,
         'charset': 'utf8mb4'
@@ -66,6 +67,15 @@ db_session = scoped_session(
 Base = declarative_base()
 Base.query = db_session.query_property()
 
+# Function to explicitly clean up database resources
+def cleanup_db_resources():
+    """Explicitly clean up database session resources and run garbage collection"""
+    try:
+        db_session.remove()
+        gc.collect()
+    except Exception as e:
+        print(f"Error during DB resource cleanup: {str(e)}")
+
 # Create database if it doesn't exist with retry logic
 def init_db():
     max_retries = 5
@@ -87,8 +97,8 @@ def init_db():
             
             # Set session variables for all new connections
             with engine.connect() as conn:
-                conn.execute(text("SET SESSION wait_timeout=28800"))  # 8 hours
-                conn.execute(text("SET SESSION interactive_timeout=28800"))  # 8 hours
+                conn.execute(text("SET SESSION wait_timeout=7200"))  # 2 hours, reduced from 8
+                conn.execute(text("SET SESSION interactive_timeout=7200"))  # 2 hours, reduced from 8
                 print("Database session variables configured successfully")
             break
             

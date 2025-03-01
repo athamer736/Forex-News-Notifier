@@ -1,8 +1,10 @@
 import os
 import logging
 from typing import Dict, Optional
-from openai import OpenAI
-from datetime import datetime
+import time
+import json
+import traceback
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # Get the absolute path of the project root
@@ -16,23 +18,56 @@ logger = logging.getLogger(__name__)
 
 class AISummaryService:
     def __init__(self):
-        # Get API key and log its presence (without exposing the full key)
-        api_key = os.getenv('OPENAI_API_KEY')
-        if not api_key:
-            raise ValueError("OpenAI API key not found in environment variables")
+        # Initialize failure tracking
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.cooldown_period = 1800  # 30 minutes in seconds
+        self.max_failures = 5  # After this many failures, enter cooldown
         
-        # Log the first and last few characters of the API key for debugging
-        logger.info(f"Initializing OpenAI client with API key: {api_key[:4]}...{api_key[-4:]}")
+        # Get API key
+        self.api_key = os.getenv('OPENAI_API_KEY')
         
-        self.client = OpenAI(api_key=api_key)
+        if not self.api_key:
+            logger.warning("OpenAI API key not found in environment variables. AI summaries will be disabled.")
+            self.enabled = False
+        else:
+            # Log the first and last few characters of the API key for debugging
+            logger.info(f"Initializing OpenAI client with API key: {self.api_key[:4]}...{self.api_key[-4:]}")
+            self.enabled = True
+            
+            try:
+                # Import OpenAI library - we'll import it only when needed to reduce memory usage
+                from openai import OpenAI
+                self.client = OpenAI(api_key=self.api_key)
+                logger.info("OpenAI client initialized successfully")
+            except Exception as e:
+                logger.error(f"Error initializing OpenAI client: {str(e)}")
+                self.enabled = False
+                self.failure_reason = str(e)
         
     def generate_event_summary(self, event: Dict) -> Optional[str]:
-        """Generate an AI summary for a forex event."""
+        """Generate an AI summary for a forex event with fallback mechanism."""
+        # Skip if not enabled
+        if not self.enabled:
+            logger.info("AI summary generation is disabled")
+            return None
+            
+        # Check if we're in cooldown period
+        if self.last_failure_time and (datetime.now() - self.last_failure_time).total_seconds() < self.cooldown_period:
+            logger.info(f"AI summary generation is in cooldown period after multiple failures. Resuming in {self.cooldown_period - (datetime.now() - self.last_failure_time).total_seconds():.1f} seconds")
+            return None
+            
         try:
             # Skip if not a high-impact US or GBP event
             if not self.should_generate_summary(event):
                 return None
 
+            # Import OpenAI just when needed
+            from openai import OpenAI
+                
+            if not hasattr(self, 'client'):
+                self.client = OpenAI(api_key=self.api_key)
+                
             # Construct the prompt
             prompt = f"""
             Please provide a comprehensive market analysis and prediction for this {event['currency']} forex economic event using smart money concepts and quarterly theory:
@@ -78,7 +113,11 @@ class AISummaryService:
             Please write your response in one paragraph and make it easy to read and understand, max words of 250-300. Don't put it in a list or bullet points, just write it out.
             """
             
-            # Call GPT-4 API
+            # Log memory usage before making API call
+            logger.info(f"Making OpenAI API call for event: {event['event_title']}")
+            
+            # Call GPT-4 API with timeout handling
+            start_time = time.time()
             response = self.client.chat.completions.create(
                 model="gpt-4",  # Using standard GPT-4 model
                 messages=[
@@ -89,8 +128,14 @@ class AISummaryService:
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=1000,
-                temperature=0.7
+                temperature=0.7,
+                timeout=30  # 30 second timeout
             )
+            elapsed_time = time.time() - start_time
+            logger.info(f"OpenAI API call completed in {elapsed_time:.2f} seconds")
+            
+            # Reset failure count on success
+            self.failure_count = 0
             
             # Extract and return the summary
             if response.choices and response.choices[0].message:
@@ -99,11 +144,26 @@ class AISummaryService:
             return None
             
         except Exception as e:
-            logger.error(f"Error generating AI summary: {str(e)}")
+            # Increment failure count
+            self.failure_count += 1
+            self.last_failure_time = datetime.now()
+            
+            # Log the exception
+            logger.error(f"Error generating AI summary (failure #{self.failure_count}): {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Enter cooldown if too many failures
+            if self.failure_count >= self.max_failures:
+                logger.warning(f"Entering cooldown period after {self.failure_count} consecutive failures. AI summaries will be disabled for {self.cooldown_period/60} minutes.")
+            
             return None
             
     def should_generate_summary(self, event: Dict) -> bool:
         """Determine if we should generate a summary for this event."""
+        # Skip if AI is disabled
+        if not self.enabled:
+            return False
+            
         # Only generate summaries for high-impact USD and GBP events
         is_high_impact = event.get('impact') == 'High'
         is_target_currency = event.get('currency') in ['USD', 'GBP']
@@ -112,4 +172,23 @@ class AISummaryService:
             logger.info(f"Will generate summary for {event['currency']} event: {event.get('event_title')}")
             return True
             
-        return False 
+        return False
+
+    def get_status(self) -> Dict:
+        """Get the current status of the AI service"""
+        status = {
+            "enabled": self.enabled,
+            "failure_count": self.failure_count,
+        }
+        
+        if self.last_failure_time:
+            status["last_failure"] = self.last_failure_time.isoformat()
+            
+            # Calculate cooldown remaining
+            cooldown_seconds_remaining = max(0, self.cooldown_period - (datetime.now() - self.last_failure_time).total_seconds())
+            status["cooldown_seconds_remaining"] = cooldown_seconds_remaining
+            
+        if not self.enabled and hasattr(self, 'failure_reason'):
+            status["failure_reason"] = self.failure_reason
+            
+        return status 

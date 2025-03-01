@@ -8,6 +8,11 @@ import redis
 from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 import os
 import sys
+import gc
+import threading
+import time
+import psutil
+import atexit
 
 from backend.main import (
     get_local_ip,
@@ -16,6 +21,7 @@ from backend.main import (
     get_appropriate_origin,
     get_cors_headers,
     start_background_tasks,
+    stop_background_tasks,
     handle_timezone_request,
     handle_events_request,
     handle_cache_status_request,
@@ -52,6 +58,47 @@ console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
+
+# Flag to track initialization
+app_initialized = False
+
+# Set up memory monitoring
+memory_monitor_thread = None
+memory_monitor_stop = threading.Event()
+
+def monitor_memory_usage():
+    """Background thread to monitor memory usage"""
+    logger.info("Memory monitoring started")
+    process = psutil.Process(os.getpid())
+    
+    while not memory_monitor_stop.is_set():
+        try:
+            # Get memory info
+            mem_info = process.memory_info()
+            mem_percent = process.memory_percent()
+            
+            # Log memory usage (MB)
+            mem_usage_mb = mem_info.rss / 1024 / 1024
+            logger.info(f"Memory usage: {mem_usage_mb:.2f} MB ({mem_percent:.1f}%)")
+            
+            # If memory usage is too high, force garbage collection
+            if mem_percent > 70:
+                logger.warning(f"High memory usage detected: {mem_percent:.1f}%. Running garbage collection.")
+                gc.collect()
+                
+                # Log memory after collection
+                mem_info = process.memory_info()
+                mem_percent = process.memory_percent()
+                mem_usage_mb = mem_info.rss / 1024 / 1024
+                logger.info(f"Memory after GC: {mem_usage_mb:.2f} MB ({mem_percent:.1f}%)")
+        except Exception as e:
+            logger.error(f"Error in memory monitoring: {str(e)}")
+        
+        # Sleep for 5 minutes
+        for _ in range(300):
+            if memory_monitor_stop.is_set():
+                break
+            time.sleep(1)
 
 app = Flask(__name__)
 
@@ -156,9 +203,22 @@ def add_cors_headers(response):
 @app.before_request
 def initialize_app():
     """Initialize the application on first request"""
-    if not hasattr(app, '_got_first_request'):
+    global app_initialized, memory_monitor_thread
+    if not app_initialized:
+        logger.info("Initializing application on first request")
+        # Start background tasks for event processing
         start_background_tasks()
-        app._got_first_request = True
+        
+        # Start memory monitoring
+        memory_monitor_stop.clear()
+        memory_monitor_thread = threading.Thread(target=monitor_memory_usage, daemon=True)
+        memory_monitor_thread.start()
+        
+        # Force garbage collection after initialization
+        gc.collect()
+        
+        app_initialized = True
+        logger.info("Application initialization complete")
 
 @app.route("/")
 @limiter.limit("60 per minute")
@@ -226,6 +286,33 @@ def unsubscribe(token):
     response, status_code = handle_unsubscribe_request(token)
     return response, status_code
 
+@app.route("/memory-status")
+def memory_status():
+    """Get the current memory status"""
+    try:
+        process = psutil.Process(os.getpid())
+        mem_info = process.memory_info()
+        mem_usage_mb = mem_info.rss / 1024 / 1024
+        mem_percent = process.memory_percent()
+        
+        cpu_percent = process.cpu_percent(interval=0.1)
+        
+        status = {
+            "memory_usage_mb": round(mem_usage_mb, 2),
+            "memory_percent": round(mem_percent, 2),
+            "cpu_percent": round(cpu_percent, 2),
+            "gc_stats": {
+                "collections": gc.get_count(),
+                "garbage_objects": len(gc.garbage)
+            },
+            "uptime_seconds": time.time() - process.create_time()
+        }
+        
+        return status, 200
+    except Exception as e:
+        logger.error(f"Error getting memory status: {str(e)}")
+        return {"error": str(e)}, 500
+
 # Error handlers
 @app.errorhandler(429)
 def ratelimit_handler(e):
@@ -240,8 +327,33 @@ def internal_error(e):
 def not_found(e):
     return {"error": "Resource not found."}, 404
 
+# Clean up function to run on application shutdown
+def cleanup_resources():
+    """Clean up resources on application shutdown"""
+    logger.info("Application shutting down, cleaning up resources...")
+    
+    # Stop memory monitoring
+    memory_monitor_stop.set()
+    if memory_monitor_thread and memory_monitor_thread.is_alive():
+        memory_monitor_thread.join(timeout=2)
+    
+    # Stop background tasks
+    stop_background_tasks()
+    
+    # Run garbage collection
+    gc.collect()
+    
+    logger.info("Cleanup complete, goodbye!")
+
+# Register the cleanup function to run on exit
+atexit.register(cleanup_resources)
+
 if __name__ == "__main__":
     try:
+        # Run garbage collection before starting
+        gc.collect()
+        logger.info("Starting application server...")
+        
         app.run(
             host="0.0.0.0",
             port=5000,

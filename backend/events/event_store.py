@@ -4,14 +4,18 @@ import logging
 from typing import List, Dict
 import json
 import os
+import gc
+import threading
 
 logger = logging.getLogger(__name__)
 
-# In-memory store for events
+# In-memory store for events with size limits
 event_store = {
     'events': [],
     'last_updated': None,
-    'cache_status': 'uninitialized'  # possible values: uninitialized, updating, ready, error
+    'cache_status': 'uninitialized',  # possible values: uninitialized, updating, ready, error
+    'max_events': 1000,  # Maximum number of events to keep in memory
+    'cache_lock': threading.Lock()  # Lock for thread-safe operations
 }
 
 # Add at the top with other constants
@@ -48,23 +52,73 @@ def store_weekly_events(events: List[Dict]) -> None:
 
         # Calculate week start (Sunday) and end (Saturday)
         current_weekday = current_time.weekday()
-        if current_weekday == 6:  # If today is Sunday
-            week_start = current_time
-        else:
-            days_to_start = -(current_weekday + 1)
-            week_start = current_time + timedelta(days=days_to_start)
-        week_end = week_start + timedelta(days=6)
-
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump({
-                'events': events,
-                'week_start': week_start.isoformat(),
-                'week_end': week_end.isoformat(),
-                'last_updated': current_time.isoformat()
-            }, f, indent=2)
-        logger.info(f"Stored weekly events in {filepath}")
+        
+        # Only keep events from this week
+        with open(filepath, 'w') as f:
+            json.dump(events, f, indent=2)
+        
+        logger.info(f"Stored {len(events)} events in weekly file: {filepath}")
+        
     except Exception as e:
         logger.error(f"Error storing weekly events: {str(e)}")
+
+def store_events(events: List[Dict]) -> None:
+    """Store events in memory and in weekly file with size limits"""
+    try:
+        # Use lock to ensure thread safety
+        with event_store['cache_lock']:
+            # Enforce memory limit
+            if len(events) > event_store['max_events']:
+                logger.warning(f"Truncating events list from {len(events)} to {event_store['max_events']} items to save memory")
+                events = events[:event_store['max_events']]
+            
+            # Store events in memory
+            event_store['events'] = events
+            event_store['last_updated'] = datetime.now(pytz.UTC)
+            event_store['cache_status'] = 'ready'
+            
+            # Log memory usage
+            logger.info(f"In-memory event store updated with {len(events)} events")
+            
+        # Store to weekly file outside the lock
+        store_weekly_events(events)
+        
+        # Force garbage collection after updates
+        gc.collect()
+        
+    except Exception as e:
+        event_store['cache_status'] = 'error'
+        logger.error(f"Error storing events: {str(e)}")
+
+def clean_memory_cache():
+    """Explicitly clean up memory cache to prevent leaks"""
+    try:
+        with event_store['cache_lock']:
+            current_size = len(event_store['events'])
+            if current_size > 0:
+                logger.info(f"Cleaning memory cache, current size: {current_size} events")
+                
+                # Keep only recent and future events
+                now = datetime.now(pytz.UTC)
+                filtered_events = []
+                
+                for event in event_store['events']:
+                    try:
+                        event_time = datetime.fromisoformat(event['time']) if isinstance(event['time'], str) else event['time']
+                        # Keep events from the last 24 hours and future events
+                        if event_time >= (now - timedelta(hours=24)):
+                            filtered_events.append(event)
+                    except (ValueError, KeyError):
+                        # Skip events with invalid time format
+                        pass
+                
+                event_store['events'] = filtered_events
+                logger.info(f"Memory cache cleaned, new size: {len(filtered_events)} events")
+        
+        # Force garbage collection
+        gc.collect()
+    except Exception as e:
+        logger.error(f"Error cleaning memory cache: {str(e)}")
 
 def load_weekly_events(weeks_offset: int = 0) -> List[Dict]:
     """
@@ -100,47 +154,6 @@ def load_weekly_events(weeks_offset: int = 0) -> List[Dict]:
     except Exception as e:
         logger.error(f"Error loading weekly events: {str(e)}")
         return []
-
-def store_events(events: List[Dict]) -> None:
-    """Store events in memory and in weekly file"""
-    if not events:
-        logger.warning("Attempted to store empty events list")
-        return
-    
-    try:
-        event_store['cache_status'] = 'updating'
-        
-        # Store events in memory
-        event_store['events'] = events
-        event_store['last_updated'] = datetime.now(pytz.UTC)
-        event_store['cache_status'] = 'ready'
-        
-        # Store events in weekly file
-        store_weekly_events(events)
-        
-        logger.info(f"Stored {len(events)} events in memory and weekly file")
-        
-        # Also save to disk as backup
-        try:
-            backup_dir = 'cache'
-            os.makedirs(backup_dir, exist_ok=True)
-            
-            backup_file = os.path.join(backup_dir, 'events_cache.json')
-            backup_data = {
-                'events': events,
-                'last_updated': event_store['last_updated'].isoformat()
-            }
-            
-            with open(backup_file, 'w', encoding='utf-8') as f:
-                json.dump(backup_data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Saved cache backup to {backup_file}")
-            
-        except Exception as e:
-            logger.error(f"Error saving cache backup: {str(e)}")
-            
-    except Exception as e:
-        event_store['cache_status'] = 'error'
-        logger.error(f"Error storing events: {str(e)}")
 
 def load_cached_events() -> bool:
     """Load events from disk cache if available"""
