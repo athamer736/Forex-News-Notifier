@@ -120,6 +120,13 @@ const DonationPage = () => {
     setPaymentMethod(newValue);
   };
 
+  const paypalOptions = {
+    clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+    currency: "USD",
+    intent: "capture",
+    components: ["buttons"]
+  };
+
   return (
     <Box
       sx={{
@@ -337,11 +344,7 @@ const DonationPage = () => {
                   </Button>
                 </Box>
               ) : (
-                <PayPalScriptProvider options={{
-                  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
-                  components: 'buttons',
-                  currency: 'USD'
-                }}>
+                <PayPalScriptProvider options={paypalOptions}>
                   <Box sx={{ 
                     width: '100%', 
                     minHeight: 200,
