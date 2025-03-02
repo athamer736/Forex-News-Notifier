@@ -267,4 +267,20 @@ def init_db():
     Initialize database tables.
     """
     Base.metadata.create_all(bind=engine)
-    logger.info("Initialized database tables") 
+    logger.info("Initialized database tables")
+
+def cleanup_db_resources():
+    """Clean up database resources by removing the session and closing connections."""
+    try:
+        # Remove the session
+        if db_session:
+            db_session.remove()
+            logger.info("Database session removed")
+        
+        # Dispose of the engine connections
+        if engine:
+            engine.dispose()
+            logger.info("Database engine connections disposed")
+            
+    except Exception as e:
+        logger.error(f"Error during database cleanup: {str(e)}") 
