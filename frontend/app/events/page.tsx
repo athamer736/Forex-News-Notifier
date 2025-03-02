@@ -2,7 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
@@ -217,8 +217,9 @@ function EventsPage() {
     const open = Boolean(anchorEl);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const router = useRouter();
+    const [memoryUsage, setMemoryUsage] = useState<number | null>(null);
 
-    const handleExpandClick = (eventId: string, e?: React.MouseEvent) => {
+    const handleExpandClick = useCallback((eventId: string, e?: React.MouseEvent) => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -232,16 +233,14 @@ function EventsPage() {
             }
             return newSet;
         });
-    };
+    }, []);
 
-    const handleInfoButtonClick = (e: React.MouseEvent<HTMLButtonElement>, eventId: string) => {
+    const handleInfoButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>, eventId: string) => {
         handleExpandClick(eventId, e);
-    };
+    }, [handleExpandClick]);
 
-    // Remove the loading of saved filters from this useEffect since we're now doing it in the initial state
     useEffect(() => {
         try {
-            // Load saved view mode if not already set
             if (!viewMode) {
                 const savedViewMode = localStorage.getItem('viewMode') as 'grid' | 'table';
                 if (savedViewMode) {
@@ -252,22 +251,18 @@ function EventsPage() {
         } catch (error) {
             console.error('Error loading saved filters:', error);
         }
-    }, []); // Empty dependency array to run only once on mount
+    }, []);
 
-    // Initialize timezone on component mount
     useEffect(() => {
         const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         console.log('Browser timezone:', browserTimezone);
         
-        // Get the current stored timezone for reference
         const storedTimezone = localStorage.getItem('timezone');
         console.log('Current stored timezone:', storedTimezone);
 
-        // First try exact match
         const exactMatch = timezoneOptions.find(opt => opt.value === browserTimezone);
         if (exactMatch) {
             console.log('Found exact timezone match:', exactMatch.value);
-            // Update stored timezone and selected timezone with exact match
             localStorage.setItem('timezone', exactMatch.value);
             setSelectedTimezone(exactMatch.value);
             console.log('Updated stored timezone to:', exactMatch.value);
@@ -275,7 +270,6 @@ function EventsPage() {
             return;
         }
         
-        // If no exact match, try to match by region
         const browserRegion = browserTimezone.split('/')[0];
         const regionMatch = timezoneOptions.find(opt => 
             opt.value !== 'auto' && 
@@ -285,7 +279,6 @@ function EventsPage() {
         
         if (regionMatch) {
             console.log('Found region timezone match:', regionMatch.value);
-            // Update stored timezone and selected timezone with region match
             localStorage.setItem('timezone', regionMatch.value);
             setSelectedTimezone(regionMatch.value);
             console.log('Updated stored timezone to:', regionMatch.value);
@@ -293,18 +286,16 @@ function EventsPage() {
             return;
         }
         
-        // If no match found at all, default to auto
         console.log('No timezone match found, defaulting to auto');
         localStorage.setItem('timezone', 'auto');
         setSelectedTimezone('auto');
         console.log('Updated stored timezone to: auto');
         console.log('Updated selected timezone to: auto');
-    }, []); // Empty dependency array to run only once on mount
+    }, []);
 
     const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = event.target.value;
         
-        // Clear error if the selected date is after or equal to Feb 2, 2025
         const selectedDateTime = new Date(newDate);
         const cutoffDate = new Date('2025-02-02');
         if (selectedDateTime >= cutoffDate) {
@@ -316,12 +307,11 @@ function EventsPage() {
         handleClose();
     };
 
-    const fetchEvents = async () => {
+    const fetchEvents = useCallback(async () => {
         try {
             setIsUpdating(true);
             setError(null);
             
-            // Check date validity before making the request
             if (timeRange === 'specific_date' && selectedDate) {
                 const selectedDateTime = new Date(selectedDate);
                 const cutoffDate = new Date('2025-02-02');
@@ -335,7 +325,6 @@ function EventsPage() {
 
             const userId = localStorage.getItem('userId') || 'default';
             
-            // Use HTTPS for all environments
             let baseUrl;
             if (typeof window !== 'undefined') {
                 if (window.location.hostname === 'localhost') {
@@ -343,13 +332,12 @@ function EventsPage() {
                 } else if (window.location.hostname === '192.168.0.144') {
                     baseUrl = 'https://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
+                    baseUrl = 'https://fxalert.co.uk:5000';
                 }
             } else {
-                baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
+                baseUrl = 'https://fxalert.co.uk:5000';
             }
 
-            // Add selected date to query parameters if applicable
             const dateParam = timeRange === 'specific_date' ? `&date=${selectedDate}` : '';
             const currencyParam = selectedCurrencies.length > 0 ? `&currencies=${selectedCurrencies.join(',')}` : '';
             const impactParam = selectedImpacts.length > 0 ? `&impacts=${selectedImpacts.join(',')}` : '';
@@ -368,7 +356,6 @@ function EventsPage() {
                 const errorData = await response.json();
                 const errorMessage = errorData.error || 'Failed to fetch events';
                 
-                // Handle specific error cases
                 if (errorMessage.includes('database')) {
                     throw new Error('Database connection error. Please try again later.');
                 } else if (errorMessage.includes('Rate limit exceeded')) {
@@ -383,10 +370,9 @@ function EventsPage() {
             }
             
             const data = await response.json();
+            
             setEvents(prev => {
-                // Fade out old events that are not in the new data
                 const oldEventIds = new Set(prev.map((e: ForexEvent) => `${e.time}-${e.event_title}`));
-                const newEventIds = new Set(data.map((e: ForexEvent) => `${e.time}-${e.event_title}`));
                 
                 return data.map((event: ForexEvent) => ({
                     ...event,
@@ -403,39 +389,50 @@ function EventsPage() {
         } finally {
             setLoading(false);
             setInitialLoad(false);
-            // Add a small delay before removing the updating state for smooth transition
             setTimeout(() => {
                 setIsUpdating(false);
             }, 300);
         }
-    };
+    }, [timeRange, selectedDate, selectedCurrencies, selectedImpacts]);
 
     useEffect(() => {
+        let timerRef: NodeJS.Timeout | null = null;
+        
         if (retryTimer !== null) {
-            const timer = setTimeout(() => {
+            console.log(`Setting retry timer for ${retryTimer} seconds`);
+            timerRef = setTimeout(() => {
+                console.log('Retry timer completed, fetching events again');
                 setRetryTimer(null);
                 setError(null);
-                fetchEvents();  // Retry the fetch
+                fetchEvents();
             }, retryTimer * 1000);
-            return () => clearTimeout(timer);
         }
-    }, [retryTimer]);
+        
+        return () => {
+            if (timerRef !== null) {
+                console.log('Clearing retry timer');
+                clearTimeout(timerRef);
+            }
+        };
+    }, [retryTimer, fetchEvents]);
 
     useEffect(() => {
+        let isMounted = true;
+        let fetchInterval: NodeJS.Timeout | null = null;
+        
         const setUserTimezone = async () => {
+            if (!isMounted) return;
+            
             try {
                 const userId = localStorage.getItem('userId') || 'default';
                 const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
                 let timezone;
                 let displayTimezone;
                 
-                // Get the actual timezone to use
                 if (!selectedTimezone || selectedTimezone === 'auto') {
-                    // If auto is selected, use browser timezone directly
                     timezone = browserTimezone;
                     displayTimezone = selectedTimezone || 'auto';
                 } else {
-                    // Use the selected timezone
                     timezone = selectedTimezone;
                     displayTimezone = selectedTimezone;
                 }
@@ -447,7 +444,6 @@ function EventsPage() {
                 const offset = new Date().getTimezoneOffset();
                 console.log('Current offset:', offset);
                 
-                // Determine the base URL based on hostname
                 let baseUrl;
                 if (typeof window !== 'undefined') {
                     if (window.location.hostname === 'localhost') {
@@ -455,10 +451,10 @@ function EventsPage() {
                     } else if (window.location.hostname === '192.168.0.144') {
                         baseUrl = 'https://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
+                        baseUrl = 'https://fxalert.co.uk:5000';
                     }
                 } else {
-                    baseUrl = 'https://fxalert.co.uk:5000';  // Use domain name for production
+                    baseUrl = 'https://fxalert.co.uk:5000';
                 }
                 
                 console.log('Using base URL:', baseUrl);
@@ -479,6 +475,8 @@ function EventsPage() {
                     }),
                 });
 
+                if (!isMounted) return;
+
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`Failed to set timezone: ${errorText}`);
@@ -496,34 +494,48 @@ function EventsPage() {
             } catch (error) {
                 console.error('Error in setUserTimezone:', error);
                 const defaultTimezone = 'Europe/London';
-                setSelectedTimezone(defaultTimezone);
+                if (isMounted) {
+                    setSelectedTimezone(defaultTimezone);
+                }
             }
         };
 
-        // Set timezone and fetch events
-        setUserTimezone().then(() => {
-            try {
-                fetchEvents();
-            } catch (error) {
-                console.error('Error fetching events:', error);
+        const initializeEventsAndTimezone = async () => {
+            await setUserTimezone();
+            
+            if (isMounted) {
+                await fetchEvents();
+                
+                fetchInterval = setInterval(() => {
+                    console.log('Running scheduled refresh');
+                    if (isMounted) {
+                        setUserTimezone().then(() => {
+                            if (isMounted) {
+                                fetchEvents().catch(err => {
+                                    console.error('Error in scheduled fetch:', err);
+                                });
+                            }
+                        });
+                    }
+                }, 5 * 60 * 1000);
             }
-        });
-
-        // Set up interval for fetching events
-        const interval = setInterval(() => {
-            setUserTimezone().then(() => {
-                try {
-                    fetchEvents();
-                } catch (error) {
-                    console.error('Error in interval fetch:', error);
-                }
-            });
-        }, 5 * 60 * 1000);  // Refresh every 5 minutes
+        };
         
-        return () => clearInterval(interval);
-    }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone, selectedDate]);
+        initializeEventsAndTimezone().catch(err => {
+            console.error('Error during initialization:', err);
+        });
+        
+        return () => {
+            console.log('Cleaning up fetch and timezone effect');
+            isMounted = false;
+            
+            if (fetchInterval !== null) {
+                clearInterval(fetchInterval);
+            }
+        };
+    }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone, selectedDate, fetchEvents]);
 
-    const getImpactColor = (impact: string): string => {
+    const getImpactColor = useCallback((impact: string): string => {
         switch (impact.toLowerCase()) {
             case 'high':
                 return '#d32f2f';
@@ -536,9 +548,9 @@ function EventsPage() {
             default:
                 return '#424242';
         }
-    };
+    }, []);
 
-    const handleCurrencyChange = (event: SelectChangeEvent<string[]>) => {
+    const handleCurrencyChange = useCallback((event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
         const newCurrencies = typeof value === 'string' ? value.split(',') : value;
         setSelectedCurrencies(newCurrencies);
@@ -549,20 +561,22 @@ function EventsPage() {
             console.error('Error saving currencies:', error);
         }
         event.stopPropagation();
-    };
+    }, []);
 
-    const handleRemoveCurrency = (currencyToRemove: string) => {
-        const newCurrencies = selectedCurrencies.filter(currency => currency !== currencyToRemove);
-        setSelectedCurrencies(newCurrencies);
-        try {
-            localStorage.setItem('selectedCurrencies', JSON.stringify(newCurrencies));
-            console.log('Saved currencies after removal:', newCurrencies);
-        } catch (error) {
-            console.error('Error saving currencies:', error);
-        }
-    };
+    const handleRemoveCurrency = useCallback((currencyToRemove: string) => {
+        setSelectedCurrencies(prev => {
+            const newCurrencies = prev.filter(currency => currency !== currencyToRemove);
+            try {
+                localStorage.setItem('selectedCurrencies', JSON.stringify(newCurrencies));
+                console.log('Saved currencies after removal:', newCurrencies);
+            } catch (error) {
+                console.error('Error saving currencies:', error);
+            }
+            return newCurrencies;
+        });
+    }, []);
 
-    const handleImpactChange = (event: SelectChangeEvent<string[]>) => {
+    const handleImpactChange = useCallback((event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
         const newImpacts = typeof value === 'string' ? value.split(',') : value;
         setSelectedImpacts(newImpacts);
@@ -573,39 +587,38 @@ function EventsPage() {
             console.error('Error saving impact levels:', error);
         }
         event.stopPropagation();
-    };
+    }, []);
 
-    const handleRemoveImpact = (impactToRemove: string) => {
-        const newImpacts = selectedImpacts.filter(impact => impact !== impactToRemove);
-        setSelectedImpacts(newImpacts);
-        try {
-            localStorage.setItem('selectedImpacts', JSON.stringify(newImpacts));
-            console.log('Saved impact levels after removal:', newImpacts);
-        } catch (error) {
-            console.error('Error saving impact levels:', error);
-        }
-    };
+    const handleRemoveImpact = useCallback((impactToRemove: string) => {
+        setSelectedImpacts(prev => {
+            const newImpacts = prev.filter(impact => impact !== impactToRemove);
+            try {
+                localStorage.setItem('selectedImpacts', JSON.stringify(newImpacts));
+                console.log('Saved impact levels after removal:', newImpacts);
+            } catch (error) {
+                console.error('Error saving impact levels:', error);
+            }
+            return newImpacts;
+        });
+    }, []);
 
-    // Add handler for opening/closing the menu
-    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const handleClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl(event.currentTarget);
-    };
+    }, []);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setAnchorEl(null);
-    };
+    }, []);
 
-    // Function to get display text for current time range
-    const getTimeRangeDisplayText = () => {
+    const getTimeRangeDisplayText = useCallback(() => {
         if (timeRange === 'specific_date' && selectedDate) {
             return `Date: ${selectedDate}`;
         }
         const option = timeRangeOptions.find(opt => opt.value === timeRange);
         return option ? option.label : 'Select Time Range';
-    };
+    }, [timeRange, selectedDate]);
 
-    // Add this utility function to group events by date
-    const groupEventsByDate = (events: ForexEvent[]): Record<string, GroupedEvents> => {
+    const groupEventsByDate = useCallback((events: ForexEvent[]): Record<string, GroupedEvents> => {
         return events.reduce((acc: Record<string, GroupedEvents>, event) => {
             const date = new Date(event.time);
             const displayDate = date.toLocaleDateString('en-US', {
@@ -623,11 +636,13 @@ function EventsPage() {
             acc[displayDate].events.push(event);
             return acc;
         }, {});
-    };
+    }, []);
 
-    const TableView = () => {
-        const groupedEvents = groupEventsByDate(events);
-        
+    const groupedEventsByDate = useMemo(() => {
+        return groupEventsByDate(events);
+    }, [events, groupEventsByDate]);
+
+    const TableView = useCallback(() => {
         return (
             <TableContainer component={Paper} sx={{ mt: 2 }}>
                 <Table>
@@ -643,7 +658,7 @@ function EventsPage() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {Object.values(groupedEvents).map((group) => (
+                        {Object.values(groupedEventsByDate).map((group) => (
                             <React.Fragment key={group.displayDate}>
                                 <TableRow>
                                     <TableCell
@@ -753,7 +768,7 @@ function EventsPage() {
                 </Table>
             </TableContainer>
         );
-    };
+    }, [groupedEventsByDate, expanded, getImpactColor, handleInfoButtonClick]);
 
     const GridView = () => {
         const groupedEvents = groupEventsByDate(events);
@@ -928,6 +943,31 @@ function EventsPage() {
         );
     };
 
+    // Add memory usage monitoring
+    useEffect(() => {
+        const logMemoryUsage = () => {
+            if (window.performance && (window.performance as any).memory) {
+                const memoryInfo = (window.performance as any).memory;
+                const usedJSHeapSize = Math.round(memoryInfo.usedJSHeapSize / (1024 * 1024));
+                console.log(`Memory usage: ${usedJSHeapSize} MB / ${Math.round(memoryInfo.jsHeapSizeLimit / (1024 * 1024))} MB`);
+                setMemoryUsage(usedJSHeapSize);
+                
+                if (usedJSHeapSize > 100 && window.gc) {
+                    console.log('High memory usage detected, suggesting garbage collection');
+                }
+            }
+        };
+        
+        logMemoryUsage();
+        
+        const memoryInterval = setInterval(logMemoryUsage, 30000);
+        
+        return () => {
+            console.log('Cleaning up memory monitoring');
+            clearInterval(memoryInterval);
+        };
+    }, []);
+
     if (loading && initialLoad) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -946,6 +986,25 @@ function EventsPage() {
                 pb: 12
             }}
         >
+            {/* Development memory indicator - only shows in development */}
+            {process.env.NODE_ENV === 'development' && memoryUsage !== null && (
+                <Box 
+                    sx={{ 
+                        position: 'fixed', 
+                        bottom: 10, 
+                        right: 10, 
+                        zIndex: 9999,
+                        backgroundColor: memoryUsage > 100 ? 'rgba(255,0,0,0.8)' : 'rgba(0,0,0,0.7)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                    }}
+                >
+                    Memory: {memoryUsage} MB
+                </Box>
+            )}
+            
             <Container maxWidth="lg">
                 <motion.div
                     variants={containerVariants}
@@ -1008,7 +1067,6 @@ function EventsPage() {
                                 color: '#000'
                             }}
                         >
-                            {/* Filters Section */}
                             <Grid container spacing={3} sx={{ mb: 4 }}>
                                 <Grid item xs={12} md={4}>
                                     <FormControl fullWidth sx={{ minWidth: '100%' }}>
@@ -1189,7 +1247,6 @@ function EventsPage() {
                                 </Grid>
                             </Grid>
 
-                            {/* View Toggle */}
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                                 <IconButton
                                     onClick={() => setViewMode('table')}
@@ -1210,7 +1267,6 @@ function EventsPage() {
                                 </IconButton>
                             </Box>
 
-                            {/* Events Display */}
                             {loading ? (
                                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                                     <CircularProgress sx={{ color: '#2196F3' }} />
