@@ -6,16 +6,19 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 export class PaymentService {
   static async createStripeSession(amount: number) {
     try {
-      const response = await fetch('/api/create-stripe-session', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
+      const response = await fetch(`${baseUrl}/api/create-stripe-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ amount }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create Stripe session');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create Stripe session');
       }
 
       const session = await response.json();

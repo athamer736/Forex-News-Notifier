@@ -7,7 +7,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-01-27.acacia', // Using the required API version
+  apiVersion: '2025-01-27.acacia',
 });
 
 export async function POST(req: Request) {
@@ -32,6 +32,8 @@ export async function POST(req: Request) {
       );
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://fxalert.co.uk';
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -48,8 +50,8 @@ export async function POST(req: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/donate?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/donate?canceled=true`,
+      success_url: `${baseUrl}/donate?success=true`,
+      cancel_url: `${baseUrl}/donate?canceled=true`,
     });
 
     return NextResponse.json({ id: session.id }, {
