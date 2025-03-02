@@ -106,8 +106,8 @@ def send_email(to_email: str, subject: str, html_content: str):
 
 def send_verification_email(email: str, token: str):
     """Send a verification email."""
-    # Use the domain name instead of IP
-    verification_url = f"https://fxalert.co.uk:5000/verify/{token}"
+    # Use the frontend URL (port 3000)
+    verification_url = f"https://fxalert.co.uk:3000/verify/{token}"
     
     html_content = f"""
     <html>
