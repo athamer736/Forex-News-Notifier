@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { headers } from 'next/headers';
 
 // Check if STRIPE_SECRET_KEY is defined
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -10,29 +11,38 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-01-27.acacia',
 });
 
-export async function POST(req: Request) {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
-  }
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': 'https://fxalert.co.uk:3000',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
 
+export async function POST(req: Request) {
   try {
+    const headersList = headers();
+    const origin = headersList.get('origin') || 'https://fxalert.co.uk:3000';
+
     const { amount } = await req.json();
 
     if (!amount || amount <= 0) {
-      return NextResponse.json(
-        { error: 'Invalid amount' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Invalid amount' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Credentials': 'true',
+          },
+        }
       );
     }
-
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://fxalert.co.uk';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -50,28 +60,32 @@ export async function POST(req: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${baseUrl}/donate?success=true`,
-      cancel_url: `${baseUrl}/donate?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/donate?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/donate?canceled=true`,
     });
 
-    return NextResponse.json({ id: session.id }, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+    return new Response(
+      JSON.stringify({ id: session.id }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Credentials': 'true',
+        },
       }
-    });
+    );
   } catch (error) {
     console.error('Stripe session creation error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create payment session' },
-      { 
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to create payment session' }),
+      {
         status: 500,
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        }
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': 'https://fxalert.co.uk:3000',
+          'Access-Control-Allow-Credentials': 'true',
+        },
       }
     );
   }

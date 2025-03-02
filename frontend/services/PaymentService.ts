@@ -6,14 +6,14 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 export class PaymentService {
   static async createStripeSession(amount: number) {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
-      const response = await fetch(`${baseUrl}/api/create-stripe-session`, {
+      const response = await fetch('/api/create-stripe-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ amount }),
-        credentials: 'include',
+        credentials: 'same-origin',
       });
 
       if (!response.ok) {
