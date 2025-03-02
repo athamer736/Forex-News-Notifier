@@ -6,6 +6,8 @@ import signal
 import logging
 import venv
 import threading
+import psutil
+import gc
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
@@ -33,6 +35,43 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
+
+# Process management settings
+MAX_MEMORY_PERCENT = 75  # Maximum memory usage percentage
+MEMORY_CHECK_INTERVAL = 300  # Check memory every 5 minutes
+GC_THRESHOLD = 70  # Run garbage collection when memory usage exceeds this percentage
+
+def check_memory_usage():
+    """Monitor memory usage and take action if necessary"""
+    while True:
+        try:
+            # Get memory usage for the current process and its children
+            current_process = psutil.Process()
+            total_memory_percent = 0
+            
+            # Include memory of all child processes
+            for proc in current_process.children(recursive=True):
+                try:
+                    total_memory_percent += proc.memory_percent()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            
+            total_memory_percent += current_process.memory_percent()
+            
+            logger.info(f"Total memory usage: {total_memory_percent:.1f}%")
+            
+            if total_memory_percent > MAX_MEMORY_PERCENT:
+                logger.warning(f"Memory usage too high ({total_memory_percent:.1f}%). Taking action...")
+                gc.collect()  # Force garbage collection
+                
+            elif total_memory_percent > GC_THRESHOLD:
+                logger.info(f"Memory usage above threshold ({total_memory_percent:.1f}%). Running garbage collection...")
+                gc.collect()
+                
+        except Exception as e:
+            logger.error(f"Error checking memory usage: {str(e)}")
+            
+        time.sleep(MEMORY_CHECK_INTERVAL)
 
 # Configure component loggers
 def setup_logger(name, log_file):
@@ -297,120 +336,56 @@ def monitor_processes(python_path):
             time.sleep(5)  # Wait before retrying
 
 def main():
-    """Main function to start all services"""
+    """Main entry point for the server"""
     try:
         # Set up signal handlers
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         
-        logger.info("Starting server manager...")
+        # Enable garbage collection
+        gc.enable()
         
-        # Setup virtual environment
+        # Start memory monitoring in a separate thread
+        memory_thread = threading.Thread(target=check_memory_usage, daemon=True)
+        memory_thread.start()
+        
+        # Set up virtual environment
         python_path = setup_virtual_environment()
         if not python_path:
-            logger.error("Failed to set up virtual environment, will retry in 30 seconds...")
-            time.sleep(30)
-            python_path = setup_virtual_environment()
-            if not python_path:
-                logger.error("Virtual environment setup failed twice, continuing with limited functionality")
+            logger.error("Failed to set up virtual environment")
+            return
         
-        # Start Flask server
-        flask_process = start_flask_server(python_path)
-        if not flask_process:
-            logger.error("Failed to start Flask server, will retry in 30 seconds...")
-            time.sleep(30)
-            flask_process = start_flask_server(python_path)
-            if not flask_process:
-                logger.error("Flask server failed to start twice, continuing with limited functionality")
-        
-        # Start scheduler
-        scheduler_process = start_scheduler(python_path)
-        if not scheduler_process:
-            logger.error("Failed to start scheduler, will retry in 30 seconds...")
-            time.sleep(30)
-            scheduler_process = start_scheduler(python_path)
-            if not scheduler_process:
-                logger.error("Scheduler failed to start twice, continuing with limited functionality")
-        
-        # Start frontend
+        # Start components with reduced memory limits
         frontend_process = setup_frontend()
         if not frontend_process:
-            logger.error("Failed to start frontend, will retry in 30 seconds...")
-            time.sleep(30)
-            frontend_process = setup_frontend()
-            if not frontend_process:
-                logger.error("Frontend failed to start twice, continuing with limited functionality")
-        
-        # Start email scheduler
+            logger.error("Failed to start frontend")
+            return
+            
+        flask_process = start_flask_server(python_path)
+        if not flask_process:
+            logger.error("Failed to start Flask server")
+            stop_all_processes()
+            return
+            
+        scheduler_process = start_scheduler(python_path)
+        if not scheduler_process:
+            logger.error("Failed to start event scheduler")
+            stop_all_processes()
+            return
+            
         email_scheduler_process = start_email_scheduler(python_path)
         if not email_scheduler_process:
-            logger.error("Failed to start email scheduler, will retry in 30 seconds...")
-            time.sleep(30)
-            email_scheduler_process = start_email_scheduler(python_path)
-            if not email_scheduler_process:
-                logger.error("Email scheduler failed to start twice, continuing with limited functionality")
+            logger.error("Failed to start email scheduler")
+            stop_all_processes()
+            return
         
-        logger.info("Server manager initialization complete. Starting process monitor...")
-        
-        # Monitor processes
-        while True:
-            try:
-                for i, process in enumerate(processes):
-                    if process and process.poll() is not None:  # Process has terminated
-                        # Get process output
-                        out, err = process.communicate()
-                        if out:
-                            logger.info(f"Process output: {out}")
-                        if err:
-                            logger.error(f"Process error: {err}")
-                        
-                        logger.warning(f"Process {process.pid} has terminated. Attempting restart...")
-                        
-                        # Restart the appropriate process
-                        if i == 0:  # Flask server
-                            new_process = start_flask_server(python_path)
-                            if new_process:
-                                processes[i] = new_process
-                                logger.info("Flask server restarted successfully")
-                            else:
-                                logger.error("Failed to restart Flask server")
-                        elif i == 1:  # Event scheduler
-                            new_process = start_scheduler(python_path)
-                            if new_process:
-                                processes[i] = new_process
-                                logger.info("Event scheduler restarted successfully")
-                            else:
-                                logger.error("Failed to restart event scheduler")
-                        elif i == 2:  # Frontend
-                            new_process = setup_frontend()
-                            if new_process:
-                                processes[i] = new_process
-                                logger.info("Frontend restarted successfully")
-                            else:
-                                logger.error("Failed to restart frontend")
-                        else:  # Email scheduler
-                            new_process = start_email_scheduler(python_path)
-                            if new_process:
-                                processes[i] = new_process
-                                logger.info("Email scheduler restarted successfully")
-                            else:
-                                logger.error("Failed to restart email scheduler")
-                
-                time.sleep(5)  # Check every 5 seconds
-                
-            except Exception as e:
-                logger.error(f"Error in process monitor: {str(e)}")
-                time.sleep(5)  # Wait before retrying
+        # Monitor processes and restart if necessary
+        monitor_processes(python_path)
         
     except Exception as e:
-        logger.error(f"Critical error in main: {str(e)}")
-        logger.error("Attempting to continue running...")
-        time.sleep(30)  # Wait before retrying
-        main()  # Recursive call to restart the main function
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt. Shutting down gracefully...")
+        logger.error(f"Error in main: {str(e)}")
         stop_all_processes()
-        sys.exit(0)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main() 
