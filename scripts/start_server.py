@@ -179,33 +179,55 @@ def setup_frontend():
     try:
         frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
         if not os.path.exists(frontend_dir):
-            raise Exception("Frontend directory not found")
+            raise Exception(f"Frontend directory not found at {frontend_dir}")
+
+        # Set up environment for npm
+        env = os.environ.copy()
+        if sys.platform == 'win32':
+            npm_cmd = 'npm.cmd'
+        else:
+            npm_cmd = 'npm'
 
         logger.info("Installing frontend dependencies...")
-        result = subprocess.run(
-            ['npm', 'install'],
+        install_process = subprocess.run(
+            [npm_cmd, 'install'],
             capture_output=True,
             text=True,
-            cwd=frontend_dir
+            cwd=frontend_dir,
+            env=env
         )
-        if result.stdout:
-            frontend_logger.info(result.stdout)
-        if result.stderr:
-            frontend_logger.error(result.stderr)
+        
+        if install_process.returncode != 0:
+            logger.error(f"npm install failed: {install_process.stderr}")
+            raise Exception("Failed to install frontend dependencies")
+        
+        if install_process.stdout:
+            frontend_logger.info(install_process.stdout)
+        if install_process.stderr:
+            frontend_logger.error(install_process.stderr)
 
         logger.info("Starting frontend development server...")
         frontend_process = subprocess.Popen(
-            ['npm', 'run', 'dev'],
+            [npm_cmd, 'run', 'dev'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
             cwd=frontend_dir,
-            bufsize=1
+            env=env,
+            bufsize=1,
+            shell=True  # This helps with Windows path resolution
         )
         processes.append(frontend_process)
         
         # Set up real-time logging
         log_output(frontend_process, 'Frontend', '[Frontend] ')
+        
+        # Wait a bit to check if the process stays alive
+        time.sleep(2)
+        if frontend_process.poll() is not None:
+            out, err = frontend_process.communicate()
+            logger.error(f"Frontend process failed to start. Output: {out}, Error: {err}")
+            raise Exception("Frontend process failed to start")
         
         logger.info(f"Frontend server started with PID {frontend_process.pid}")
         return frontend_process
