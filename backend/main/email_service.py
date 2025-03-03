@@ -7,11 +7,13 @@ from datetime import datetime, timedelta
 from typing import List, Dict
 import pytz
 from dotenv import load_dotenv
+import ssl
 
 from ..database import db_session, get_filtered_events
 from models.email_subscription import EmailSubscription
 from backend.services.ai_summary_service import AISummaryService
 from models.forex_event import ForexEvent
+from .config import FRONTEND_URL
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +108,8 @@ def send_email(to_email: str, subject: str, html_content: str):
 
 def send_verification_email(email: str, token: str):
     """Send a verification email."""
-    # Use the frontend URL without specifying port
-    verification_url = f"https://fxalert.co.uk/verify/{token}"
+    # Use the frontend URL from configuration
+    verification_url = f"{FRONTEND_URL}/verify/{token}"
     
     html_content = f"""
     <html>
@@ -262,7 +264,7 @@ def send_daily_update(subscription: EmailSubscription):
                 {''.join(format_event_summary(event) for event in events)}
                 <p style="margin-top: 30px; font-size: 12px; color: #666;">
                     To unsubscribe from these updates, 
-                    <a href="https://fxalert.co.uk/unsubscribe/{subscription.verification_token}">click here</a>
+                    <a href="{FRONTEND_URL}/unsubscribe/{subscription.verification_token}">click here</a>
                 </p>
             </body>
         </html>
@@ -337,7 +339,7 @@ def send_weekly_update(subscription: EmailSubscription):
         html_content += f"""
                 <p style="margin-top: 30px; font-size: 12px; color: #666;">
                     To unsubscribe from these updates, 
-                    <a href="https://fxalert.co.uk/unsubscribe/{subscription.verification_token}">click here</a>
+                    <a href="{FRONTEND_URL}/unsubscribe/{subscription.verification_token}">click here</a>
                 </p>
             </body>
         </html>

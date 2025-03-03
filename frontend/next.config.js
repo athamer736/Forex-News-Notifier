@@ -10,7 +10,7 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk';
     return [
       {
         source: '/api/:path*',

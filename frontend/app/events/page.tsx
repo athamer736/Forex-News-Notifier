@@ -332,10 +332,10 @@ function EventsPage() {
                 } else if (window.location.hostname === '192.168.0.144') {
                     baseUrl = 'https://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'https://fxalert.co.uk:5000';
+                    baseUrl = 'https://fxalert.co.uk';
                 }
             } else {
-                baseUrl = 'https://fxalert.co.uk:5000';
+                baseUrl = 'https://fxalert.co.uk';
             }
 
             const dateParam = timeRange === 'specific_date' ? `&date=${selectedDate}` : '';
@@ -451,10 +451,10 @@ function EventsPage() {
                     } else if (window.location.hostname === '192.168.0.144') {
                         baseUrl = 'https://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'https://fxalert.co.uk:5000';
+                        baseUrl = 'https://fxalert.co.uk';
                     }
                 } else {
-                    baseUrl = 'https://fxalert.co.uk:5000';
+                    baseUrl = 'https://fxalert.co.uk';
                 }
                 
                 console.log('Using base URL:', baseUrl);
