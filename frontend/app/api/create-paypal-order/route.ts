@@ -1,12 +1,38 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
+  }
+
   try {
     const { amount } = await req.json();
 
     // Validate amount
     if (!amount || amount <= 0) {
-      throw new Error('Invalid amount');
+      return NextResponse.json(
+        { error: 'Invalid amount' },
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+          }
+        }
+      );
+    }
+
+    // Ensure PayPal environment variables are set
+    if (!process.env.PAYPAL_API_URL || !process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+      throw new Error('PayPal configuration is missing');
     }
 
     // Log the request details
@@ -26,7 +52,7 @@ export async function POST(req: Request) {
           {
             amount: {
               currency_code: 'USD',
-              value: amount.toFixed(2),
+              value: Number(amount).toFixed(2),
             },
             description: 'Donation to Forex News Notifier',
           },
@@ -42,12 +68,25 @@ export async function POST(req: Request) {
       throw new Error(data.message || 'Failed to create PayPal order');
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
   } catch (error) {
     console.error('PayPal order creation error:', error);
     return NextResponse.json(
-      { error: 'Failed to create PayPal order' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Failed to create PayPal order' },
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        }
+      }
     );
   }
 } 

@@ -1,17 +1,27 @@
 import sys
-from pathlib import Path
+import os
 import logging
 from datetime import datetime, timedelta
 import pytz
-import os
+from dotenv import load_dotenv
 
-# Add the project root directory to Python path
-project_root = str(Path(__file__).parent.parent)
-sys.path.append(project_root)
+# Simple path manipulation - add project root to path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
 
-from backend.database import db_session
-from models.forex_event import ForexEvent
-from backend.services.ai_summary_service import AISummaryService
+# Add to path if not already there
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Load environment variables
+env_path = os.path.join(project_root, '.env')
+load_dotenv(env_path, override=True)
+
+# Get OpenAI API key
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+if not OPENAI_API_KEY:
+    print("Error: OPENAI_API_KEY not found in environment variables")
+    sys.exit(1)
 
 # Configure logging
 log_dir = os.path.join(project_root, 'logs')
@@ -41,11 +51,15 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
 
+from models.forex_event import ForexEvent
+from backend.database import db_session
+from backend.services.ai_summary_service import AISummaryService
+
 def generate_missing_summaries():
     """Generate AI summaries for events that don't have them."""
     try:
-        # Initialize AI service
-        ai_service = AISummaryService()
+        # Initialize AI service with API key
+        ai_service = AISummaryService(OPENAI_API_KEY)
         
         # Get events that need summaries
         events = ForexEvent.query.filter(
@@ -66,7 +80,7 @@ def generate_missing_summaries():
                     'impact': event.impact,
                     'forecast': event.forecast,
                     'previous': event.previous,
-                    'time': event.time
+                    'time': event.time.isoformat() if event.time else None
                 }
                 
                 # Generate summary
@@ -82,6 +96,8 @@ def generate_missing_summaries():
                 
             except Exception as e:
                 logger.error(f"Error processing event {event.event_title}: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 db_session.rollback()
                 continue
         
@@ -89,11 +105,16 @@ def generate_missing_summaries():
         
     except Exception as e:
         logger.error(f"Error in generate_missing_summaries: {str(e)}")
-        db_session.rollback()
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
 
 def refresh_old_summaries():
     """Refresh summaries that are more than a week old."""
     try:
+        # Initialize AI service with API key
+        ai_service = AISummaryService(OPENAI_API_KEY)
+        
         # Get events with old summaries
         week_ago = datetime.now(pytz.UTC) - timedelta(days=7)
         events = ForexEvent.query.filter(
@@ -104,10 +125,7 @@ def refresh_old_summaries():
         ).all()
         
         logger.info(f"Found {len(events)} events needing summary refresh")
-        
-        # Initialize AI service
-        ai_service = AISummaryService()
-        
+                
         for event in events:
             try:
                 # Convert event to dictionary
@@ -117,7 +135,7 @@ def refresh_old_summaries():
                     'impact': event.impact,
                     'forecast': event.forecast,
                     'previous': event.previous,
-                    'time': event.time
+                    'time': event.time.isoformat() if event.time else None
                 }
                 
                 # Generate new summary
@@ -131,6 +149,8 @@ def refresh_old_summaries():
                 
             except Exception as e:
                 logger.error(f"Error refreshing summary for event {event.event_title}: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 db_session.rollback()
                 continue
         
@@ -138,7 +158,9 @@ def refresh_old_summaries():
         
     except Exception as e:
         logger.error(f"Error in refresh_old_summaries: {str(e)}")
-        db_session.rollback()
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
 
 if __name__ == "__main__":
     generate_missing_summaries()

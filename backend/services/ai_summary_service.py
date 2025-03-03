@@ -4,6 +4,7 @@ from typing import Dict, Optional
 from openai import OpenAI
 from datetime import datetime
 from dotenv import load_dotenv
+from backend.services.ssl_helper import configure_ssl
 
 # Get the absolute path of the project root
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,16 +16,24 @@ load_dotenv(env_path, override=True)
 logger = logging.getLogger(__name__)
 
 class AISummaryService:
-    def __init__(self):
-        # Get API key and log its presence (without exposing the full key)
-        api_key = os.getenv('OPENAI_API_KEY')
-        if not api_key:
-            raise ValueError("OpenAI API key not found in environment variables")
+    def __init__(self, api_key=None):
+        """Initialize the AI summary service.
         
-        # Log the first and last few characters of the API key for debugging
-        logger.info(f"Initializing OpenAI client with API key: {api_key[:4]}...{api_key[-4:]}")
+        Args:
+            api_key (str, optional): OpenAI API key. If not provided, will try to get from environment.
+        """
+        # Configure SSL for API calls
+        configure_ssl()
         
-        self.client = OpenAI(api_key=api_key)
+        # Get API key from environment if not provided
+        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        
+        if not self.api_key:
+            raise ValueError("OpenAI API key is required. Provide it as an argument or set OPENAI_API_KEY environment variable.")
+            
+        # Initialize OpenAI client
+        logger.info(f"Initializing OpenAI client with API key: {self.api_key[:3]}...{self.api_key[-4:]}")
+        self.client = OpenAI(api_key=self.api_key)
         
     def generate_event_summary(self, event: Dict) -> Optional[str]:
         """Generate an AI summary for a forex event."""
