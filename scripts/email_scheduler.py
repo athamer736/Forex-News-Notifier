@@ -6,6 +6,7 @@ import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import os
+import time
 
 # Add the project root directory to Python path
 project_root = str(Path(__file__).parent.parent)
@@ -143,6 +144,9 @@ if __name__ == "__main__":
     try:
         # Keep the script running
         while True:
-            pass
+            # Sleep for a minute between checks - keeps the process alive
+            # without consuming too much CPU
+            time.sleep(60)
+            logger.debug("Email scheduler heartbeat - still running")
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown() 

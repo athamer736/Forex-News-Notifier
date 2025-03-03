@@ -144,7 +144,10 @@ def main():
         # Keep the script running
         try:
             while True:
-                time.sleep(60)  # Sleep for 1 minute
+                # Sleep for a minute between checks - keeps the process alive
+                # without consuming too much CPU
+                time.sleep(60)
+                logger.debug("Scheduler heartbeat - still running")
         except (KeyboardInterrupt, SystemExit):
             logger.info("Shutting down scheduler...")
             scheduler.shutdown()
