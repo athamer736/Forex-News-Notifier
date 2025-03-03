@@ -193,11 +193,11 @@ try {
                     <action type="Rewrite" url="http://localhost:5000/{R:1}" />
                 </rule>
                 <rule name="ReverseProxyToFlaskVerify" stopProcessing="true">
-                    <match url="^verify/(.*)" />
+                    <match url="^api/verify/(.*)" />
                     <action type="Rewrite" url="http://localhost:5000/verify/{R:1}" />
                 </rule>
                 <rule name="ReverseProxyToFlaskUnsubscribe" stopProcessing="true">
-                    <match url="^unsubscribe/(.*)" />
+                    <match url="^api/unsubscribe/(.*)" />
                     <action type="Rewrite" url="http://localhost:5000/unsubscribe/{R:1}" />
                 </rule>
             </rules>

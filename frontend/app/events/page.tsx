@@ -459,14 +459,11 @@ function EventsPage() {
                 
                 console.log('Using base URL:', baseUrl);
 
-                const response = await fetch(`${baseUrl}/timezone`, {
+                const response = await fetch(`${baseUrl}/api/timezone`, {
                     method: 'POST',
-                    mode: 'cors',
-                    credentials: 'include',
                     headers: {
-                        'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        'Origin': typeof window !== 'undefined' ? window.location.origin : '',
+                        'Accept': 'application/json',
                     },
                     body: JSON.stringify({
                         userId,

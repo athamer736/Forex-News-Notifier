@@ -17,7 +17,7 @@ export default function VerifyPage() {
     const verifyToken = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk';
-        const response = await fetch(`${baseUrl}/verify/${token}`, {
+        const response = await fetch(`${baseUrl}/api/verify/${token}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
