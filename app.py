@@ -130,27 +130,22 @@ ALLOWED_ORIGINS = [
 ]
 
 # Configure CORS
-CORS(app, resources={r"/*": {"origins": [
-    "https://fxalert.co.uk",
-    "https://fxalert.co.uk:3000",
-    "https://fxalert.co.uk:5000"
-]}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get('Origin')
-    if origin in ALLOWED_ORIGINS:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
-        response.headers['Access-Control-Max-Age'] = '3600'
-        response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
-        # Add security headers
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Access-Control-Allow-Origin'] = origin if origin else '*'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
+    response.headers['Access-Control-Max-Age'] = '3600'
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+    # Add security headers
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
     return response
 
 @app.before_request
@@ -177,6 +172,15 @@ def home():
 @limiter.limit("30 per minute")  # Rate limit for timezone updates
 def set_timezone():
     """Handle timezone setting requests"""
+    if request.method == "OPTIONS":
+        return "", 204
+    response, status_code = handle_timezone_request()
+    return response, status_code
+
+@app.route("/api/timezone", methods=["POST", "OPTIONS"])
+@limiter.limit("30 per minute") 
+def api_set_timezone():
+    """Handle timezone setting requests from /api/timezone (for frontend compatibility)"""
     if request.method == "OPTIONS":
         return "", 204
     response, status_code = handle_timezone_request()
