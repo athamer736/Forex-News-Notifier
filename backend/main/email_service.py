@@ -106,8 +106,8 @@ def send_email(to_email: str, subject: str, html_content: str):
 
 def send_verification_email(email: str, token: str):
     """Send a verification email."""
-    # Use the frontend URL (port 3000)
-    verification_url = f"https://fxalert.co.uk:3000/verify/{token}"
+    # Use the frontend URL without specifying port
+    verification_url = f"https://fxalert.co.uk/verify/{token}"
     
     html_content = f"""
     <html>
@@ -262,7 +262,7 @@ def send_daily_update(subscription: EmailSubscription):
                 {''.join(format_event_summary(event) for event in events)}
                 <p style="margin-top: 30px; font-size: 12px; color: #666;">
                     To unsubscribe from these updates, 
-                    <a href="https://fxalert.co.uk:3000/unsubscribe/{subscription.verification_token}">click here</a>
+                    <a href="https://fxalert.co.uk/unsubscribe/{subscription.verification_token}">click here</a>
                 </p>
             </body>
         </html>
@@ -337,7 +337,7 @@ def send_weekly_update(subscription: EmailSubscription):
         html_content += f"""
                 <p style="margin-top: 30px; font-size: 12px; color: #666;">
                     To unsubscribe from these updates, 
-                    <a href="https://fxalert.co.uk:3000/unsubscribe/{subscription.verification_token}">click here</a>
+                    <a href="https://fxalert.co.uk/unsubscribe/{subscription.verification_token}">click here</a>
                 </p>
             </body>
         </html>
