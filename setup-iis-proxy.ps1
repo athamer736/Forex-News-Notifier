@@ -183,12 +183,22 @@ try {
                     <conditions>
                         <add input="{HTTP_HOST}" pattern="^fxalert\.co\.uk$" />
                         <add input="{PATH_INFO}" pattern="^/api" negate="true" />
+                        <add input="{PATH_INFO}" pattern="^/verify" negate="true" />
+                        <add input="{PATH_INFO}" pattern="^/unsubscribe" negate="true" />
                     </conditions>
                     <action type="Rewrite" url="http://localhost:3000/{R:1}" />
                 </rule>
                 <rule name="ReverseProxyToFlask" stopProcessing="true">
                     <match url="^api/(.*)" />
                     <action type="Rewrite" url="http://localhost:5000/{R:1}" />
+                </rule>
+                <rule name="ReverseProxyToFlaskVerify" stopProcessing="true">
+                    <match url="^api/verify/(.*)" />
+                    <action type="Rewrite" url="http://localhost:5000/verify/{R:1}" />
+                </rule>
+                <rule name="ReverseProxyToFlaskUnsubscribe" stopProcessing="true">
+                    <match url="^api/unsubscribe/(.*)" />
+                    <action type="Rewrite" url="http://localhost:5000/unsubscribe/{R:1}" />
                 </rule>
             </rules>
         </rewrite>

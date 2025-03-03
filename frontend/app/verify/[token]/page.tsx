@@ -16,8 +16,8 @@ export default function VerifyPage() {
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
-        const response = await fetch(`${baseUrl}/verify/${token}`, {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk';
+        const response = await fetch(`${baseUrl}/api/verify/${token}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',

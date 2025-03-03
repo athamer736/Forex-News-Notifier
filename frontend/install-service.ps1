@@ -214,7 +214,7 @@ $envString += "SSL_CRT_FILE=$certPath;"
 $envString += "SSL_KEY_FILE=$keyPath;"
 $envString += "NODE_TLS_REJECT_UNAUTHORIZED=1;"  # Enable TLS verification in production
 $envString += "PORT=3000;"
-$envString += "NEXT_PUBLIC_API_URL=https://fxalert.co.uk:5000;"  # Production API URL
+$envString += "NEXT_PUBLIC_API_URL=https://fxalert.co.uk;"  # Production API URL
 $envString += "NEXT_PUBLIC_BASE_URL=https://fxalert.co.uk;"  # Production base URL
 
 # Add other environment variables from .env.production file if it exists

@@ -6,7 +6,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 export class PaymentService {
   static async createStripeSession(amount: number) {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk';
       const response = await fetch(`${baseUrl}/api/create-stripe-session`, {
         method: 'POST',
         headers: {

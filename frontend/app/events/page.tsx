@@ -338,11 +338,17 @@ function EventsPage() {
                 baseUrl = 'https://fxalert.co.uk:5000';
             }
 
+            console.log('Using base URL for events:', baseUrl);
+
             const dateParam = timeRange === 'specific_date' ? `&date=${selectedDate}` : '';
             const currencyParam = selectedCurrencies.length > 0 ? `&currencies=${selectedCurrencies.join(',')}` : '';
             const impactParam = selectedImpacts.length > 0 ? `&impacts=${selectedImpacts.join(',')}` : '';
             
-            const response = await fetch(`${baseUrl}/events?userId=${userId}&time_range=${timeRange}${dateParam}${currencyParam}${impactParam}`, {
+            const url = `${baseUrl}/events?userId=${userId}&time_range=${timeRange}${dateParam}${currencyParam}${impactParam}`;
+            console.log('Fetching events from:', url);
+            
+            const response = await fetch(url, {
+                method: 'GET',
                 mode: 'cors',
                 credentials: 'include',
                 headers: {
@@ -353,20 +359,28 @@ function EventsPage() {
             });
             
             if (!response.ok) {
-                const errorData = await response.json();
-                const errorMessage = errorData.error || 'Failed to fetch events';
-                
-                if (errorMessage.includes('database')) {
-                    throw new Error('Database connection error. Please try again later.');
-                } else if (errorMessage.includes('Rate limit exceeded')) {
-                    const seconds = parseInt(errorMessage.match(/\d+/)[0]);
-                    setRetryTimer(seconds);
-                    throw new Error(`Rate limit exceeded. Retrying in ${seconds} seconds...`);
-                } else if (errorMessage.includes('before February 2, 2025')) {
-                    throw new Error('Sorry, we do not have data from before February 2, 2025');
+                if (response.status === 0 || response.type === 'opaque') {
+                    throw new Error('CORS error: Could not access the API. Please ensure the backend server is running and accessible.');
                 }
                 
-                throw new Error(errorMessage);
+                try {
+                    const errorData = await response.json();
+                    const errorMessage = errorData.error || 'Failed to fetch events';
+                    
+                    if (errorMessage.includes('database')) {
+                        throw new Error('Database connection error. Please try again later.');
+                    } else if (errorMessage.includes('Rate limit exceeded')) {
+                        const seconds = parseInt(errorMessage.match(/\d+/)[0]);
+                        setRetryTimer(seconds);
+                        throw new Error(`Rate limit exceeded. Retrying in ${seconds} seconds...`);
+                    } else if (errorMessage.includes('before February 2, 2025')) {
+                        throw new Error('Sorry, we do not have data from before February 2, 2025');
+                    }
+                    
+                    throw new Error(errorMessage);
+                } catch (jsonError) {
+                    throw new Error(`Server error (${response.status}): ${response.statusText}`);
+                }
             }
             
             const data = await response.json();
@@ -459,13 +473,16 @@ function EventsPage() {
                 
                 console.log('Using base URL:', baseUrl);
 
-                const response = await fetch(`${baseUrl}/timezone`, {
+                const timezoneUrl = `${baseUrl}/api/timezone`;
+                console.log('Setting timezone with URL:', timezoneUrl);
+
+                const response = await fetch(timezoneUrl, {
                     method: 'POST',
                     mode: 'cors',
                     credentials: 'include',
                     headers: {
-                        'Accept': 'application/json',
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'Origin': typeof window !== 'undefined' ? window.location.origin : '',
                     },
                     body: JSON.stringify({
@@ -478,8 +495,17 @@ function EventsPage() {
                 if (!isMounted) return;
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to set timezone: ${errorText}`);
+                    if (response.status === 0 || response.type === 'opaque') {
+                        throw new Error('CORS error: Could not access the timezone API.');
+                    }
+                    
+                    try {
+                        const errorData = await response.json();
+                        throw new Error(`Failed to set timezone: ${errorData.error || 'Unknown error'}`);
+                    } catch (jsonError) {
+                        const errorText = await response.text();
+                        throw new Error(`Failed to set timezone: ${errorText || response.statusText}`);
+                    }
                 }
 
                 const data = await response.json();

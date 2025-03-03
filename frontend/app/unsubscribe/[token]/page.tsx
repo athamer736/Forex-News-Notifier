@@ -16,8 +16,8 @@ export default function UnsubscribePage() {
   useEffect(() => {
     const unsubscribe = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
-        const response = await fetch(`${baseUrl}/unsubscribe/${token}`, {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk';
+        const response = await fetch(`${baseUrl}/api/unsubscribe/${token}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
