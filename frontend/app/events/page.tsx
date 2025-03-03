@@ -332,10 +332,10 @@ function EventsPage() {
                 } else if (window.location.hostname === '192.168.0.144') {
                     baseUrl = 'https://192.168.0.144:5000';
                 } else {
-                    baseUrl = 'https://fxalert.co.uk';
+                    baseUrl = 'https://fxalert.co.uk:5000';
                 }
             } else {
-                baseUrl = 'https://fxalert.co.uk';
+                baseUrl = 'https://fxalert.co.uk:5000';
             }
 
             console.log('Using base URL for events:', baseUrl);
@@ -465,10 +465,10 @@ function EventsPage() {
                     } else if (window.location.hostname === '192.168.0.144') {
                         baseUrl = 'https://192.168.0.144:5000';
                     } else {
-                        baseUrl = 'https://fxalert.co.uk';
+                        baseUrl = 'https://fxalert.co.uk:5000';
                     }
                 } else {
-                    baseUrl = 'https://fxalert.co.uk';
+                    baseUrl = 'https://fxalert.co.uk:5000';
                 }
                 
                 console.log('Using base URL:', baseUrl);

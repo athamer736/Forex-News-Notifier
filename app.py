@@ -135,17 +135,28 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get('Origin')
-    response.headers['Access-Control-Allow-Origin'] = origin if origin else '*'
+    # Always add CORS headers regardless of origin
+    if origin:
+        response.headers['Access-Control-Allow-Origin'] = origin
+    else:
+        response.headers['Access-Control-Allow-Origin'] = '*'
+    
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
     response.headers['Access-Control-Max-Age'] = '3600'
     response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+    
     # Add security headers
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # Handle OPTIONS requests explicitly
+    if request.method == 'OPTIONS':
+        return response
+        
     return response
 
 @app.before_request

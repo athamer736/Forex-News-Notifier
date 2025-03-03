@@ -70,6 +70,15 @@ try:
     # Import Flask app
     logger.info('Importing Flask application...')
     from app import app
+    
+    # Verify CORS configuration
+    if 'flask_cors' not in [m.__name__ for m in app.extensions.values()]:
+        logger.warning('CORS extension not detected in Flask app. Manually adding CORS support...')
+        from flask_cors import CORS
+        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    else:
+        logger.info('CORS extension detected in Flask app')
+    
     logger.info('Flask application imported successfully')
 except Exception as e:
     logger.error('Failed to import Flask application', exc_info=True)
