@@ -176,4 +176,7 @@ def fetch_events():
         return fetch_and_store_events()
     except Exception as e:
         logger.error(f"Error in fetch_events: {str(e)}")
-        return False 
+        return False
+
+# Add at the end of the file
+fetch_forex_events = fetch_events 

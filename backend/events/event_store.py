@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict
 import json
 import os
+import gc
 
 logger = logging.getLogger(__name__)
 
@@ -388,4 +389,51 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
     except Exception as e:
         logger.error(f"Error filtering events: {str(e)}")
         logger.exception(e)
-        return [] 
+        return []
+
+def clean_memory_cache():
+    """Clean up the events cache to free memory."""
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Get the global variables in this module
+        global_vars = globals()
+        
+        # Clear any cache variables if they exist
+        if '_events_cache' in global_vars:
+            logger.info("Clearing events cache")
+            global_vars['_events_cache'] = {}
+            
+        # Force garbage collection
+        collected = gc.collect()
+        logger.info(f"Garbage collection completed, collected {collected} objects")
+        return True
+    except Exception as e:
+        logger.error(f"Error cleaning memory cache: {str(e)}")
+        return False
+
+def save_events_to_cache(events):
+    """Save events to the cache."""
+    logger = logging.getLogger(__name__)
+    try:
+        global _events_cache
+        _events_cache = events
+        logger.info(f"Saved {len(events)} events to cache")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving events to cache: {str(e)}")
+        return False
+
+def get_cached_events():
+    """Get events from the cache."""
+    logger = logging.getLogger(__name__)
+    try:
+        global _events_cache
+        if '_events_cache' in globals() and _events_cache:
+            logger.info(f"Retrieved {len(_events_cache)} events from cache")
+            return _events_cache
+        logger.info("No events found in cache")
+        return None
+    except Exception as e:
+        logger.error(f"Error getting cached events: {str(e)}")
+        return None 

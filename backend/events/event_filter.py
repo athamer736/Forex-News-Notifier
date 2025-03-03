@@ -87,3 +87,5 @@ def filter_events_by_range(events: List[Dict], time_range: TimeRange, user_timez
         logger.error(f"Error filtering events: {str(e)}")
         logger.exception(e)
         return events  # Return original events if filtering fails 
+
+filter_events = filter_events_by_range 
