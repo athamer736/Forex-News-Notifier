@@ -118,7 +118,14 @@ while ($true) {
             Start-Scheduler -scriptPath "scripts\email_scheduler.py" -displayName "Email Scheduler"
         }
         
-        if ($eventSchedulerRunning -and $emailSchedulerRunning) {
+        # Check service restart scheduler
+        $serviceRestartSchedulerRunning = Check-Process -scriptName "service_restart_scheduler.py" -displayName "Service Restart Scheduler"
+        if (!$serviceRestartSchedulerRunning) {
+            Write-Log "Service Restart Scheduler is not running! Attempting to restart..." -level "WARNING"
+            Start-Scheduler -scriptPath "scripts\service_restart_scheduler.py" -displayName "Service Restart Scheduler"
+        }
+        
+        if ($eventSchedulerRunning -and $emailSchedulerRunning -and $serviceRestartSchedulerRunning) {
             if ($verbose) {
                 Write-Log "All schedulers are running correctly" -level "SUCCESS"
             }
