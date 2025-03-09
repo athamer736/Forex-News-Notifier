@@ -657,13 +657,42 @@ function EventsPage() {
 
     const groupEventsByDate = useCallback((events: ForexEvent[]): Record<string, GroupedEvents> => {
         return events.reduce((acc: Record<string, GroupedEvents>, event) => {
+            // Parse the event time
             const date = new Date(event.time);
-            const displayDate = date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            
+            // Format date according to selected timezone
+            let displayDate;
+            
+            try {
+                if (!selectedTimezone || selectedTimezone === 'auto') {
+                    // Use browser's timezone
+                    displayDate = date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } else {
+                    // Use selected timezone
+                    displayDate = date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        timeZone: selectedTimezone
+                    });
+                }
+            } catch (error) {
+                console.error('Error formatting date with timezone:', error);
+                // Fallback to default formatting
+                displayDate = date.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+            
             if (!acc[displayDate]) {
                 acc[displayDate] = {
                     displayDate,
@@ -673,11 +702,47 @@ function EventsPage() {
             acc[displayDate].events.push(event);
             return acc;
         }, {});
-    }, []);
+    }, [selectedTimezone]);
 
     const groupedEventsByDate = useMemo(() => {
         return groupEventsByDate(events);
-    }, [events, groupEventsByDate]);
+    }, [events, groupEventsByDate, selectedTimezone]);
+
+    // Helper function to format event time in the selected timezone
+    const formatEventTime = useCallback((timeString: string) => {
+        // If no timeString provided or invalid, return N/A
+        if (!timeString || !timeString.trim()) {
+            return 'N/A';
+        }
+
+        try {
+            // Parse the event time string to a Date object
+            const eventDate = new Date(timeString);
+            
+            // If the date is invalid, return N/A
+            if (isNaN(eventDate.getTime())) {
+                return 'N/A';
+            }
+
+            // If using 'auto', use the browser's default timezone
+            if (!selectedTimezone || selectedTimezone === 'auto') {
+                return eventDate.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            // For specific timezones, use the Intl API with timezone option
+            return eventDate.toLocaleString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: selectedTimezone
+            });
+        } catch (error) {
+            console.error('Error formatting event time:', error);
+            return 'N/A';
+        }
+    }, [selectedTimezone]);
 
     const TableView = useCallback(() => {
         if (events.length === 0) {
@@ -744,10 +809,7 @@ function EventsPage() {
                                                 }}
                                             >
                                                 <TableCell>
-                                                    {new Date(event.time).toLocaleTimeString([], {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
+                                                    {formatEventTime(event.time)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Chip
@@ -828,7 +890,7 @@ function EventsPage() {
                 </Table>
             </TableContainer>
         );
-    }, [events, groupedEventsByDate, expanded, getImpactColor, handleInfoButtonClick]);
+    }, [events, groupedEventsByDate, expanded, getImpactColor, handleInfoButtonClick, formatEventTime]);
 
     const GridView = () => {
         const groupedEvents = groupEventsByDate(events);
@@ -898,10 +960,7 @@ function EventsPage() {
                                             <CardContent>
                                                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                     <Typography variant="h6" component="div">
-                                                        {new Date(event.time).toLocaleTimeString([], {
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
+                                                        {formatEventTime(event.time)}
                                                     </Typography>
                                                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                                                         <Chip
