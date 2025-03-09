@@ -615,6 +615,17 @@ function EventsPage() {
         event.stopPropagation();
     }, []);
 
+    const handleTimezoneChange = useCallback((event: SelectChangeEvent<string>) => {
+        const value = event.target.value;
+        setSelectedTimezone(value);
+        try {
+            localStorage.setItem('timezone', value);
+            console.log('Saved timezone:', value);
+        } catch (error) {
+            console.error('Error saving timezone:', error);
+        }
+    }, []);
+
     const handleRemoveImpact = useCallback((impactToRemove: string) => {
         setSelectedImpacts(prev => {
             const newImpacts = prev.filter(impact => impact !== impactToRemove);
@@ -1054,7 +1065,7 @@ function EventsPage() {
                 </Box>
             )}
             
-            <Container maxWidth="lg">
+            <Container maxWidth="xl">
                 <motion.div
                     variants={containerVariants}
                     initial="hidden"
@@ -1113,11 +1124,13 @@ function EventsPage() {
                                 borderRadius: 2,
                                 p: 4,
                                 mb: 4,
-                                color: '#000'
+                                color: '#000',
+                                maxWidth: '100%',
+                                overflowX: 'auto'
                             }}
                         >
-                            <Grid container spacing={3} sx={{ mb: 4 }}>
-                                <Grid item xs={12} md={4}>
+                            <Grid container spacing={3} sx={{ mb: 4, flexWrap: 'nowrap', minWidth: { xs: 'auto', lg: '1200px' } }}>
+                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
                                     <FormControl fullWidth sx={{ minWidth: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="time-range-filter-label"
@@ -1157,7 +1170,7 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4}>
+                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
                                     <FormControl fullWidth sx={{ mt: 1 }}>
                                         <InputLabel 
                                             id="currency-filter-label"
@@ -1248,7 +1261,7 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4}>
+                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
                                     <FormControl fullWidth sx={{ mt: 1 }}>
                                         <InputLabel 
                                             id="impact-filter-label"
@@ -1338,23 +1351,78 @@ function EventsPage() {
                                         </Select>
                                     </FormControl>
                                 </Grid>
+
+                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
+                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                        <InputLabel 
+                                            id="timezone-filter-label"
+                                            sx={{ 
+                                                '&.Mui-focused, &.MuiFormLabel-filled': {
+                                                    transform: 'translate(14px, -16px) scale(0.75)'
+                                                }
+                                            }}
+                                        >
+                                            Timezone
+                                        </InputLabel>
+                                        <Select
+                                            labelId="timezone-filter-label"
+                                            label="Timezone"
+                                            value={selectedTimezone}
+                                            onChange={handleTimezoneChange}
+                                            sx={{
+                                                backgroundColor: '#fff',
+                                                height: '56px',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.23)'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.87)'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            }}
+                                            MenuProps={{
+                                                PaperProps: {
+                                                    style: {
+                                                        maxHeight: '300px'
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            {timezoneOptions.map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        {option.FlagComponent && (
+                                                            <Box sx={{ width: '16px', height: '12px', display: 'flex', alignItems: 'center' }}>
+                                                                <option.FlagComponent 
+                                                                    title={option.label} 
+                                                                    className="flag" 
+                                                                />
+                                                            </Box>
+                                                        )}
+                                                        {option.label}
+                                                    </Box>
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
                             </Grid>
 
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, mt: 3 }}>
                                 <IconButton
                                     onClick={() => setViewMode('table')}
-                                    sx={{
-                                        color: viewMode === 'table' ? '#2196F3' : 'rgba(0, 0, 0, 0.54)',
-                                        mr: 1
-                                    }}
+                                    color={viewMode === 'table' ? 'primary' : 'default'}
+                                    aria-label="table view"
+                                    sx={{ mr: 1 }}
                                 >
                                     <TableViewIcon />
                                 </IconButton>
                                 <IconButton
                                     onClick={() => setViewMode('grid')}
-                                    sx={{
-                                        color: viewMode === 'grid' ? '#2196F3' : 'rgba(0, 0, 0, 0.54)'
-                                    }}
+                                    color={viewMode === 'grid' ? 'primary' : 'default'}
+                                    aria-label="grid view"
                                 >
                                     <GridViewIcon />
                                 </IconButton>
