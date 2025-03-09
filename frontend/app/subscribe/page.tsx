@@ -34,6 +34,7 @@ interface SubscriptionForm {
   frequency: 'daily' | 'weekly' | 'both';
   dailyTime: string;
   weeklyDay: string;
+  timezone: string;
 }
 
 interface ApiResponse {
@@ -68,6 +69,19 @@ const weekDays = [
     { value: 'friday', label: 'Friday' },
     { value: 'saturday', label: 'Saturday' },
     { value: 'sunday', label: 'Sunday' }
+];
+
+const timezoneOptions = [
+    { value: 'UTC', label: 'UTC - Coordinated Universal Time' },
+    { value: 'America/New_York', label: 'Eastern Time (ET) - New York' },
+    { value: 'America/Chicago', label: 'Central Time (CT) - Chicago' },
+    { value: 'America/Denver', label: 'Mountain Time (MT) - Denver' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (PT) - Los Angeles' },
+    { value: 'Europe/London', label: 'GMT - London' },
+    { value: 'Europe/Paris', label: 'CET - Paris, Berlin, Rome' },
+    { value: 'Asia/Tokyo', label: 'JST - Tokyo' },
+    { value: 'Asia/Shanghai', label: 'CST - Beijing, Shanghai' },
+    { value: 'Australia/Sydney', label: 'AEST - Sydney' }
 ];
 
 const motionVariants = {
@@ -116,7 +130,8 @@ function SubscribePage() {
         impactLevels: [],
         frequency: 'daily',
         dailyTime: '09:00',
-        weeklyDay: 'monday'
+        weeklyDay: 'monday',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -163,12 +178,15 @@ function SubscribePage() {
             }
 
             setSuccess('Successfully subscribed! Please check your email for confirmation.');
-            setForm(prev => ({
-                ...prev,
+            setForm({
                 email: '',
                 currencies: [],
-                impactLevels: []
-            }));
+                impactLevels: [],
+                frequency: 'daily',
+                dailyTime: '09:00',
+                weeklyDay: 'monday',
+                timezone: form.timezone
+            });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
@@ -393,6 +411,175 @@ function SubscribePage() {
                                         {error && (
                                             <FormHelperText>{error}</FormHelperText>
                                         )}
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
+                                        Email Preferences
+                                    </Typography>
+                                    <Paper sx={{ p: 3, background: 'rgba(255, 255, 255, 0.08)', borderRadius: 2 }}>
+                                        <Grid container spacing={3}>
+                                            <Grid item xs={12} md={4}>
+                                                <FormControl fullWidth>
+                                                    <InputLabel 
+                                                        id="frequency-label"
+                                                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                                    >
+                                                        Email Frequency
+                                                    </InputLabel>
+                                                    <Select
+                                                        labelId="frequency-label"
+                                                        value={form.frequency}
+                                                        onChange={(e) => setForm(prev => ({ 
+                                                            ...prev, 
+                                                            frequency: e.target.value as 'daily' | 'weekly' | 'both' 
+                                                        }))}
+                                                        sx={{
+                                                            color: '#fff',
+                                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: 'rgba(255, 255, 255, 0.3)'
+                                                            },
+                                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: 'rgba(255, 255, 255, 0.5)'
+                                                            },
+                                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: '#2196F3'
+                                                            }
+                                                        }}
+                                                    >
+                                                        <MenuItem value="daily">Daily Updates</MenuItem>
+                                                        <MenuItem value="weekly">Weekly Summary</MenuItem>
+                                                        <MenuItem value="both">Both Daily & Weekly</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            
+                                            {(form.frequency === 'daily' || form.frequency === 'both') && (
+                                                <Grid item xs={12} md={4}>
+                                                    <FormControl fullWidth>
+                                                        <InputLabel 
+                                                            id="daily-time-label"
+                                                            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                                        >
+                                                            Daily Delivery Time
+                                                        </InputLabel>
+                                                        <Select
+                                                            labelId="daily-time-label"
+                                                            value={form.dailyTime}
+                                                            onChange={(e) => setForm(prev => ({ 
+                                                                ...prev, 
+                                                                dailyTime: e.target.value 
+                                                            }))}
+                                                            sx={{
+                                                                color: '#fff',
+                                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255, 255, 255, 0.3)'
+                                                                },
+                                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255, 255, 255, 0.5)'
+                                                                },
+                                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: '#2196F3'
+                                                                }
+                                                            }}
+                                                        >
+                                                            {Array.from({ length: 24 }).map((_, hour) => (
+                                                                <MenuItem key={hour} value={`${hour.toString().padStart(2, '0')}:00`}>
+                                                                    {`${hour}:00`} {hour < 12 ? 'AM' : 'PM'}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+                                                </Grid>
+                                            )}
+                                            
+                                            {(form.frequency === 'weekly' || form.frequency === 'both') && (
+                                                <Grid item xs={12} md={4}>
+                                                    <FormControl fullWidth>
+                                                        <InputLabel 
+                                                            id="weekly-day-label"
+                                                            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                                        >
+                                                            Weekly Delivery Day
+                                                        </InputLabel>
+                                                        <Select
+                                                            labelId="weekly-day-label"
+                                                            value={form.weeklyDay}
+                                                            onChange={(e) => setForm(prev => ({ 
+                                                                ...prev, 
+                                                                weeklyDay: e.target.value 
+                                                            }))}
+                                                            sx={{
+                                                                color: '#fff',
+                                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255, 255, 255, 0.3)'
+                                                                },
+                                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255, 255, 255, 0.5)'
+                                                                },
+                                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: '#2196F3'
+                                                                }
+                                                            }}
+                                                        >
+                                                            {weekDays.map(day => (
+                                                                <MenuItem key={day.value} value={day.value}>
+                                                                    {day.label}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+                                                </Grid>
+                                            )}
+                                        </Grid>
+                                    </Paper>
+                                    <Typography variant="body2" sx={{ mt: 1, color: 'rgba(255, 255, 255, 0.7)', fontStyle: 'italic' }}>
+                                        Daily updates include upcoming events for the next 24 hours. Weekly summaries provide a forecast for the entire week ahead. 
+                                        All times are based on your selected timezone.
+                                    </Typography>
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <FormControl fullWidth>
+                                        <InputLabel 
+                                            id="timezone-label"
+                                            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                        >
+                                            Your Timezone
+                                        </InputLabel>
+                                        <Select
+                                            labelId="timezone-label"
+                                            value={form.timezone}
+                                            onChange={(e) => setForm(prev => ({ 
+                                                ...prev, 
+                                                timezone: e.target.value 
+                                            }))}
+                                            sx={{
+                                                color: '#fff',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.3)'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(255, 255, 255, 0.5)'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#2196F3'
+                                                }
+                                            }}
+                                        >
+                                            <MenuItem value={Intl.DateTimeFormat().resolvedOptions().timeZone}>
+                                                Browser Detected ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+                                            </MenuItem>
+                                            {timezoneOptions.map(tz => (
+                                                <MenuItem key={tz.value} value={tz.value}>
+                                                    {tz.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                        <FormHelperText sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                                            All event times and updates will be sent according to this timezone
+                                        </FormHelperText>
                                     </FormControl>
                                 </Grid>
 
