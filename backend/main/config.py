@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Frontend URL configuration
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fxalert.co.uk')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fxalert.co.uk:3000')
 
 # Remove any trailing slashes
 if FRONTEND_URL.endswith('/'):
