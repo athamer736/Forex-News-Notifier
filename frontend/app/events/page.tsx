@@ -4,7 +4,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover } from '@mui/material';
+import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
 import Image from 'next/image';
@@ -303,7 +303,7 @@ function EventsPage() {
         }
         
         setSelectedDate(newDate);
-        setTimeRange('specific_date');
+        setTimeRange('specific_date'); // Needs to be specific date for the date picker to work, not working currently
         handleClose();
     };
 
@@ -669,6 +669,29 @@ function EventsPage() {
     }, [events, groupEventsByDate]);
 
     const TableView = useCallback(() => {
+        if (events.length === 0) {
+            return (
+                <Paper sx={{ 
+                    mt: 2,
+                    minHeight: '250px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                }}>
+                    <Typography 
+                        variant="h6" 
+                        sx={{ 
+                            color: 'rgba(0, 0, 0, 0.6)',
+                            fontWeight: 500
+                        }}
+                    >
+                        No news available to display
+                    </Typography>
+                </Paper>
+            );
+        }
+
         return (
             <TableContainer component={Paper} sx={{ mt: 2 }}>
                 <Table>
@@ -794,7 +817,7 @@ function EventsPage() {
                 </Table>
             </TableContainer>
         );
-    }, [groupedEventsByDate, expanded, getImpactColor, handleInfoButtonClick]);
+    }, [events, groupedEventsByDate, expanded, getImpactColor, handleInfoButtonClick]);
 
     const GridView = () => {
         const groupedEvents = groupEventsByDate(events);
@@ -1095,8 +1118,20 @@ function EventsPage() {
                         >
                             <Grid container spacing={3} sx={{ mb: 4 }}>
                                 <Grid item xs={12} md={4}>
-                                    <FormControl fullWidth sx={{ minWidth: '100%' }}>
+                                    <FormControl fullWidth sx={{ minWidth: '100%', mt: 1 }}>
+                                        <InputLabel 
+                                            id="time-range-filter-label"
+                                            sx={{ 
+                                                '&.Mui-focused, &.MuiFormLabel-filled': {
+                                                    transform: 'translate(14px, -16px) scale(0.75)'
+                                                }
+                                            }}
+                                        >
+                                            Time Range
+                                        </InputLabel>
                                         <Select
+                                            labelId="time-range-filter-label"
+                                            label="Time Range"
                                             value={timeRange}
                                             onChange={(e) => setTimeRange(e.target.value)}
                                             sx={{
@@ -1123,8 +1158,20 @@ function EventsPage() {
                                 </Grid>
 
                                 <Grid item xs={12} md={4}>
-                                    <FormControl fullWidth>
+                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                        <InputLabel 
+                                            id="currency-filter-label"
+                                            sx={{ 
+                                                '&.Mui-focused, &.MuiFormLabel-filled': {
+                                                    transform: 'translate(14px, -16px) scale(0.75)'
+                                                }
+                                            }}
+                                        >
+                                            Currency Filter
+                                        </InputLabel>
                                         <Select
+                                            labelId="currency-filter-label"
+                                            label="Currency Filter"
                                             multiple
                                             value={selectedCurrencies}
                                             onChange={handleCurrencyChange}
@@ -1136,25 +1183,29 @@ function EventsPage() {
                                                     maxWidth: '100%',
                                                     overflow: 'hidden'
                                                 }}>
-                                                    {selected.map((value) => (
-                                                        <Chip 
-                                                            key={value} 
-                                                            label={value}
-                                                            size="small"
-                                                            sx={{
-                                                                maxWidth: '90px',
-                                                                backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                                                                color: '#2196F3',
-                                                                '& .MuiChip-label': {
-                                                                    whiteSpace: 'nowrap',
-                                                                    overflow: 'hidden',
-                                                                    textOverflow: 'ellipsis',
-                                                                    fontSize: '0.8125rem',
-                                                                    padding: '0 6px'
-                                                                }
-                                                            }}
-                                                        />
-                                                    ))}
+                                                    {selected.length === 0 ? (
+                                                        <Typography sx={{ color: 'text.secondary' }}>Select currencies</Typography>
+                                                    ) : (
+                                                        selected.map((value) => (
+                                                            <Chip 
+                                                                key={value} 
+                                                                label={value}
+                                                                size="small"
+                                                                sx={{
+                                                                    maxWidth: '90px',
+                                                                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                                    color: '#2196F3',
+                                                                    '& .MuiChip-label': {
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis',
+                                                                        fontSize: '0.8125rem',
+                                                                        padding: '0 6px'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        ))
+                                                    )}
                                                 </Box>
                                             )}
                                             sx={{
@@ -1198,8 +1249,20 @@ function EventsPage() {
                                 </Grid>
 
                                 <Grid item xs={12} md={4}>
-                                    <FormControl fullWidth>
+                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                        <InputLabel 
+                                            id="impact-filter-label"
+                                            sx={{ 
+                                                '&.Mui-focused, &.MuiFormLabel-filled': {
+                                                    transform: 'translate(14px, -16px) scale(0.75)'
+                                                }
+                                            }}
+                                        >
+                                            Impact Filter
+                                        </InputLabel>
                                         <Select
+                                            labelId="impact-filter-label"
+                                            label="Impact Filter"
                                             multiple
                                             value={selectedImpacts}
                                             onChange={handleImpactChange}
@@ -1211,25 +1274,29 @@ function EventsPage() {
                                                     maxWidth: '100%',
                                                     overflow: 'hidden'
                                                 }}>
-                                                    {selected.map((value) => (
-                                                        <Chip 
-                                                            key={value} 
-                                                            label={value}
-                                                            size="small"
-                                                            sx={{
-                                                                maxWidth: '90px',
-                                                                backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                                                                color: '#2196F3',
-                                                                '& .MuiChip-label': {
-                                                                    whiteSpace: 'nowrap',
-                                                                    overflow: 'hidden',
-                                                                    textOverflow: 'ellipsis',
-                                                                    fontSize: '0.8125rem',
-                                                                    padding: '0 6px'
-                                                                }
-                                                            }}
-                                                        />
-                                                    ))}
+                                                    {selected.length === 0 ? (
+                                                        <Typography sx={{ color: 'text.secondary' }}>Select impact levels</Typography>
+                                                    ) : (
+                                                        selected.map((value) => (
+                                                            <Chip 
+                                                                key={value} 
+                                                                label={value}
+                                                                size="small"
+                                                                sx={{
+                                                                    maxWidth: '90px',
+                                                                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                                    color: '#2196F3',
+                                                                    '& .MuiChip-label': {
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis',
+                                                                        fontSize: '0.8125rem',
+                                                                        padding: '0 6px'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        ))
+                                                    )}
                                                 </Box>
                                             )}
                                             sx={{
