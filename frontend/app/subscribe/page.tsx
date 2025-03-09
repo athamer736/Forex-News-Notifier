@@ -136,6 +136,11 @@ function SubscribePage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [formErrors, setFormErrors] = useState<{
+        email?: string;
+        currencies?: string;
+        impactLevels?: string;
+    }>({});
 
     const handleCurrencyChange = (event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
@@ -153,11 +158,46 @@ function SubscribePage() {
         }));
     };
 
+    const validateForm = (): boolean => {
+        const errors: {
+            email?: string;
+            currencies?: string;
+            impactLevels?: string;
+        } = {};
+
+        // Validate email
+        if (!form.email) {
+            errors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+            errors.email = 'Please enter a valid email address';
+        }
+
+        // Validate currencies
+        if (!form.currencies.length) {
+            errors.currencies = 'Please select at least one currency';
+        }
+
+        // Validate impact levels
+        if (!form.impactLevels.length) {
+            errors.impactLevels = 'Please select at least one impact level';
+        }
+
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setLoading(true);
         setError(null);
         setSuccess(null);
+        setFormErrors({});
+
+        // Validate form before submitting
+        if (!validateForm()) {
+            setLoading(false);
+            return;
+        }
 
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscribe`, {
@@ -278,8 +318,8 @@ function SubscribePage() {
                                         type="email"
                                         value={form.email}
                                         onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-                                        error={!!error}
-                                        helperText={error}
+                                        error={!!formErrors.email}
+                                        helperText={formErrors.email}
                                         required
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
@@ -307,7 +347,7 @@ function SubscribePage() {
                                 <Grid item xs={12}>
                                     <FormControl 
                                         fullWidth 
-                                        error={!!error}
+                                        error={!!formErrors.currencies}
                                     >
                                         <InputLabel 
                                             id="currency-label"
@@ -353,8 +393,8 @@ function SubscribePage() {
                                                 </MenuItem>
                                             ))}
                                         </Select>
-                                        {error && (
-                                            <FormHelperText>{error}</FormHelperText>
+                                        {formErrors.currencies && (
+                                            <FormHelperText>{formErrors.currencies}</FormHelperText>
                                         )}
                                     </FormControl>
                                 </Grid>
@@ -362,7 +402,7 @@ function SubscribePage() {
                                 <Grid item xs={12}>
                                     <FormControl 
                                         fullWidth
-                                        error={!!error}
+                                        error={!!formErrors.impactLevels}
                                     >
                                         <InputLabel 
                                             id="impact-label"
@@ -408,8 +448,8 @@ function SubscribePage() {
                                                 </MenuItem>
                                             ))}
                                         </Select>
-                                        {error && (
-                                            <FormHelperText>{error}</FormHelperText>
+                                        {formErrors.impactLevels && (
+                                            <FormHelperText>{formErrors.impactLevels}</FormHelperText>
                                         )}
                                     </FormControl>
                                 </Grid>
