@@ -17,7 +17,7 @@ export default function UnsubscribePage() {
     const unsubscribe = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk';
-        const response = await fetch(`${baseUrl}/api/unsubscribe/${token}`, {
+        const response = await fetch(`${baseUrl}/unsubscribe/${token}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -32,11 +32,13 @@ export default function UnsubscribePage() {
         } else {
           const data = await response.json();
           setStatus('error');
-          setMessage(data.error || 'Failed to unsubscribe. Please try again or contact support.');
+          setMessage((data.error || 'Failed to unsubscribe. Please try again.') + 
+            ' If you continue to experience issues, please contact us at fxalerts736@gmail.com');
         }
       } catch (error) {
         setStatus('error');
-        setMessage('An error occurred while processing your request. Please try again.');
+        setMessage('An error occurred while processing your request. Please try again. ' +
+          'If the problem persists, please contact us at fxalerts736@gmail.com');
       }
     };
 
