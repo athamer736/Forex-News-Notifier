@@ -78,57 +78,88 @@ def handle_subscription_request() -> Tuple[Dict, int]:
 def handle_verification_request(token: str) -> Tuple[Dict, int]:
     """Handle subscription verification."""
     try:
+        if not token or len(token) < 10:  # Basic validation
+            logger.error(f"Invalid token format: {token}")
+            return render_template('verify.html', 
+                success=False, 
+                error='Invalid verification token format. Please check the link in your email.'
+            ), 400
+            
         subscription = EmailSubscription.query.filter_by(
             verification_token=token,
             is_verified=False
         ).first()
         
         if not subscription:
+            # Check if the subscription exists but is already verified
+            already_verified = EmailSubscription.query.filter(
+                EmailSubscription.verification_token == token
+            ).first()
+            
+            if already_verified and already_verified.is_verified:
+                logger.info(f"Token already verified: {token}")
+                return render_template('verify.html', 
+                    success=True,
+                    message='Your email is already verified. You are all set to receive updates!'
+                ), 200
+            
+            logger.error(f"Token not found: {token}")
             return render_template('verify.html', 
                 success=False, 
-                error='Invalid or expired verification token'
+                error='Invalid or expired verification token. The link may have expired or been used already.'
             ), 400
         
         subscription.is_verified = True
         subscription.verification_token = None
         db_session.commit()
         
+        logger.info(f"Successfully verified subscription for: {subscription.email}")
         return render_template('verify.html', 
             success=True
         ), 200
         
     except Exception as e:
-        logger.exception("Error verifying subscription")
+        logger.exception(f"Error verifying subscription with token: {token}")
         db_session.rollback()
         return render_template('verify.html', 
             success=False, 
-            error='An error occurred while verifying your subscription'
+            error='An error occurred while verifying your subscription. Please contact us at fxalerts736@gmail.co.uk for assistance.'
         ), 500
 
 def handle_unsubscribe_request(token: str) -> Tuple[Dict, int]:
     """Handle unsubscribe requests."""
     try:
+        if not token or len(token) < 10:  # Basic validation
+            logger.error(f"Invalid unsubscribe token format: {token}")
+            return render_template('unsubscribe.html', 
+                success=False, 
+                error='Invalid unsubscribe token format. Please check the link in your email.'
+            ), 400
+            
         subscription = EmailSubscription.query.filter_by(
             verification_token=token
         ).first()
         
         if not subscription:
+            logger.error(f"Unsubscribe token not found: {token}")
             return render_template('unsubscribe.html', 
                 success=False, 
-                error='Invalid unsubscribe token'
+                error='Invalid unsubscribe token. The link may have expired or been used already.'
             ), 400
         
+        email = subscription.email  # Save email for logging
         db_session.delete(subscription)
         db_session.commit()
         
+        logger.info(f"Successfully unsubscribed: {email}")
         return render_template('unsubscribe.html', 
             success=True
         ), 200
         
     except Exception as e:
-        logger.exception("Error handling unsubscribe request")
+        logger.exception(f"Error handling unsubscribe request with token: {token}")
         db_session.rollback()
         return render_template('unsubscribe.html', 
             success=False, 
-            error='An error occurred while processing your unsubscribe request'
+            error='An error occurred while processing your unsubscribe request. Please contact us at fxalerts736@gmail.com for assistance.'
         ), 500 

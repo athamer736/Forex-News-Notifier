@@ -50,7 +50,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // Use the origin or the NEXT_PUBLIC_BASE_URL with port 3000
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || origin;
+    console.log('Using base URL for success/cancel:', baseUrl);
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -72,6 +74,8 @@ export async function POST(req: Request) {
       cancel_url: `${baseUrl}/donate?canceled=true`,
     });
 
+    console.log('Stripe session created:', session.id);
+    
     return new Response(
       JSON.stringify({ id: session.id }),
       {

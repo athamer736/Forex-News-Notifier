@@ -241,6 +241,178 @@ def unsubscribe(token):
     response, status_code = handle_unsubscribe_request(token)
     return response, status_code
 
+# Payment endpoints
+@app.route("/payment/create-stripe-session", methods=["POST", "OPTIONS"])
+@limiter.limit("20 per minute")
+def create_stripe_session():
+    """Handle Stripe session creation"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data or 'amount' not in data:
+            return {"error": "Missing amount parameter"}, 400
+        
+        amount = data['amount']
+        
+        # Check if STRIPE_SECRET_KEY is defined
+        stripe_secret_key = os.environ.get('STRIPE_SECRET_KEY')
+        if not stripe_secret_key:
+            logger.error("STRIPE_SECRET_KEY is not defined in environment variables")
+            return {"error": "Payment configuration error"}, 500
+            
+        # Import Stripe
+        import stripe
+        stripe.api_key = stripe_secret_key
+        
+        # Create a Stripe Checkout Session
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://fxalert.co.uk:3000')
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': 'Donation to Forex News Notifier',
+                            'description': 'Thank you for supporting our project!',
+                        },
+                        'unit_amount': int(float(amount) * 100),  # Convert to cents
+                    },
+                    'quantity': 1,
+                },
+            ],
+            mode='payment',
+            success_url=f"{frontend_url}/donate?success=true",
+            cancel_url=f"{frontend_url}/donate?canceled=true",
+        )
+        
+        logger.info(f"Stripe session created: {session.id}")
+        return {"id": session.id}, 200
+        
+    except Exception as e:
+        logger.exception(f"Error creating Stripe session: {str(e)}")
+        return {"error": str(e)}, 500
+
+@app.route("/payment/create-paypal-order", methods=["POST", "OPTIONS"])
+@limiter.limit("20 per minute")
+def create_paypal_order():
+    """Handle PayPal order creation"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data or 'amount' not in data:
+            return {"error": "Missing amount parameter"}, 400
+        
+        amount = data['amount']
+        
+        # Check if PayPal credentials are defined
+        paypal_client_id = os.environ.get('PAYPAL_CLIENT_ID')
+        paypal_client_secret = os.environ.get('PAYPAL_CLIENT_SECRET')
+        paypal_api_url = os.environ.get('PAYPAL_API_URL', 'https://api-m.paypal.com')
+        
+        if not paypal_client_id or not paypal_client_secret:
+            logger.error("PayPal credentials are not defined in environment variables")
+            return {"error": "Payment configuration error"}, 500
+        
+        # Create PayPal order
+        import base64
+        import requests
+        
+        auth = base64.b64encode(f"{paypal_client_id}:{paypal_client_secret}".encode()).decode()
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {auth}"
+        }
+        
+        payload = {
+            "intent": "CAPTURE",
+            "purchase_units": [
+                {
+                    "amount": {
+                        "currency_code": "USD",
+                        "value": str(float(amount))
+                    },
+                    "description": "Donation to Forex News Notifier"
+                }
+            ]
+        }
+        
+        response = requests.post(
+            f"{paypal_api_url}/v2/checkout/orders",
+            headers=headers,
+            json=payload
+        )
+        
+        if response.status_code != 201:
+            logger.error(f"PayPal API error: {response.status_code}, {response.text}")
+            return {"error": "Failed to create PayPal order"}, 500
+        
+        order_data = response.json()
+        logger.info(f"PayPal order created: {order_data['id']}")
+        
+        return order_data, 200
+        
+    except Exception as e:
+        logger.exception(f"Error creating PayPal order: {str(e)}")
+        return {"error": str(e)}, 500
+
+@app.route("/payment/capture-paypal-order", methods=["POST", "OPTIONS"])
+@limiter.limit("20 per minute")
+def capture_paypal_order():
+    """Handle PayPal order capture"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data or 'orderId' not in data:
+            return {"error": "Missing orderId parameter"}, 400
+        
+        order_id = data['orderId']
+        
+        # Check if PayPal credentials are defined
+        paypal_client_id = os.environ.get('PAYPAL_CLIENT_ID')
+        paypal_client_secret = os.environ.get('PAYPAL_CLIENT_SECRET')
+        paypal_api_url = os.environ.get('PAYPAL_API_URL', 'https://api-m.paypal.com')
+        
+        if not paypal_client_id or not paypal_client_secret:
+            logger.error("PayPal credentials are not defined in environment variables")
+            return {"error": "Payment configuration error"}, 500
+        
+        # Capture PayPal order
+        import base64
+        import requests
+        
+        auth = base64.b64encode(f"{paypal_client_id}:{paypal_client_secret}".encode()).decode()
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {auth}"
+        }
+        
+        response = requests.post(
+            f"{paypal_api_url}/v2/checkout/orders/{order_id}/capture",
+            headers=headers
+        )
+        
+        if response.status_code not in [200, 201]:
+            logger.error(f"PayPal API error: {response.status_code}, {response.text}")
+            return {"error": "Failed to capture PayPal payment"}, 500
+        
+        capture_data = response.json()
+        logger.info(f"PayPal payment captured: {order_id}")
+        
+        return capture_data, 200
+        
+    except Exception as e:
+        logger.exception(f"Error capturing PayPal payment: {str(e)}")
+        return {"error": str(e)}, 500
+
 # Error handlers
 @app.errorhandler(429)
 def ratelimit_handler(e):
