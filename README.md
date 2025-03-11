@@ -115,12 +115,12 @@ The application will be available at:
   - Volatility expectations and key price levels
   - Updated every 4 hours for high-impact USD/GBP events
   - Weekly refreshes to maintain accuracy
-
-### Planned Features
 - Email Notifications:
   - Customizable news selection
   - Flexible notification schedules (weekly/daily)
   - Local time-based notifications (e.g., 07:30 AM daily)
+    
+### Planned Features
 - Mobile Application with push notifications
 
 ## System Requirements
