@@ -413,6 +413,127 @@ def capture_paypal_order():
         logger.exception(f"Error capturing PayPal payment: {str(e)}")
         return {"error": str(e)}, 500
 
+# Contact form endpoint
+@app.route("/contact", methods=["POST", "OPTIONS"])
+@limiter.limit("10 per hour")  # Rate limit contact submissions
+def handle_contact_form():
+    """Process contact form submissions"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return {"error": "No data provided"}, 400
+            
+        # Validate required fields
+        required_fields = ['name', 'email', 'message']
+        for field in required_fields:
+            if field not in data or not data[field].strip():
+                return {"error": f"Missing required field: {field}"}, 400
+        
+        # Extract form data
+        name = data.get('name')
+        email = data.get('email')
+        subject = data.get('subject', 'Contact Form Submission')
+        message = data.get('message')
+        
+        # Basic email validation
+        import re
+        email_regex = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+        if not email_regex.match(email):
+            return {"error": "Invalid email address"}, 400
+            
+        # Create email content
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import smtplib
+        
+        # Get SMTP settings
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        smtp_user = os.environ.get('SMTP_USER')
+        smtp_password = os.environ.get('SMTP_PASSWORD')
+        
+        if not all([smtp_host, smtp_user, smtp_password]):
+            logger.error("Missing SMTP configuration for contact form")
+            return {"error": "Server configuration error"}, 500
+            
+        # Create email
+        recipient_email = smtp_user  # Send to the same email used for SMTP
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"FXALERT Contact: {subject}"
+        msg['From'] = smtp_user
+        msg['To'] = recipient_email
+        
+        html_content = f"""
+        <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; }}
+                    h1 {{ color: #2196F3; }}
+                    .field {{ margin-bottom: 20px; }}
+                    .label {{ font-weight: bold; }}
+                    .value {{ margin-top: 5px; }}
+                    .footer {{ margin-top: 30px; font-size: 12px; color: #777; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Contact Form Submission</h1>
+                    
+                    <div class="field">
+                        <div class="label">Name:</div>
+                        <div class="value">{name}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Email:</div>
+                        <div class="value">{email}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Subject:</div>
+                        <div class="value">{subject}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Message:</div>
+                        <div class="value">{message}</div>
+                    </div>
+                    
+                    <div class="footer">
+                        This email was sent from the FXALERT contact form.
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        html_part = MIMEText(html_content, 'html')
+        msg.attach(html_part)
+        
+        # Send email
+        try:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+            server.quit()
+            
+            logger.info(f"Contact form submission from {email} successfully processed")
+            return {"success": True, "message": "Your message has been sent successfully!"}, 200
+            
+        except Exception as e:
+            logger.error(f"Error sending contact form email: {str(e)}")
+            return {"error": "Failed to send email, please try again later"}, 500
+        
+    except Exception as e:
+        logger.exception(f"Error processing contact form: {str(e)}")
+        return {"error": "Server error processing your request"}, 500
+
 # Error handlers
 @app.errorhandler(429)
 def ratelimit_handler(e):
