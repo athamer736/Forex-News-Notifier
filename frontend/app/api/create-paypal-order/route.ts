@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 
 export async function POST(req: Request) {
+  const headersList = headers();
+  const origin = headersList.get('origin') || 'https://fxalert.co.uk:3000';
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': origin,
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Credentials': 'true',
       }
     });
   }
@@ -22,9 +27,10 @@ export async function POST(req: Request) {
         { 
           status: 400,
           headers: {
-            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': origin,
             'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Credentials': 'true',
           }
         }
       );
@@ -70,21 +76,26 @@ export async function POST(req: Request) {
 
     return NextResponse.json(data, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': origin,
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Credentials': 'true',
       }
     });
   } catch (error) {
     console.error('PayPal order creation error:', error);
+    const headersList = headers();
+    const origin = headersList.get('origin') || 'https://fxalert.co.uk:3000';
+    
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create PayPal order' },
       { 
         status: 500,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': origin,
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Credentials': 'true',
         }
       }
     );

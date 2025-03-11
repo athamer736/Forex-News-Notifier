@@ -277,6 +277,30 @@ const HomePage = () => {
                 Donate
               </Button>
             </motion.div>
+
+            <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => router.push('/about')}
+                sx={{
+                  px: 4,
+                  py: 2,
+                  borderRadius: 2,
+                  borderColor: '#2196F3',
+                  color: '#2196F3',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  fontSize: '1.1rem',
+                  '&:hover': {
+                    borderColor: '#1976D2',
+                    background: 'rgba(33, 150, 243, 0.1)'
+                  }
+                }}
+              >
+                About Us
+              </Button>
+            </motion.div>
           </motion.div>
         </motion.div>
       </Container>

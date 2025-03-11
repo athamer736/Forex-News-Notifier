@@ -241,6 +241,299 @@ def unsubscribe(token):
     response, status_code = handle_unsubscribe_request(token)
     return response, status_code
 
+# Payment endpoints
+@app.route("/payment/create-stripe-session", methods=["POST", "OPTIONS"])
+@limiter.limit("20 per minute")
+def create_stripe_session():
+    """Handle Stripe session creation"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data or 'amount' not in data:
+            return {"error": "Missing amount parameter"}, 400
+        
+        amount = data['amount']
+        
+        # Check if STRIPE_SECRET_KEY is defined
+        stripe_secret_key = os.environ.get('STRIPE_SECRET_KEY')
+        if not stripe_secret_key:
+            logger.error("STRIPE_SECRET_KEY is not defined in environment variables")
+            return {"error": "Payment configuration error"}, 500
+            
+        # Import Stripe
+        import stripe
+        stripe.api_key = stripe_secret_key
+        
+        # Create a Stripe Checkout Session
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://fxalert.co.uk:3000')
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': 'Donation to Forex News Notifier',
+                            'description': 'Thank you for supporting our project!',
+                        },
+                        'unit_amount': int(float(amount) * 100),  # Convert to cents
+                    },
+                    'quantity': 1,
+                },
+            ],
+            mode='payment',
+            success_url=f"{frontend_url}/donate?success=true",
+            cancel_url=f"{frontend_url}/donate?canceled=true",
+        )
+        
+        logger.info(f"Stripe session created: {session.id}")
+        return {"id": session.id}, 200
+        
+    except Exception as e:
+        logger.exception(f"Error creating Stripe session: {str(e)}")
+        return {"error": str(e)}, 500
+
+@app.route("/payment/create-paypal-order", methods=["POST", "OPTIONS"])
+@limiter.limit("20 per minute")
+def create_paypal_order():
+    """Handle PayPal order creation"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data or 'amount' not in data:
+            return {"error": "Missing amount parameter"}, 400
+        
+        amount = data['amount']
+        
+        # Check if PayPal credentials are defined
+        paypal_client_id = os.environ.get('PAYPAL_CLIENT_ID')
+        paypal_client_secret = os.environ.get('PAYPAL_CLIENT_SECRET')
+        paypal_api_url = os.environ.get('PAYPAL_API_URL', 'https://api-m.paypal.com')
+        
+        if not paypal_client_id or not paypal_client_secret:
+            logger.error("PayPal credentials are not defined in environment variables")
+            return {"error": "Payment configuration error"}, 500
+        
+        # Create PayPal order
+        import base64
+        import requests
+        
+        auth = base64.b64encode(f"{paypal_client_id}:{paypal_client_secret}".encode()).decode()
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {auth}"
+        }
+        
+        payload = {
+            "intent": "CAPTURE",
+            "purchase_units": [
+                {
+                    "amount": {
+                        "currency_code": "USD",
+                        "value": str(float(amount))
+                    },
+                    "description": "Donation to Forex News Notifier"
+                }
+            ]
+        }
+        
+        response = requests.post(
+            f"{paypal_api_url}/v2/checkout/orders",
+            headers=headers,
+            json=payload
+        )
+        
+        if response.status_code != 201:
+            logger.error(f"PayPal API error: {response.status_code}, {response.text}")
+            return {"error": "Failed to create PayPal order"}, 500
+        
+        order_data = response.json()
+        logger.info(f"PayPal order created: {order_data['id']}")
+        
+        return order_data, 200
+        
+    except Exception as e:
+        logger.exception(f"Error creating PayPal order: {str(e)}")
+        return {"error": str(e)}, 500
+
+@app.route("/payment/capture-paypal-order", methods=["POST", "OPTIONS"])
+@limiter.limit("20 per minute")
+def capture_paypal_order():
+    """Handle PayPal order capture"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data or 'orderId' not in data:
+            return {"error": "Missing orderId parameter"}, 400
+        
+        order_id = data['orderId']
+        
+        # Check if PayPal credentials are defined
+        paypal_client_id = os.environ.get('PAYPAL_CLIENT_ID')
+        paypal_client_secret = os.environ.get('PAYPAL_CLIENT_SECRET')
+        paypal_api_url = os.environ.get('PAYPAL_API_URL', 'https://api-m.paypal.com')
+        
+        if not paypal_client_id or not paypal_client_secret:
+            logger.error("PayPal credentials are not defined in environment variables")
+            return {"error": "Payment configuration error"}, 500
+        
+        # Capture PayPal order
+        import base64
+        import requests
+        
+        auth = base64.b64encode(f"{paypal_client_id}:{paypal_client_secret}".encode()).decode()
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {auth}"
+        }
+        
+        response = requests.post(
+            f"{paypal_api_url}/v2/checkout/orders/{order_id}/capture",
+            headers=headers
+        )
+        
+        if response.status_code not in [200, 201]:
+            logger.error(f"PayPal API error: {response.status_code}, {response.text}")
+            return {"error": "Failed to capture PayPal payment"}, 500
+        
+        capture_data = response.json()
+        logger.info(f"PayPal payment captured: {order_id}")
+        
+        return capture_data, 200
+        
+    except Exception as e:
+        logger.exception(f"Error capturing PayPal payment: {str(e)}")
+        return {"error": str(e)}, 500
+
+# Contact form endpoint
+@app.route("/contact", methods=["POST", "OPTIONS"])
+@limiter.limit("10 per hour")  # Rate limit contact submissions
+def handle_contact_form():
+    """Process contact form submissions"""
+    if request.method == "OPTIONS":
+        return "", 204
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return {"error": "No data provided"}, 400
+            
+        # Validate required fields
+        required_fields = ['name', 'email', 'message']
+        for field in required_fields:
+            if field not in data or not data[field].strip():
+                return {"error": f"Missing required field: {field}"}, 400
+        
+        # Extract form data
+        name = data.get('name')
+        email = data.get('email')
+        subject = data.get('subject', 'Contact Form Submission')
+        message = data.get('message')
+        
+        # Basic email validation
+        import re
+        email_regex = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+        if not email_regex.match(email):
+            return {"error": "Invalid email address"}, 400
+            
+        # Create email content
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import smtplib
+        
+        # Get SMTP settings
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        smtp_user = os.environ.get('SMTP_USER')
+        smtp_password = os.environ.get('SMTP_PASSWORD')
+        
+        if not all([smtp_host, smtp_user, smtp_password]):
+            logger.error("Missing SMTP configuration for contact form")
+            return {"error": "Server configuration error"}, 500
+            
+        # Create email
+        recipient_email = smtp_user  # Send to the same email used for SMTP
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"FXALERT Contact: {subject}"
+        msg['From'] = smtp_user
+        msg['To'] = recipient_email
+        
+        html_content = f"""
+        <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; }}
+                    h1 {{ color: #2196F3; }}
+                    .field {{ margin-bottom: 20px; }}
+                    .label {{ font-weight: bold; }}
+                    .value {{ margin-top: 5px; }}
+                    .footer {{ margin-top: 30px; font-size: 12px; color: #777; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Contact Form Submission</h1>
+                    
+                    <div class="field">
+                        <div class="label">Name:</div>
+                        <div class="value">{name}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Email:</div>
+                        <div class="value">{email}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Subject:</div>
+                        <div class="value">{subject}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Message:</div>
+                        <div class="value">{message}</div>
+                    </div>
+                    
+                    <div class="footer">
+                        This email was sent from the FXALERT contact form.
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        html_part = MIMEText(html_content, 'html')
+        msg.attach(html_part)
+        
+        # Send email
+        try:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+            server.quit()
+            
+            logger.info(f"Contact form submission from {email} successfully processed")
+            return {"success": True, "message": "Your message has been sent successfully!"}, 200
+            
+        except Exception as e:
+            logger.error(f"Error sending contact form email: {str(e)}")
+            return {"error": "Failed to send email, please try again later"}, 500
+        
+    except Exception as e:
+        logger.exception(f"Error processing contact form: {str(e)}")
+        return {"error": "Server error processing your request"}, 500
+
 # Error handlers
 @app.errorhandler(429)
 def ratelimit_handler(e):

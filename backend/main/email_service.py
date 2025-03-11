@@ -113,12 +113,72 @@ def send_verification_email(email: str, token: str):
     
     html_content = f"""
     <html>
+        <head>
+            <style>
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    color: #e0e0e0;
+                    background-color: #1a1a1a;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                    border-radius: 12px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }}
+                .header {{
+                    text-align: center;
+                    padding: 20px 0;
+                }}
+                h1, h2 {{
+                    color: #2196F3;
+                    text-align: center;
+                }}
+                p {{
+                    line-height: 1.6;
+                    margin: 12px 0;
+                }}
+                .button {{
+                    display: inline-block;
+                    background: linear-gradient(45deg, #2196F3 30%, #21CBF3 90%);
+                    color: white;
+                    text-decoration: none;
+                    padding: 12px 24px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                }}
+                a {{
+                    color: #2196F3;
+                }}
+            </style>
+        </head>
         <body>
-            <h2>Verify Your Email</h2>
-            <p>Thank you for subscribing to Forex News Notifier!</p>
-            <p>Please click the link below to verify your email address:</p>
-            <p><a href="{verification_url}">Verify Email</a></p>
-            <p>If you didn't request this subscription, you can ignore this email.</p>
+            <div class="container">
+                <div class="header">
+                    <h1>Forex News Notifier</h1>
+                </div>
+                <h2>Verify Your Email</h2>
+                <p>Thank you for subscribing to Forex News Notifier!</p>
+                <p>Please click the button below to verify your email address:</p>
+                <div style="text-align: center;">
+                    <a href="{verification_url}" class="button">Verify Email</a>
+                </div>
+                <p>If you didn't request this subscription, you can ignore this email.</p>
+                <div class="footer">
+                    <p>© Forex News Notifier. All rights reserved.</p>
+                </div>
+            </div>
         </body>
     </html>
     """
@@ -152,18 +212,18 @@ def format_event_summary(event: Dict) -> str:
     summary_section = ""
     if ai_summary:
         summary_section = f"""
-        <div style="margin: 15px 0; padding: 20px; background: linear-gradient(145deg, #1a237e05 0%, #0d47a110 100%); border: 1px solid #1a237e20; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="margin-bottom: 10px; font-weight: 600; color: #1a237e; font-size: 14px;">
+        <div style="margin: 15px 0; padding: 20px; background: rgba(33, 150, 243, 0.1); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="margin-bottom: 10px; font-weight: 600; color: #2196F3; font-size: 14px;">
                 🤖 AI Market Analysis
             </div>
-            <div style="font-size: 14px; color: #333; line-height: 1.6; white-space: pre-line;">
+            <div style="font-size: 14px; color: #e0e0e0; line-height: 1.6; white-space: pre-line;">
                 {ai_summary}
             </div>
         </div>
         """
     
     return f"""
-    <div style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
+    <div style="margin-bottom: 25px; padding: 20px; background: #2d2d2d; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1);">
         <div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <span style="background-color: {impact_colors.get(event['impact'], '#424242')}; 
@@ -175,8 +235,8 @@ def format_event_summary(event: Dict) -> str:
                            margin-right: 8px;">
                     {event.get('impact', 'Unknown')}
                 </span>
-                <span style="background-color: #e3f2fd; 
-                           color: #1976d2; 
+                <span style="background-color: rgba(33, 150, 243, 0.2); 
+                           color: #2196F3; 
                            padding: 4px 12px; 
                            border-radius: 20px; 
                            font-size: 12px;
@@ -184,23 +244,23 @@ def format_event_summary(event: Dict) -> str:
                     {event.get('currency', 'Unknown')}
                 </span>
             </div>
-            <div style="color: #666; font-size: 14px;">
+            <div style="color: #e0e0e0; font-size: 14px;">
                 {event_time.strftime('%I:%M %p') if isinstance(event_time, datetime) else 'Time N/A'}
             </div>
         </div>
         
-        <div style="font-weight: 600; font-size: 16px; margin-bottom: 12px; color: #333;">
+        <div style="font-weight: 600; font-size: 16px; margin-bottom: 12px; color: #fff;">
             {event_title}
         </div>
         
         <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-            <div style="flex: 1; padding: 8px; background: #f5f5f5; border-radius: 8px;">
-                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Forecast</div>
-                <div style="font-size: 14px; color: #333;">{event.get('forecast', 'N/A')}</div>
+            <div style="flex: 1; padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Forecast</div>
+                <div style="font-size: 14px; color: #e0e0e0;">{event.get('forecast', 'N/A')}</div>
             </div>
-            <div style="flex: 1; padding: 8px; background: #f5f5f5; border-radius: 8px;">
-                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Previous</div>
-                <div style="font-size: 14px; color: #333;">{event.get('previous', 'N/A')}</div>
+            <div style="flex: 1; padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Previous</div>
+                <div style="font-size: 14px; color: #e0e0e0;">{event.get('previous', 'N/A')}</div>
             </div>
         </div>
         
@@ -258,14 +318,70 @@ def send_daily_update(subscription: EmailSubscription):
         # Create email content
         html_content = f"""
         <html>
+            <head>
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        color: #e0e0e0;
+                        background-color: #1a1a1a;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        border-radius: 12px;
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                    }}
+                    .header {{
+                        text-align: center;
+                        padding: 20px 0;
+                    }}
+                    h1, h2 {{
+                        color: #2196F3;
+                    }}
+                    h1 {{
+                        font-size: 28px;
+                        text-align: center;
+                    }}
+                    h2 {{
+                        font-size: 24px;
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }}
+                    p {{
+                        line-height: 1.6;
+                        margin: 12px 0;
+                    }}
+                    .footer {{
+                        margin-top: 30px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #666;
+                    }}
+                    a {{
+                        color: #2196F3;
+                    }}
+                </style>
+            </head>
             <body>
-                <h2>Your Daily Forex News Update</h2>
-                <p>Here are today's important forex events for your selected currencies:</p>
-                {''.join(format_event_summary(event) for event in events)}
-                <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                    To unsubscribe from these updates, 
-                    <a href="{FRONTEND_URL}/unsubscribe/{subscription.verification_token}">click here</a>
-                </p>
+                <div class="container">
+                    <div class="header">
+                        <h1>Forex News Notifier</h1>
+                    </div>
+                    <h2>Your Daily Forex News Update</h2>
+                    <p>Here are today's important forex events for your selected currencies:</p>
+                    {''.join(format_event_summary(event) for event in events)}
+                    <div class="footer">
+                        <p>
+                            To unsubscribe from these updates, 
+                            <a href="{FRONTEND_URL}/unsubscribe/{subscription.verification_token}">click here</a>
+                        </p>
+                        <p>© Forex News Notifier. All rights reserved.</p>
+                    </div>
+                </div>
             </body>
         </html>
         """
@@ -320,9 +436,65 @@ def send_weekly_update(subscription: EmailSubscription):
         # Create email content
         html_content = """
         <html>
+            <head>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        color: #e0e0e0;
+                        background-color: #1a1a1a;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        border-radius: 12px;
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                    }
+                    .header {
+                        text-align: center;
+                        padding: 20px 0;
+                    }
+                    h1, h2, h3 {
+                        color: #2196F3;
+                    }
+                    h1 {
+                        font-size: 28px;
+                        text-align: center;
+                    }
+                    h2 {
+                        font-size: 24px;
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    h3 {
+                        font-size: 20px;
+                        margin-top: 30px;
+                    }
+                    p {
+                        line-height: 1.6;
+                        margin: 12px 0;
+                    }
+                    .footer {
+                        margin-top: 30px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #666;
+                    }
+                    a {
+                        color: #2196F3;
+                    }
+                </style>
+            </head>
             <body>
-                <h2>Your Weekly Forex News Summary</h2>
-                <p>Here are the important forex events for the upcoming week:</p>
+                <div class="container">
+                    <div class="header">
+                        <h1>Forex News Notifier</h1>
+                    </div>
+                    <h2>Your Weekly Forex News Summary</h2>
+                    <p>Here are the important forex events for the upcoming week:</p>
         """
         
         for day_key in sorted(events_by_day.keys()):
@@ -330,17 +502,21 @@ def send_weekly_update(subscription: EmailSubscription):
             day_date = datetime.strptime(day_key, '%Y-%m-%d')
             
             html_content += f"""
-                <h3 style="margin-top: 30px; color: #1976d2;">
+                <h3>
                     {day_date.strftime('%A, %B %d')}
                 </h3>
                 {''.join(format_event_summary(event) for event in sorted(day_events, key=lambda x: x['time']))}
             """
         
         html_content += f"""
-                <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                    To unsubscribe from these updates, 
-                    <a href="{FRONTEND_URL}/unsubscribe/{subscription.verification_token}">click here</a>
-                </p>
+                    <div class="footer">
+                        <p>
+                            To unsubscribe from these updates, 
+                            <a href="{FRONTEND_URL}/unsubscribe/{subscription.verification_token}">click here</a>
+                        </p>
+                        <p>© Forex News Notifier. All rights reserved.</p>
+                    </div>
+                </div>
             </body>
         </html>
         """
