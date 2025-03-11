@@ -25,8 +25,8 @@ const Footer = () => {
         py: 6,
         px: 2,
         mt: 'auto',
-        backgroundColor: 'rgba(10, 10, 10, 0.9)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderTop: '3px solid rgba(255, 255, 255, 0.1)',
       }}
     >
       <Container maxWidth="lg">
