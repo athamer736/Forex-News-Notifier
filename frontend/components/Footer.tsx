@@ -25,7 +25,7 @@ const Footer = () => {
         py: 6,
         px: 2,
         mt: 'auto',
-        backgroundColor: 'rgba(10, 10, 10, 0.9)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
       }}
     >
