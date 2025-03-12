@@ -520,6 +520,86 @@ The system uses OpenAI's GPT-4 to provide detailed market analysis for high-impa
    - Check spam folder
    - Verify firewall/antivirus settings
 
+## Performance Optimization
+
+### Windows Defender Antimalware Service Optimization
+
+Windows Defender can consume significant CPU resources (30%+ CPU usage) when scanning application files. Add exclusions for development folders and processes:
+
+```powershell
+# Add path exclusions
+powershell -Command "Add-MpPreference -ExclusionPath 'C:\FlaskApps'"
+
+# Limit CPU usage during scans
+powershell -Command "Set-MpPreference -ScanAvgCPULoadFactor 5"
+
+# Exclude application processes
+powershell -Command "Add-MpPreference -ExclusionProcess 'node.exe'"
+powershell -Command "Add-MpPreference -ExclusionProcess 'python.exe'"
+
+# Verify settings
+powershell -Command "Get-MpPreference | Select-Object ExclusionPath, ExclusionProcess, ScanAvgCPULoadFactor | Format-List"
+```
+
+### NSSM Service Optimization
+
+If you notice high CPU usage from NSSM (Non-Sucking Service Manager) services:
+
+```powershell
+# Find running NSSM services
+Get-CimInstance win32_service | Where-Object {$_.PathName -like "*nssm*"} | Format-Table Name, DisplayName, State, PathName -AutoSize
+
+# View service configuration 
+C:\nssm\win64\nssm.exe get FlaskBackend Application
+C:\nssm\win64\nssm.exe get FlaskBackend AppParameters
+C:\nssm\win64\nssm.exe get NextJSFrontend Application
+C:\nssm\win64\nssm.exe get NextJSFrontend AppParameters
+
+# Set lower CPU priority for services
+C:\nssm\win64\nssm.exe set FlaskBackend AppPriority BELOW_NORMAL_PRIORITY_CLASS
+C:\nssm\win64\nssm.exe set NextJSFrontend AppPriority BELOW_NORMAL_PRIORITY_CLASS
+
+# Add CPU throttling for services
+C:\nssm\win64\nssm.exe set FlaskBackend AppThrottle 10000
+C:\nssm\win64\nssm.exe set NextJSFrontend AppThrottle 10000
+
+# Restart services to apply changes
+C:\nssm\win64\nssm.exe restart FlaskBackend
+C:\nssm\win64\nssm.exe restart NextJSFrontend
+```
+
+### SSL Certificate Access Issues
+
+If the NextJS service fails to start with "Certificate verification failed" errors:
+
+```powershell
+# Check current service account
+C:\nssm\win64\nssm.exe get NextJSFrontend ObjectName
+
+# Use LocalSystem account (has full privileges)
+C:\nssm\win64\nssm.exe set NextJSFrontend ObjectName LocalSystem
+
+# Restart the service
+C:\nssm\win64\nssm.exe restart NextJSFrontend
+```
+
+### Memory Leak Prevention
+
+The application uses several memory-intensive components. Follow these best practices:
+
+1. **Check resource usage regularly** using Task Manager or Process Explorer
+2. **Restart services weekly** during low-traffic periods
+3. **Monitor log files** for memory-related warnings or errors:
+   - Flask logs: `C:\FlaskApps\forex_news_notifier\logs\app.log`
+   - Next.js logs: `C:\FlaskApps\forex_news_notifier\frontend\logs\service-output.log`
+4. **Set memory limits** for Node.js if needed, by adding environment variables:
+   ```env
+   NODE_OPTIONS="--max-old-space-size=2048"  # Limits Node.js memory to 2GB
+   ```
+5. **Set up process monitoring** to automatically restart services that exceed memory thresholds
+
+If you continue experiencing memory leaks after applying these optimizations, consider implementing a scheduled task to restart services during off-peak hours.
+
 ## Contributing
 
 While this is primarily a personal project, contributions are welcome. Please feel free to submit issues and pull requests.
