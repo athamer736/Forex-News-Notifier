@@ -63,6 +63,7 @@ const Footer = () => {
                 <XIcon />
               </IconButton>
               */}
+              {/* GitHub link temporarily commented out
               <IconButton 
                 aria-label="GitHub" 
                 size="small"
@@ -74,6 +75,7 @@ const Footer = () => {
               >
                 <GitHubIcon />
               </IconButton>
+              */}
               <IconButton 
                 aria-label="Email" 
                 size="small"
