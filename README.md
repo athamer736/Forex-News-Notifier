@@ -353,6 +353,22 @@ Restart-Service NextJSFrontend
 
 ## Recent Updates
 
+### March 2025
+- Complete frontend redesign with improved UI/UX
+- Added About page showcasing project history and mission
+- Created comprehensive legal pages (Privacy Policy, Terms & Conditions)
+- Enhanced Contact page with direct form submission support
+- Updated Footer with improved navigation links
+- Added performance optimization features:
+  - Windows Defender exclusions for reduced CPU usage
+  - NSSM service configuration for better resource management
+  - Port conflict resolution system for developers
+- Implemented memory leak prevention best practices
+- Fixed SSL certificate access issues for services
+- Streamlined social media integration
+- Added support for LocalSystem service accounts for certificate access
+- Improved error logging and debugging tools
+
 ### February 2025
 - Added PowerShell 7.0 requirement for enhanced SSL certificate management
 - Improved SSL certificate handling in Next.js frontend
@@ -599,6 +615,41 @@ The application uses several memory-intensive components. Follow these best prac
 5. **Set up process monitoring** to automatically restart services that exceed memory thresholds
 
 If you continue experiencing memory leaks after applying these optimizations, consider implementing a scheduled task to restart services during off-peak hours.
+
+### Port Conflict Resolution
+
+When running NSSM services alongside manual development, you may encounter port conflicts with error messages like:
+
+```
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+```
+
+This occurs when a port is already in use by another process. To resolve:
+
+```powershell
+# Find processes using specific ports
+netstat -ano | findstr :3000  # For Next.js frontend
+netstat -ano | findstr :5000  # For Flask backend
+
+# Identify the process using the port
+# The last number in each line is the Process ID (PID)
+
+# Check which service is using that PID
+Get-Process -Id <PID>
+
+# If it's an NSSM service you want to stop temporarily:
+C:\nssm\win64\nssm.exe stop NextJSFrontend  # For frontend
+C:\nssm\win64\nssm.exe stop FlaskBackend    # For backend
+
+# If it's another process you need to terminate:
+taskkill /F /PID <PID>
+
+# Alternatively, configure your development server to use different ports:
+# For Next.js: modify package.json scripts to use a different port
+# "dev": "next dev -p 3001"
+```
+
+Always check if NSSM services are running before starting development servers manually to avoid port conflicts.
 
 ## Contributing
 
