@@ -460,7 +460,7 @@ def handle_contact_form():
             return {"error": "Server configuration error"}, 500
             
         # Create email
-        recipient_email = smtp_user  # Send to the same email used for SMTP
+        recipient_email = "athamer736@gmail.com"  # Updated recipient email
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"FXALERT Contact: {subject}"
