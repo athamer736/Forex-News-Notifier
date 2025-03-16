@@ -64,7 +64,8 @@ const timeRangeOptions: TimeRangeOption[] = [
     { value: 'previous_week', label: 'Previous Week' },
     { value: 'week', label: 'Current Week' },
     { value: 'next_week', label: 'Next Week' },
-    { value: 'specific_date', label: 'Specific Date' }
+    { value: 'specific_date', label: 'Specific Date' },
+    { value: 'date_range', label: 'Date Range' }
 ];
 
 const currencyOptions: CurrencyOption[] = [
@@ -218,6 +219,9 @@ function EventsPage() {
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const router = useRouter();
     const [memoryUsage, setMemoryUsage] = useState<number | null>(null);
+    const [isRangeSelectionActive, setIsRangeSelectionActive] = useState<boolean>(false);
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
 
     const handleExpandClick = useCallback((eventId: string, e?: React.MouseEvent) => {
         if (e) {
@@ -295,16 +299,45 @@ function EventsPage() {
 
     const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = event.target.value;
-        
         const selectedDateTime = new Date(newDate);
         const cutoffDate = new Date('2025-02-02');
-        if (selectedDateTime >= cutoffDate) {
-            setError(null);
+        
+        if (selectedDateTime < cutoffDate) {
+            setError('Sorry, we do not have data from before February 2, 2025');
+            return;
         }
         
-        setSelectedDate(newDate);
-        setTimeRange('specific_date'); // Needs to be specific date for the date picker to work, not working currently
-        handleClose();
+        setError(null);
+        
+        if (!isRangeSelectionActive) {
+            setStartDate(newDate);
+            setEndDate('');
+            setSelectedDate(newDate);
+            setIsRangeSelectionActive(true);
+            setTimeRange('specific_date');
+        } else {
+            if (newDate === startDate) {
+                setIsRangeSelectionActive(false);
+                setEndDate('');
+            } else {
+                const start = new Date(startDate);
+                const end = new Date(newDate);
+                
+                if (start > end) {
+                    setEndDate(startDate);
+                    setStartDate(newDate);
+                } else {
+                    setEndDate(newDate);
+                }
+                
+                setIsRangeSelectionActive(false);
+                setTimeRange('date_range');
+            }
+        }
+        
+        setTimeout(() => {
+            fetchEvents();
+        }, 100);
     };
 
     const fetchEvents = useCallback(async () => {
@@ -312,10 +345,35 @@ function EventsPage() {
             setIsUpdating(true);
             setError(null);
             
-            if (timeRange === 'specific_date' && selectedDate) {
+            if (timeRange === 'specific_date') {
+                if (!selectedDate || selectedDate.trim() === '') {
+                    setError('Please select a date to view events');
+                    setEvents([]);
+                    setIsUpdating(false);
+                    return;
+                }
+                
                 const selectedDateTime = new Date(selectedDate);
                 const cutoffDate = new Date('2025-02-02');
                 if (selectedDateTime < cutoffDate) {
+                    setError('Sorry, we do not have data from before February 2, 2025');
+                    setEvents([]);
+                    setIsUpdating(false);
+                    return;
+                }
+            } else if (timeRange === 'date_range') {
+                if (!startDate || !endDate) {
+                    setError('Please select both start and end dates');
+                    setEvents([]);
+                    setIsUpdating(false);
+                    return;
+                }
+                
+                const startDateTime = new Date(startDate);
+                const endDateTime = new Date(endDate);
+                const cutoffDate = new Date('2025-02-02');
+                
+                if (startDateTime < cutoffDate || endDateTime < cutoffDate) {
                     setError('Sorry, we do not have data from before February 2, 2025');
                     setEvents([]);
                     setIsUpdating(false);
@@ -340,7 +398,13 @@ function EventsPage() {
 
             console.log('Using base URL for events:', baseUrl);
 
-            const dateParam = timeRange === 'specific_date' ? `&date=${selectedDate}` : '';
+            let dateParam = '';
+            if (timeRange === 'specific_date') {
+                dateParam = `&date=${selectedDate}`;
+            } else if (timeRange === 'date_range') {
+                dateParam = `&start_date=${startDate}&end_date=${endDate}`;
+            }
+            
             const currencyParam = selectedCurrencies.length > 0 ? `&currencies=${selectedCurrencies.join(',')}` : '';
             const impactParam = selectedImpacts.length > 0 ? `&impacts=${selectedImpacts.join(',')}` : '';
             
@@ -407,7 +471,7 @@ function EventsPage() {
                 setIsUpdating(false);
             }, 300);
         }
-    }, [timeRange, selectedDate, selectedCurrencies, selectedImpacts]);
+    }, [timeRange, selectedDate, selectedCurrencies, selectedImpacts, startDate, endDate]);
 
     useEffect(() => {
         let timerRef: NodeJS.Timeout | null = null;
@@ -559,7 +623,7 @@ function EventsPage() {
                 clearInterval(fetchInterval);
             }
         };
-    }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone, selectedDate, fetchEvents]);
+    }, [timeRange, selectedCurrencies, selectedImpacts, selectedTimezone, startDate, endDate, fetchEvents]);
 
     const getImpactColor = useCallback((impact: string): string => {
         switch (impact.toLowerCase()) {
@@ -650,10 +714,12 @@ function EventsPage() {
     const getTimeRangeDisplayText = useCallback(() => {
         if (timeRange === 'specific_date' && selectedDate) {
             return `Date: ${selectedDate}`;
+        } else if (timeRange === 'date_range' && startDate && endDate) {
+            return `Date Range: ${startDate} to ${endDate}`;
         }
         const option = timeRangeOptions.find(opt => opt.value === timeRange);
         return option ? option.label : 'Select Time Range';
-    }, [timeRange, selectedDate]);
+    }, [timeRange, selectedDate, startDate, endDate]);
 
     const groupEventsByDate = useCallback((events: ForexEvent[]): Record<string, GroupedEvents> => {
         return events.reduce((acc: Record<string, GroupedEvents>, event) => {
@@ -1219,12 +1285,72 @@ function EventsPage() {
                                                     borderColor: '#2196F3'
                                                 }
                                             }}
+                                            renderValue={(selected) => {
+                                                if (selected === 'specific_date' && selectedDate) {
+                                                    return `Specific Date: ${selectedDate}`;
+                                                } else if (selected === 'date_range' && startDate && endDate) {
+                                                    return `Date Range: ${startDate} to ${endDate}`;
+                                                }
+                                                const option = timeRangeOptions.find(opt => opt.value === selected);
+                                                return option ? option.label : 'Select Time Range';
+                                            }}
                                         >
-                                            {timeRangeOptions.map((option) => (
+                                            {timeRangeOptions.filter(option => option.value !== 'specific_date' && option.value !== 'date_range').map((option) => (
                                                 <MenuItem key={option.value} value={option.value}>
                                                     {option.label}
                                                 </MenuItem>
                                             ))}
+                                            <MenuItem 
+                                                value="specific_date"
+                                                sx={{ 
+                                                    flexDirection: 'column', 
+                                                    alignItems: 'flex-start',
+                                                    paddingBottom: '8px'
+                                                }}
+                                            >
+                                                <Typography sx={{ mb: 1, fontWeight: 'medium' }}>
+                                                    {isRangeSelectionActive 
+                                                        ? "Select end date (or same date for single day)" 
+                                                        : "Select date" }
+                                                </Typography>
+                                                <TextField
+                                                    id="embedded-date-picker"
+                                                    type="date"
+                                                    value={isRangeSelectionActive ? '' : selectedDate}
+                                                    fullWidth
+                                                    size="small"
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                        e.stopPropagation();
+                                                        handleDateChange(e);
+                                                    }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                    }}
+                                                    sx={{ minWidth: '200px' }}
+                                                    InputLabelProps={{
+                                                        shrink: true,
+                                                    }}
+                                                />
+                                                {(startDate || endDate) && (
+                                                    <Box sx={{ mt: 1, width: '100%' }}>
+                                                        {startDate && (
+                                                            <Typography variant="body2" sx={{ color: 'primary.main' }}>
+                                                                Start: {startDate}
+                                                            </Typography>
+                                                        )}
+                                                        {endDate && (
+                                                            <Typography variant="body2" sx={{ color: 'primary.main' }}>
+                                                                End: {endDate}
+                                                            </Typography>
+                                                        )}
+                                                        {isRangeSelectionActive && (
+                                                            <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
+                                                                Click the same date twice to view a single day
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                )}
+                                            </MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Grid>
