@@ -7,6 +7,10 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   // Configure page optimization
+  experimental: {
+    // This allows Next.js to handle any hostname
+    hostname: process.env.HOST || 'localhost',
+  },
   poweredByHeader: false,
   compress: true,
   async rewrites() {
