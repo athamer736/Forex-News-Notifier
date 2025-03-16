@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "start:https": "set NODE_ENV=production&& node server.js",
+    "start:prod": "set NODE_ENV=production&& next start -H 0.0.0.0 -p 3000",
     "lint": "next lint"
   },
   "dependencies": {
