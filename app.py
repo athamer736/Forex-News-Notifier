@@ -174,10 +174,10 @@ def home():
     
     # Production domain redirects
     if 'fxalert.co.uk' in host:
-        return redirect('https://fxalert.co.uk:3000')
+        return redirect('https://fxalert.co.uk')
     
-    # Local development redirects - always use HTTPS since we have SSL
-    return redirect('https://localhost:3000')
+    # Local development redirects
+    return redirect('https://localhost')
 
 @app.route("/timezone", methods=["POST", "OPTIONS"])
 @limiter.limit("30 per minute")  # Rate limit for timezone updates
@@ -267,7 +267,7 @@ def create_stripe_session():
         stripe.api_key = stripe_secret_key
         
         # Create a Stripe Checkout Session
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://fxalert.co.uk:3000')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://fxalert.co.uk')
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[
@@ -559,6 +559,7 @@ if __name__ == "__main__":
         logger.error(f"Failed to start server: {str(e)}")
         logger.error("Error details:", exc_info=True)
         sys.exit(1)
+    
     
     
     
