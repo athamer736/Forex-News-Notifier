@@ -11,7 +11,7 @@ from ..events import get_cache_status, fetch_events
 logger = logging.getLogger(__name__)
 
 # Valid time ranges for filtering
-VALID_TIME_RANGES = ['24h', 'today', 'yesterday', 'tomorrow', 'week', 'previous_week', 'next_week', 'specific_date']
+VALID_TIME_RANGES = ['24h', 'today', 'yesterday', 'tomorrow', 'week', 'previous_week', 'next_week', 'specific_date', 'date_range']
 
 def handle_timezone_request() -> Tuple[Dict, int]:
     """Handle timezone setting requests"""
@@ -38,9 +38,16 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
         selected_currencies = request.args.get('currencies', '').split(',') if request.args.get('currencies') else None
         selected_impacts = request.args.get('impacts', '').split(',') if request.args.get('impacts') else None
         specific_date = request.args.get('date')
+        # Add parameters for date range
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
 
         # Get current time in UTC
         now = datetime.now(pytz.UTC)
+        
+        # Default initialization of start_time and end_time
+        start_time = now
+        end_time = now + timedelta(days=1)
 
         # Calculate time range
         if time_range == '24h':
@@ -91,6 +98,39 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                 if "does not match format" in str(e):
                     raise ValueError("Invalid date format. Please use YYYY-MM-DD")
                 raise
+        elif time_range == 'date_range':
+            if not start_date or not end_date:
+                raise ValueError("Both start date and end date are required for date range filter")
+            try:
+                # Parse and validate the dates
+                start_time = datetime.strptime(start_date, '%Y-%m-%d')
+                end_time = datetime.strptime(end_date, '%Y-%m-%d')
+                
+                if start_time.tzinfo is None:
+                    start_time = pytz.UTC.localize(start_time)
+                if end_time.tzinfo is None:
+                    end_time = pytz.UTC.localize(end_time)
+                
+                # Set end time to end of the selected day
+                end_time = end_time + timedelta(days=1) - timedelta(microseconds=1)
+                
+                # Ensure start_time is before end_time
+                if start_time > end_time:
+                    raise ValueError("Start date must be before end date")
+                
+                # Check if dates are before our data start date
+                min_date = datetime(2025, 2, 2, tzinfo=pytz.UTC)
+                if start_time < min_date:
+                    raise ValueError("Sorry, we do not have data from before February 2, 2025")
+                
+            except ValueError as e:
+                if "does not match format" in str(e):
+                    raise ValueError("Invalid date format. Please use YYYY-MM-DD")
+                logger.error(f"Date range error: {str(e)}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error in date range processing: {str(e)}")
+                raise ValueError(f"Error processing date range: {str(e)}")
 
         # Get filtered events from database
         filtered_events = db_get_filtered_events(
