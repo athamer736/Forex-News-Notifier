@@ -15,6 +15,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Forex Events",
   description: "Real-time forex events tracker",
+  other: {
+    "google-adsense-account": "ca-pub-3681278136187746",
+  },
 };
 
 export default function RootLayout({
