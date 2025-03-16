@@ -1311,7 +1311,7 @@ function EventsPage() {
                                                 <Typography sx={{ mb: 1, fontWeight: 'medium' }}>
                                                     {isRangeSelectionActive 
                                                         ? "Select end date (or same date for single day)" 
-                                                        : "Select date" }
+                                                        : "Select a date"}
                                                 </Typography>
                                                 <TextField
                                                     id="embedded-date-picker"
@@ -1334,19 +1334,57 @@ function EventsPage() {
                                                 {(startDate || endDate) && (
                                                     <Box sx={{ mt: 1, width: '100%' }}>
                                                         {startDate && (
-                                                            <Typography variant="body2" sx={{ color: 'primary.main' }}>
+                                                            <Typography 
+                                                                variant="body2" 
+                                                                sx={{ 
+                                                                    color: 'primary.main',
+                                                                    fontWeight: 'bold',
+                                                                    padding: '4px 8px',
+                                                                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                                    borderRadius: '4px',
+                                                                    display: 'inline-block',
+                                                                    marginBottom: '4px'
+                                                                }}
+                                                            >
                                                                 Start: {startDate}
                                                             </Typography>
                                                         )}
                                                         {endDate && (
-                                                            <Typography variant="body2" sx={{ color: 'primary.main' }}>
+                                                            <Typography 
+                                                                variant="body2" 
+                                                                sx={{ 
+                                                                    color: 'primary.main',
+                                                                    fontWeight: 'bold',
+                                                                    padding: '4px 8px',
+                                                                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                                    borderRadius: '4px',
+                                                                    display: 'inline-block'
+                                                                }}
+                                                            >
                                                                 End: {endDate}
                                                             </Typography>
                                                         )}
                                                         {isRangeSelectionActive && (
-                                                            <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
-                                                                Click the same date twice to view a single day
+                                                            <>
+                                                            <Typography 
+                                                                variant="caption" 
+                                                                sx={{ 
+                                                                    display: 'block', 
+                                                                    mt: 1, 
+                                                                    color: '#1976d2',
+                                                                    fontWeight: 'medium',
+                                                                    backgroundColor: 'rgba(25, 118, 210, 0.05)',
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '4px',
+                                                                    border: '1px dashed rgba(25, 118, 210, 0.5)'
+                                                                }}
+                                                            >
+                                                                Currently selecting: {startDate} to ?
                                                             </Typography>
+                                                            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}>
+                                                                Select a different date to complete the range, or select {startDate} again for a single day view.
+                                                            </Typography>
+                                                            </>
                                                         )}
                                                     </Box>
                                                 )}
