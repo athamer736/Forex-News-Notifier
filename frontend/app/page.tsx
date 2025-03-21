@@ -311,59 +311,11 @@ const HomePage = () => {
       </Container>
 
       {/* AdSense Display */}
-      <Container maxWidth="md" sx={{ mt: 6, mb: 4 }}>
-        <Box sx={{ 
-          width: '100%',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          padding: '20px',
-          background: 'rgba(255, 255, 255, 0.05)',
-        }}>
-          <Typography 
-            variant="subtitle2" 
-            sx={{ mb: 2, textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}
-          >
-            Advertisement
-          </Typography>
-          
-          {/* Updated ad container with matched content format */}
-          <Box
-            component="div"
-            sx={{
-              display: 'block',
-              width: '100%',
-              minHeight: '250px',
-              overflow: 'hidden',
-              textAlign: 'center'
-            }}
-          >
-            <ins 
-              className="adsbygoogle"
-              style={{ 
-                display: 'block',
-                width: '100%',
-                height: '250px'
-              }}
-              data-ad-client="ca-pub-3681278136187746"
-              data-ad-slot="3868550810"
-              data-ad-format="auto"
-              data-matched-content-ui-type="image_card_stacked"
-              data-matched-content-rows-num="2"
-              data-matched-content-columns-num="2"
-              data-full-width-responsive="true"
-            />
-            <Script id="ad-init" strategy="afterInteractive">
-              {`try {
-                (adsbygoogle = window.adsbygoogle || []).push({});
-                console.log('AdSense push successful');
-              } catch (e) {
-                console.error('AdSense push error:', e);
-              }`}
-            </Script>
-          </Box>
-        </Box>
-      </Container>
+      <AdSenseDisplay 
+        slot="3868550810" 
+        format="auto" 
+        responsive={true}
+      />
     </Box>
   );
 };

@@ -1,123 +1,123 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { Box, Typography } from '@mui/material';
 
 interface AdSenseDisplayProps {
-  adSlot: string;
-  adFormat?: 'auto' | 'rectangle' | 'horizontal' | 'vertical';
+  slot: string;
+  format?: 'auto' | 'rectangle' | 'horizontal' | 'vertical';
   style?: React.CSSProperties;
-  className?: string;
+  responsive?: boolean;
+  title?: string;
 }
 
-export default function AdSenseDisplay({ 
-  adSlot, 
-  adFormat = 'auto', 
+const AdSenseDisplay: React.FC<AdSenseDisplayProps> = ({
+  slot = '3868550810',
+  format = 'auto',
   style = {},
-  className = ''
-}: AdSenseDisplayProps) {
-  const adRef = useRef<HTMLDivElement>(null);
-  const [adLoaded, setAdLoaded] = useState(false);
-  const [adError, setAdError] = useState(false);
-  
+  responsive = true,
+  title = 'Advertisement'
+}) => {
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
   useEffect(() => {
-    // Skip on server
-    if (typeof window === 'undefined' || !adRef.current) return;
-    
-    let retryCount = 0;
-    const maxRetries = 3;
-    
-    const initializeAd = () => {
-      // Only proceed if we have the adRef and adsbygoogle is available
-      if (!adRef.current) return;
-      
-      try {
-        // Clear existing content
-        adRef.current.innerHTML = '';
-        
-        // Create ad container
-        const adContainer = document.createElement('ins');
-        adContainer.className = 'adsbygoogle';
-        adContainer.style.display = 'block';
-        adContainer.style.width = '100%';
-        adContainer.style.height = 'auto';
-        adContainer.style.minHeight = '280px';
-        adContainer.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-        adContainer.setAttribute('data-ad-slot', adSlot);
-        adContainer.setAttribute('data-ad-format', adFormat);
-        adContainer.setAttribute('data-full-width-responsive', 'true');
-        
-        // Add to DOM
-        adRef.current.appendChild(adContainer);
-        
-        // Check if AdSense script is loaded
-        if (typeof window.adsbygoogle !== 'undefined') {
-          try {
-            // Initialize ad
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-            console.log(`AdSense ad initialized for slot: ${adSlot}`);
-            setAdLoaded(true);
-          } catch (err) {
-            console.error('Error pushing ad:', err);
-            setAdError(true);
+    // Wait for the component to mount and for AdSense script to be available
+    const timeout = setTimeout(() => {
+      if (iframeRef.current && typeof window !== 'undefined') {
+        try {
+          const iframeDoc = iframeRef.current.contentDocument || 
+                           iframeRef.current.contentWindow?.document;
+          
+          if (iframeDoc) {
+            iframeDoc.open();
+            iframeDoc.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746" crossorigin="anonymous"></script>
+                  <style>
+                    body {
+                      margin: 0;
+                      padding: 0;
+                      overflow: hidden;
+                      background: transparent;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <ins class="adsbygoogle"
+                    style="display:block; width:100%; height:100%;"
+                    data-ad-client="ca-pub-3681278136187746"
+                    data-ad-slot="${slot}"
+                    data-ad-format="${format}"
+                    ${responsive ? 'data-full-width-responsive="true"' : ''}></ins>
+                  <script>
+                    try {
+                      (adsbygoogle = window.adsbygoogle || []).push({});
+                      window.parent.postMessage('adLoaded', '*');
+                    } catch (e) {
+                      window.parent.postMessage('adError: ' + e.message, '*');
+                    }
+                  </script>
+                </body>
+              </html>
+            `);
+            iframeDoc.close();
           }
-        } else {
-          // Script not loaded yet, retry after delay if under max retries
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(`AdSense not available, retry ${retryCount} of ${maxRetries}...`);
-            setTimeout(initializeAd, 1500);
-          } else {
-            console.error('AdSense not available after maximum retries');
-            setAdError(true);
-          }
+        } catch (err) {
+          console.error('Failed to initialize ad iframe:', err);
         }
-      } catch (err) {
-        console.error('Error initializing ad:', err);
-        setAdError(true);
       }
-    };
-    
-    // Delay initialization to ensure script has time to load
-    const timer = setTimeout(initializeAd, 1000);
-    
-    return () => {
-      clearTimeout(timer);
-      if (adRef.current) {
-        adRef.current.innerHTML = '';
-      }
-    };
-  }, [adSlot, adFormat]);
-  
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [slot, format, responsive]);
+
   return (
-    <div 
-      ref={adRef} 
-      data-ad-slot={adSlot}
-      style={{
-        display: 'block',
-        width: '100%',
-        minHeight: '280px',
-        background: 'rgba(255, 255, 255, 0.02)',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        margin: '20px 0',
-        ...style
-      }}
-      className={`ad-container ${className}`}
-    >
-      {adError && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '280px',
-          color: 'rgba(255,255,255,0.5)',
-          fontSize: '12px',
+    <Box sx={{ 
+      width: '100%',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      borderRadius: '8px',
+      overflow: 'hidden',
+      padding: '20px',
+      background: 'rgba(255, 255, 255, 0.05)',
+      my: 3
+    }}>
+      <Typography 
+        variant="subtitle2" 
+        sx={{ mb: 2, textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}
+      >
+        {title}
+      </Typography>
+      
+      <Box
+        component="div"
+        sx={{
+          display: 'block',
+          width: '100%',
+          minHeight: '250px',
+          overflow: 'hidden',
           textAlign: 'center',
-          padding: '20px'
-        }}>
-          Advertisement
-        </div>
-      )}
-    </div>
+          position: 'relative'
+        }}
+      >
+        <iframe
+          ref={iframeRef}
+          src="about:blank"
+          style={{ 
+            width: '100%',
+            minHeight: '250px',
+            border: 'none',
+            overflow: 'hidden',
+            ...style
+          }}
+          title="Advertisement"
+        />
+      </Box>
+    </Box>
   );
-} 
+};
+
+export default AdSenseDisplay; 

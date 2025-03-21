@@ -29,12 +29,14 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
+        {/* Additional security headers to allow AdSense */}
+        <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
-        {/* Standard Google AdSense Script */}
+        {/* Standard Google AdSense Script loaded earlier in the page */}
         <Script
           id="adsense-script"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
           crossOrigin="anonymous"
