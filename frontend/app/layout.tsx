@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   description: "Real-time forex events tracker",
   other: {
     "google-adsense-account": "ca-pub-3681278136187746",
+    "google-adsense-verification": "ca-pub-3681278136187746"
   },
 };
 
@@ -27,6 +28,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
+      </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
         {/* Google AdSense Script */}
         <AdSenseScript />

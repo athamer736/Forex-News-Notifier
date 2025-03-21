@@ -18,50 +18,50 @@ export default function AdSenseDisplay({
   const adRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    if (adRef.current && typeof window !== 'undefined') {
+    // Function to initialize ads - will retry multiple times
+    const initializeAd = () => {
+      if (!adRef.current) return;
+      
       try {
-        // Clean up any existing ad
-        if (adRef.current.firstChild) {
-          adRef.current.innerHTML = '';
-        }
+        // Clear previous content
+        adRef.current.innerHTML = '';
         
-        // Create the ad
+        // Create the ad container
         const adElement = document.createElement('ins');
         adElement.className = 'adsbygoogle';
         adElement.style.display = 'block';
+        adElement.style.width = '100%';
+        adElement.style.height = 'auto';
+        adElement.style.minHeight = '250px';
         
-        // Set format based on prop
-        if (adFormat === 'rectangle') {
-          adElement.setAttribute('data-ad-format', 'rectangle');
-        } else if (adFormat === 'horizontal') {
-          adElement.setAttribute('data-ad-format', 'horizontal');
-        } else if (adFormat === 'vertical') {
-          adElement.setAttribute('data-ad-format', 'vertical');
-        } else {
-          adElement.setAttribute('data-ad-format', 'auto');
-        }
-        
+        // Set ad attributes
         adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-        adElement.setAttribute('data-ad-slot', adSlot);
+        adElement.setAttribute('data-ad-slot', adSlot || '1234567890');
+        adElement.setAttribute('data-ad-format', adFormat);
         adElement.setAttribute('data-full-width-responsive', 'true');
         
-        // Add the ad to the DOM
+        // Add to DOM
         adRef.current.appendChild(adElement);
         
-        // Initialize the ad
-        try {
+        // Check if adsbygoogle is loaded before attempting to initialize
+        if (window && (window as any).adsbygoogle) {
           ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-          console.log(`AdSense ad initialized for slot: ${adSlot}`);
-        } catch (err) {
-          console.error(`Error initializing AdSense for slot ${adSlot}:`, err);
+          console.log('Ad initialized successfully');
+        } else {
+          // If AdSense isn't available yet, retry in 1 second
+          console.log('AdSense not available yet, retrying soon...');
+          setTimeout(initializeAd, 1000);
         }
-      } catch (err) {
-        console.error(`Error setting up AdSense ad for slot ${adSlot}:`, err);
+      } catch (error) {
+        console.error('Error initializing AdSense:', error);
       }
-    }
+    };
+
+    // Use a timeout to allow the AdSense script to load first
+    const timer = setTimeout(initializeAd, 1000);
     
     return () => {
-      // Clean up on unmount
+      clearTimeout(timer);
       if (adRef.current) {
         adRef.current.innerHTML = '';
       }
@@ -72,17 +72,16 @@ export default function AdSenseDisplay({
     <div 
       ref={adRef} 
       style={{
-        minHeight: '100px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        margin: '20px 0',
+        display: 'block',
+        width: '100%',
+        minHeight: '250px',
+        background: 'rgba(0, 0, 0, 0.05)',
+        borderRadius: '8px',
         overflow: 'hidden',
+        margin: '20px 0',
         ...style
       }}
       className={className}
-    >
-      {/* Ad will be inserted here */}
-    </div>
+    />
   );
 } 
