@@ -5,30 +5,49 @@ import Script from 'next/script';
 
 const AdSenseClient = () => {
   useEffect(() => {
-    // This will run only on the client side
+    // Manual initialization as fallback
+    const initAdSense = () => {
+      try {
+        // Only proceed if the window object is available
+        if (typeof window !== 'undefined') {
+          // Check if the script already exists to avoid duplicates
+          const existingScript = document.getElementById('adsbygoogle-script');
+          if (!existingScript) {
+            const script = document.createElement('script');
+            script.id = 'adsbygoogle-script';
+            script.async = true;
+            script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746';
+            script.crossOrigin = 'anonymous';
+            script.onload = () => console.log('AdSense manually loaded');
+            script.onerror = () => console.log('Failed to load AdSense manually');
+            document.head.appendChild(script);
+          }
+        }
+      } catch (error) {
+        // Silent error handling
+      }
+    };
+
+    // Delay initialization to ensure page content is loaded
+    const timer = setTimeout(initAdSense, 2000);
+    
     return () => {
-      // Cleanup if needed when component unmounts
+      clearTimeout(timer);
     };
   }, []);
 
-  const handleError = () => {
-    console.log('AdSense failed to load');
-  };
-
-  const handleLoad = () => {
-    console.log('AdSense loaded successfully');
-  };
-
   return (
     <>
+      {/* Use Next.js Script component as primary method */}
       <Script
         id="adsense-script"
         strategy="lazyOnload"
         async
         src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
         crossOrigin="anonymous"
-        onError={handleError}
-        onLoad={handleLoad}
+        onError={() => {
+          console.log('Next.js Script failed to load AdSense');
+        }}
       />
     </>
   );

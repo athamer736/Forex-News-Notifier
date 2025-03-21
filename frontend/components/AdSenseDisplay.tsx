@@ -14,63 +14,86 @@ interface AdSenseDisplayProps {
   slot?: string;
   format?: 'auto' | 'rectangle' | 'horizontal' | 'vertical';
   responsive?: boolean;
+  position?: 'top' | 'bottom';
 }
 
 const AdSenseDisplay: React.FC<AdSenseDisplayProps> = ({
   slot = '3868550810',
   format = 'auto',
-  responsive = true
+  responsive = true,
+  position = 'bottom'
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (adRef.current && typeof window !== 'undefined') {
-      try {
-        adRef.current.innerHTML = '';
-        
-        const adElement = document.createElement('ins');
-        adElement.className = 'adsbygoogle';
-        adElement.style.display = 'block';
-        adElement.style.width = '100%';
-        adElement.style.height = '60px';
-        adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-        adElement.setAttribute('data-ad-slot', slot);
-        adElement.setAttribute('data-ad-format', format);
-        if (responsive) {
-          adElement.setAttribute('data-full-width-responsive', 'true');
-        }
-        
-        adRef.current.appendChild(adElement);
-        
+    // Delay ad initialization to ensure the page has loaded
+    const timer = setTimeout(() => {
+      if (adRef.current && typeof window !== 'undefined') {
         try {
-          if (window.adsbygoogle) {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
+          adRef.current.innerHTML = '';
+          
+          const adElement = document.createElement('ins');
+          adElement.className = 'adsbygoogle';
+          adElement.style.display = 'block';
+          adElement.style.width = '100%';
+          adElement.style.height = '50px'; // Even smaller height
+          adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+          adElement.setAttribute('data-ad-slot', slot);
+          adElement.setAttribute('data-ad-format', format);
+          if (responsive) {
+            adElement.setAttribute('data-full-width-responsive', 'true');
           }
+          
+          adRef.current.appendChild(adElement);
+          
+          // Try to push the ad using a timeout to ensure script has loaded
+          setTimeout(() => {
+            try {
+              if (window.adsbygoogle) {
+                (window.adsbygoogle = window.adsbygoogle || []).push({});
+              }
+            } catch (err) {
+              // Silent error handling to avoid console warnings
+            }
+          }, 1000);
         } catch (err) {
-          console.error('AdSense push failed');
+          // Silent error handling
         }
-      } catch (err) {
-        console.error('AdSense init failed');
       }
-    }
+    }, 2000); // Longer delay before initializing
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, [slot, format, responsive]);
 
+  // Container styles based on position
+  const containerStyles = position === 'bottom' ? {
+    mt: 8,                   // Large top margin
+    mb: 0,                   // No bottom margin
+    pb: 2,                   // Some padding at bottom
+    position: 'relative',    // Relative positioning
+  } : {
+    mt: 1,
+    mb: 1
+  };
+
   return (
-    <Container maxWidth="md" sx={{ mt: 1, mb: 1 }}>
+    <Container maxWidth="md" sx={containerStyles}>
       <Box sx={{ 
         width: '100%',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.03)',
         borderRadius: '2px',
-        padding: '2px',
-        background: 'rgba(255, 255, 255, 0.02)',
+        padding: '1px',
+        background: 'rgba(255, 255, 255, 0.01)',
       }}>
         <Typography 
           variant="caption" 
           sx={{ 
             display: 'block', 
             textAlign: 'center', 
-            color: 'rgba(255, 255, 255, 0.4)',
-            fontSize: '0.6rem'
+            color: 'rgba(255, 255, 255, 0.3)',
+            fontSize: '0.5rem'
           }}
         >
           Ad
@@ -82,8 +105,8 @@ const AdSenseDisplay: React.FC<AdSenseDisplayProps> = ({
           sx={{
             display: 'block',
             width: '100%',
-            minHeight: '40px',
-            maxHeight: '60px',
+            minHeight: '30px',
+            maxHeight: '50px',
             overflow: 'hidden',
             textAlign: 'center',
           }}

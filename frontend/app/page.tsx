@@ -71,17 +71,20 @@ const HomePage = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-        color: '#fff',
-        pt: 8,
-        pb: 12
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)',
+        position: 'relative',
+        pb: 10 // Add more padding at the bottom for the ad
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ flexGrow: 1, py: 8, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
+          style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}
         >
           {/* Hero Section */}
           <motion.div variants={itemVariants}>
@@ -310,12 +313,15 @@ const HomePage = () => {
         </motion.div>
       </Container>
 
-      {/* AdSense Display */}
-      <AdSenseDisplay 
-        slot="3868550810" 
-        format="auto" 
-        responsive={true}
-      />
+      {/* AdSense Display - positioned at bottom */}
+      <Box sx={{ position: 'absolute', bottom: 0, width: '100%' }}>
+        <AdSenseDisplay 
+          slot="3868550810" 
+          format="auto" 
+          responsive={true}
+          position="bottom"
+        />
+      </Box>
     </Box>
   );
 };
