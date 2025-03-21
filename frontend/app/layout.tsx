@@ -34,6 +34,12 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
           crossOrigin="anonymous"
           strategy="afterInteractive"
+          onError={(e) => {
+            console.error('AdSense script failed to load:', e);
+          }}
+          onLoad={() => {
+            console.log('AdSense script loaded successfully');
+          }}
         />
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
