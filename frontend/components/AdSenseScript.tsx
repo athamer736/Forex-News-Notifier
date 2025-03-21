@@ -1,6 +1,5 @@
 'use client';
 
-import Script from 'next/script';
 import { useEffect } from 'react';
 
 export default function AdSenseScript() {
@@ -16,6 +15,19 @@ export default function AdSenseScript() {
     script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746";
     script.async = true;
     script.crossOrigin = "anonymous";
+    script.setAttribute('crossorigin', 'anonymous'); // Ensure this attribute is set correctly
+    
+    // Create a no-cors fetch to preload the script domain
+    try {
+      fetch('https://pagead2.googlesyndication.com', { 
+        mode: 'no-cors',
+        credentials: 'omit'
+      }).catch(() => {});
+    } catch (e) {
+      // Ignore fetch errors
+    }
+    
+    // Append the script to head
     document.head.appendChild(script);
 
     // Error event listener for troubleshooting
@@ -40,6 +52,12 @@ export default function AdSenseScript() {
     <>
       {/* Meta tag for AdSense approval */}
       <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
+      
+      {/* Preconnect hints to help browser establish connections early */}
+      <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+      <link rel="preconnect" href="https://googleads.g.doubleclick.net" />
+      <link rel="preconnect" href="https://adservice.google.com" />
+      <link rel="preconnect" href="https://www.googletagservices.com" />
     </>
   );
 } 

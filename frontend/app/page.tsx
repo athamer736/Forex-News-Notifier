@@ -310,18 +310,30 @@ const HomePage = () => {
       </Container>
 
       {/* AdSense Display */}
-      <Box sx={{ width: '100%', my: 4, px: 2, maxWidth: '1200px', mx: 'auto' }}>
-        <AdSenseDisplay 
-          adSlot="3868550810" 
-          adFormat="auto"
-          style={{ 
-            borderRadius: '8px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            padding: '10px',
-            minHeight: '250px',
-          }} 
-        />
-      </Box>
+      <Container maxWidth="md" sx={{ mt: 6, mb: 4 }}>
+        <Box sx={{ 
+          width: '100%',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          padding: '20px',
+          background: 'rgba(255, 255, 255, 0.05)',
+        }}>
+          <Typography 
+            variant="subtitle2" 
+            sx={{ mb: 2, textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}
+          >
+            Advertisement
+          </Typography>
+          <AdSenseDisplay 
+            adSlot="3868550810" 
+            adFormat="auto"
+            style={{ 
+              minHeight: '280px',
+            }} 
+          />
+        </Box>
+      </Container>
     </Box>
   );
 };
