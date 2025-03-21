@@ -7,6 +7,10 @@ import { useRouter } from 'next/navigation';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import dynamic from 'next/dynamic';
+
+// Import AdSenseDisplay with dynamic to avoid SSR issues
+const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
 
 const HomePage = () => {
   const theme = useTheme();
@@ -304,6 +308,11 @@ const HomePage = () => {
           </motion.div>
         </motion.div>
       </Container>
+
+      {/* AdSense Display */}
+      <Box sx={{ width: '100%', my: 4 }}>
+        <AdSenseDisplay adSlot="1234567890" adFormat="horizontal" />
+      </Box>
     </Box>
   );
 };
