@@ -11,35 +11,28 @@ declare global {
 }
 
 interface AdSenseDisplayProps {
-  slot: string;
+  slot?: string;
   format?: 'auto' | 'rectangle' | 'horizontal' | 'vertical';
-  style?: React.CSSProperties;
   responsive?: boolean;
-  title?: string;
 }
 
 const AdSenseDisplay: React.FC<AdSenseDisplayProps> = ({
   slot = '3868550810',
   format = 'auto',
-  style = {},
-  responsive = true,
-  title = 'Advertisement'
+  responsive = true
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Simple non-iframe implementation
     if (adRef.current && typeof window !== 'undefined') {
       try {
-        // Clear any existing content
         adRef.current.innerHTML = '';
         
-        // Create the ad element directly
         const adElement = document.createElement('ins');
         adElement.className = 'adsbygoogle';
         adElement.style.display = 'block';
         adElement.style.width = '100%';
-        adElement.style.height = '60px';  // Smaller height
+        adElement.style.height = '60px';
         adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
         adElement.setAttribute('data-ad-slot', slot);
         adElement.setAttribute('data-ad-format', format);
@@ -47,47 +40,40 @@ const AdSenseDisplay: React.FC<AdSenseDisplayProps> = ({
           adElement.setAttribute('data-full-width-responsive', 'true');
         }
         
-        // Add to DOM
         adRef.current.appendChild(adElement);
         
-        // Push to adsbygoogle
         try {
-          // Check if AdSense is loaded
           if (window.adsbygoogle) {
             (window.adsbygoogle = window.adsbygoogle || []).push({});
-          } else {
-            console.log('AdSense not loaded yet');
           }
         } catch (err) {
-          console.error('Failed to push ad', err);
+          console.error('AdSense push failed');
         }
       } catch (err) {
-        console.error('Failed to initialize ad', err);
+        console.error('AdSense init failed');
       }
     }
   }, [slot, format, responsive]);
 
   return (
-    <Container maxWidth="md" sx={{ mt: 2, mb: 2 }}>
+    <Container maxWidth="md" sx={{ mt: 1, mb: 1 }}>
       <Box sx={{ 
         width: '100%',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '4px',
-        overflow: 'hidden',
-        padding: '5px',
-        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        borderRadius: '2px',
+        padding: '2px',
+        background: 'rgba(255, 255, 255, 0.02)',
       }}>
         <Typography 
           variant="caption" 
           sx={{ 
             display: 'block', 
-            mb: 0.5, 
             textAlign: 'center', 
-            color: 'rgba(255, 255, 255, 0.5)',
+            color: 'rgba(255, 255, 255, 0.4)',
             fontSize: '0.6rem'
           }}
         >
-          {title}
+          Ad
         </Typography>
         
         <Box
@@ -96,12 +82,10 @@ const AdSenseDisplay: React.FC<AdSenseDisplayProps> = ({
           sx={{
             display: 'block',
             width: '100%',
-            minHeight: '60px',  // Smaller height
-            maxHeight: '90px',  // Add max height
+            minHeight: '40px',
+            maxHeight: '60px',
             overflow: 'hidden',
             textAlign: 'center',
-            position: 'relative',
-            ...style
           }}
         />
       </Box>
