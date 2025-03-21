@@ -8,6 +8,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import dynamic from 'next/dynamic';
+import Script from 'next/script';
 
 // Import AdSenseDisplay with dynamic to avoid SSR issues
 const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
@@ -325,13 +326,42 @@ const HomePage = () => {
           >
             Advertisement
           </Typography>
-          <AdSenseDisplay 
-            adSlot="3868550810" 
-            adFormat="auto"
-            style={{ 
-              minHeight: '280px',
-            }} 
-          />
+          
+          {/* Updated ad container with matched content format */}
+          <Box
+            component="div"
+            sx={{
+              display: 'block',
+              width: '100%',
+              minHeight: '250px',
+              overflow: 'hidden',
+              textAlign: 'center'
+            }}
+          >
+            <ins 
+              className="adsbygoogle"
+              style={{ 
+                display: 'block',
+                width: '100%',
+                height: '250px'
+              }}
+              data-ad-client="ca-pub-3681278136187746"
+              data-ad-slot="3868550810"
+              data-ad-format="auto"
+              data-matched-content-ui-type="image_card_stacked"
+              data-matched-content-rows-num="2"
+              data-matched-content-columns-num="2"
+              data-full-width-responsive="true"
+            />
+            <Script id="ad-init" strategy="afterInteractive">
+              {`try {
+                (adsbygoogle = window.adsbygoogle || []).push({});
+                console.log('AdSense push successful');
+              } catch (e) {
+                console.error('AdSense push error:', e);
+              }`}
+            </Script>
+          </Box>
         </Box>
       </Container>
     </Box>
