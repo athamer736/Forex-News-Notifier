@@ -29,17 +29,22 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
-        {/* Additional security headers to allow AdSense */}
-        <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+        {/* Don't add CSP tag as it can interfere with AdSense */}
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
-        {/* Standard Google AdSense Script loaded earlier in the page */}
+        {/* Standard Google AdSense Script with fallback */}
         <Script
           id="adsense-script"
-          strategy="beforeInteractive"
+          strategy="lazyOnload"
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
           crossOrigin="anonymous"
+          onError={() => {
+            console.log('AdSense failed to load');
+          }}
+          onLoad={() => {
+            console.log('AdSense loaded successfully');
+          }}
         />
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">

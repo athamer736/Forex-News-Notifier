@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Container } from '@mui/material';
+
+// Add AdSense type definition to the window object
+declare global {
+  interface Window {
+    adsbygoogle: any[];
+  }
+}
 
 interface AdSenseDisplayProps {
   slot: string;
@@ -18,105 +25,87 @@ const AdSenseDisplay: React.FC<AdSenseDisplayProps> = ({
   responsive = true,
   title = 'Advertisement'
 }) => {
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const adRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Wait for the component to mount and for AdSense script to be available
-    const timeout = setTimeout(() => {
-      if (iframeRef.current && typeof window !== 'undefined') {
+    // Simple non-iframe implementation
+    if (adRef.current && typeof window !== 'undefined') {
+      try {
+        // Clear any existing content
+        adRef.current.innerHTML = '';
+        
+        // Create the ad element directly
+        const adElement = document.createElement('ins');
+        adElement.className = 'adsbygoogle';
+        adElement.style.display = 'block';
+        adElement.style.width = '100%';
+        adElement.style.height = '60px';  // Smaller height
+        adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+        adElement.setAttribute('data-ad-slot', slot);
+        adElement.setAttribute('data-ad-format', format);
+        if (responsive) {
+          adElement.setAttribute('data-full-width-responsive', 'true');
+        }
+        
+        // Add to DOM
+        adRef.current.appendChild(adElement);
+        
+        // Push to adsbygoogle
         try {
-          const iframeDoc = iframeRef.current.contentDocument || 
-                           iframeRef.current.contentWindow?.document;
-          
-          if (iframeDoc) {
-            iframeDoc.open();
-            iframeDoc.write(`
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1">
-                  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746" crossorigin="anonymous"></script>
-                  <style>
-                    body {
-                      margin: 0;
-                      padding: 0;
-                      overflow: hidden;
-                      background: transparent;
-                    }
-                  </style>
-                </head>
-                <body>
-                  <ins class="adsbygoogle"
-                    style="display:block; width:100%; height:100%;"
-                    data-ad-client="ca-pub-3681278136187746"
-                    data-ad-slot="${slot}"
-                    data-ad-format="${format}"
-                    ${responsive ? 'data-full-width-responsive="true"' : ''}></ins>
-                  <script>
-                    try {
-                      (adsbygoogle = window.adsbygoogle || []).push({});
-                      window.parent.postMessage('adLoaded', '*');
-                    } catch (e) {
-                      window.parent.postMessage('adError: ' + e.message, '*');
-                    }
-                  </script>
-                </body>
-              </html>
-            `);
-            iframeDoc.close();
+          // Check if AdSense is loaded
+          if (window.adsbygoogle) {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+          } else {
+            console.log('AdSense not loaded yet');
           }
         } catch (err) {
-          console.error('Failed to initialize ad iframe:', err);
+          console.error('Failed to push ad', err);
         }
+      } catch (err) {
+        console.error('Failed to initialize ad', err);
       }
-    }, 1000);
-
-    return () => clearTimeout(timeout);
+    }
   }, [slot, format, responsive]);
 
   return (
-    <Box sx={{ 
-      width: '100%',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      padding: '20px',
-      background: 'rgba(255, 255, 255, 0.05)',
-      my: 3
-    }}>
-      <Typography 
-        variant="subtitle2" 
-        sx={{ mb: 2, textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}
-      >
-        {title}
-      </Typography>
-      
-      <Box
-        component="div"
-        sx={{
-          display: 'block',
-          width: '100%',
-          minHeight: '250px',
-          overflow: 'hidden',
-          textAlign: 'center',
-          position: 'relative'
-        }}
-      >
-        <iframe
-          ref={iframeRef}
-          src="about:blank"
-          style={{ 
+    <Container maxWidth="md" sx={{ mt: 2, mb: 2 }}>
+      <Box sx={{ 
+        width: '100%',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        overflow: 'hidden',
+        padding: '5px',
+        background: 'rgba(255, 255, 255, 0.05)',
+      }}>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            display: 'block', 
+            mb: 0.5, 
+            textAlign: 'center', 
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontSize: '0.6rem'
+          }}
+        >
+          {title}
+        </Typography>
+        
+        <Box
+          ref={adRef}
+          component="div"
+          sx={{
+            display: 'block',
             width: '100%',
-            minHeight: '250px',
-            border: 'none',
+            minHeight: '60px',  // Smaller height
+            maxHeight: '90px',  // Add max height
             overflow: 'hidden',
+            textAlign: 'center',
+            position: 'relative',
             ...style
           }}
-          title="Advertisement"
         />
       </Box>
-    </Box>
+    </Container>
   );
 };
 
