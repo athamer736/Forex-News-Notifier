@@ -5,10 +5,6 @@ Currently scanning for news from ForexFactory and displays it here.
 
 Currently Accessible at:
 
-https://fxalert.co.uk:3000
-
-Aiming to have it working on:
-
 https://fxalert.co.uk/
 
 ## Quick Setup (Windows)
