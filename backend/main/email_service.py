@@ -201,11 +201,11 @@ def format_event_summary(event: Dict) -> str:
     # Get event title from event_title field (not title)
     event_title = event.get('event_title', 'No Title')
     event_time = event.get('time', '')
-    if isinstance(event_time, str):
-        try:
-            event_time = datetime.fromisoformat(event_time)
-        except ValueError:
-            event_time = datetime.now()
+    timezone_abbr = event.get('timezone_abbr', '')
+    formatted_time = event.get('formatted_time', '')
+    
+    if not formatted_time and isinstance(event_time, datetime):
+        formatted_time = f"{event_time.strftime('%I:%M %p')} {timezone_abbr}".strip()
     
     # Format AI summary if available
     ai_summary = event.get('ai_summary')
@@ -245,7 +245,7 @@ def format_event_summary(event: Dict) -> str:
                 </span>
             </div>
             <div style="color: #e0e0e0; font-size: 14px;">
-                {event_time.strftime('%I:%M %p') if isinstance(event_time, datetime) else 'Time N/A'}
+                {formatted_time or (event_time.strftime('%I:%M %p') if isinstance(event_time, datetime) else 'Time N/A')}
             </div>
         </div>
         
@@ -310,7 +310,12 @@ def send_daily_update(subscription: EmailSubscription):
             event_time = datetime.fromisoformat(event['time'])
             if event_time.tzinfo is None:
                 event_time = pytz.UTC.localize(event_time)
-            event['time'] = event_time.astimezone(user_tz)
+            local_time = event_time.astimezone(user_tz)
+            # Get timezone abbreviation that properly reflects DST status
+            tz_abbr = local_time.strftime('%Z')
+            event['time'] = local_time
+            event['timezone_abbr'] = tz_abbr  # Add timezone abbreviation
+            event['formatted_time'] = f"{local_time.strftime('%I:%M %p')} {tz_abbr}"  # Format with abbreviation
         
         # Sort events by time
         events.sort(key=lambda x: x['time'])
@@ -425,6 +430,11 @@ def send_weekly_update(subscription: EmailSubscription):
             if event_time.tzinfo is None:
                 event_time = pytz.UTC.localize(event_time)
             local_time = event_time.astimezone(user_tz)
+            
+            # Get timezone abbreviation that properly reflects DST status
+            tz_abbr = local_time.strftime('%Z')
+            event['timezone_abbr'] = tz_abbr  # Add timezone abbreviation
+            event['formatted_time'] = f"{local_time.strftime('%I:%M %p')} {tz_abbr}"  # Format with abbreviation
             
             day_key = local_time.strftime('%Y-%m-%d')
             if day_key not in events_by_day:
