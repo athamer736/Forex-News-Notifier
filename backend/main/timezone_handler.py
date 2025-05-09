@@ -87,7 +87,8 @@ def convert_to_local_time(events: List[Dict], user_id: str = 'default') -> List[
     current_utc = datetime.now(pytz.UTC)
     
     try:
-        target_tz = pytz.timezone(user_tz)
+        # Get the target timezone from pytz - this properly handles DST transitions
+        target_tz = pytz.timezone(user_tz) if user_tz else pytz.UTC
         
         for event in events:
             try:
@@ -96,16 +97,21 @@ def convert_to_local_time(events: List[Dict], user_id: str = 'default') -> List[
                 if utc_time.tzinfo is None:
                     utc_time = pytz.UTC.localize(utc_time)
                 
-                # Convert to user's timezone
+                # Convert to user's timezone - pytz automatically handles DST transitions
                 local_time = utc_time.astimezone(target_tz)
-                logger.debug(f"Converting {event['time']} UTC to {local_time.strftime('%Y-%m-%d %H:%M')} {user_tz}")
+                
+                # Get timezone abbreviation (GMT/BST/EDT/EST etc.) that properly reflects DST status
+                tz_abbr = local_time.strftime('%Z')
+                
+                logger.debug(f"Converting {event['time']} UTC to {local_time.strftime('%Y-%m-%d %H:%M')} {tz_abbr} ({user_tz})")
                 
                 # Only include future events and events from the last hour
                 time_difference = (utc_time - current_utc).total_seconds() / 3600
                 if time_difference > -1:  # Include events from the last hour
                     converted_event = event.copy()
-                    # Format the time in a user-friendly format
+                    # Format the time in a user-friendly format with timezone abbreviation
                     converted_event['time'] = local_time.strftime('%Y-%m-%d %H:%M')
+                    converted_event['timezone_abbr'] = tz_abbr  # Add timezone abbreviation
                     converted_event['_datetime'] = local_time  # For sorting
                     converted_events.append(converted_event)
                 else:
