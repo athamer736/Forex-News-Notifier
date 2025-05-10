@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from 'next/dynamic';
-import Script from 'next/script';
 
 // Import Footer with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
@@ -36,7 +35,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://www.googletagmanager.com" />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
-        {/* Use client component for AdSense */}
+        {/* Use GoogleAdsense client component */}
         <GoogleAdsense />
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
