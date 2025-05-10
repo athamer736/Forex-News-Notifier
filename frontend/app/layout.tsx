@@ -29,6 +29,10 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
+        <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+        <link rel="preconnect" href="https://googleads.g.doubleclick.net" />
+        <link rel="preconnect" href="https://adservice.google.com" />
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
         {/* Standard Google AdSense Script */}
@@ -38,6 +42,12 @@ export default function RootLayout({
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
           crossOrigin="anonymous"
+          onError={(e) => {
+            console.error('AdSense script failed to load', e);
+          }}
+          onLoad={() => {
+            console.log('AdSense script loaded successfully');
+          }}
         />
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
