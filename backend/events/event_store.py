@@ -69,7 +69,7 @@ def store_weekly_events(events: List[Dict]) -> None:
 
 def load_weekly_events(weeks_offset: int = 0) -> List[Dict]:
     """
-    Load events for a specific week
+    Load events for a specific week from JSON file
     weeks_offset: 0 for current week, -1 for previous week, 1 for next week
     """
     try:
@@ -80,23 +80,13 @@ def load_weekly_events(weeks_offset: int = 0) -> List[Dict]:
 
         if os.path.exists(filepath):
             with open(filepath, 'r', encoding='utf-8') as f:
-                raw_events = json.load(f)
-                # Convert the raw events to our expected format
-                formatted_events = []
-                for event in raw_events:
-                    formatted_event = {
-                        'time': event['date'],  # The date field contains the ISO timestamp
-                        'currency': event['country'],
-                        'impact': event['impact'],
-                        'event_title': event['title'],
-                        'forecast': event['forecast'],
-                        'previous': event['previous']
-                    }
-                    formatted_events.append(formatted_event)
-                logger.info(f"Loaded {len(formatted_events)} events from {filename}")
-                return formatted_events
+                data = json.load(f)
+                events = data.get('events', [])
+                
+                logger.info(f"Loaded {len(events)} events from {filename}")
+                return events
         else:
-            logger.warning(f"Weekly events file not found: {filename}")
+            logger.warning(f"Weekly events file not found: {filepath}")
         return []
     except Exception as e:
         logger.error(f"Error loading weekly events: {str(e)}")
@@ -198,7 +188,7 @@ def convert_to_user_timezone(event: Dict, user_tz: pytz.timezone) -> Dict:
 def get_filtered_events(time_range: str, user_timezone: str, selected_currencies: List[str] = None, selected_impacts: List[str] = None, specific_date: str = None) -> List[Dict]:
     """
     Filter events based on time range, user's timezone, currencies, and impact levels
-    Now uses database directly for all time ranges, avoiding JSON file dependency
+    Uses local JSON files for 'previous_week' time range, returns empty list for other ranges
     
     Args:
         time_range: One of '24h', 'today', 'yesterday', 'tomorrow', 'week', 'previous_week', 'next_week', 'specific_date'
@@ -207,10 +197,28 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
         selected_impacts: List of impact levels to filter by (e.g., ['High', 'Medium'])
         specific_date: Date string in YYYY-MM-DD format for 'specific_date' time range
     """
-    logger.info(f"Using database to get filtered events for time_range: {time_range}")
+    logger.info(f"Getting filtered events for time_range: {time_range}")
     
-    # Empty results array should be returned by route_handler's database query
-    # This tells the caller that events should be fetched from database directly
+    # Special case for previous_week - use local JSON files
+    if time_range == 'previous_week':
+        logger.info("Using local JSON file for previous week events")
+        events = load_weekly_events(weeks_offset=-1)
+        
+        # Filter by currency if needed
+        if selected_currencies and len(selected_currencies) > 0:
+            events = [event for event in events if event['currency'] in selected_currencies]
+            logger.info(f"Filtered to {len(events)} events after currency filter")
+        
+        # Filter by impact if needed
+        if selected_impacts and len(selected_impacts) > 0:
+            events = [event for event in events if event['impact'] in selected_impacts]
+            logger.info(f"Filtered to {len(events)} events after impact filter")
+        
+        logger.info(f"Returning {len(events)} previous week events from local file")
+        return events
+    
+    # For all other time ranges, return empty list to use database query
+    logger.info(f"Using database to get filtered events for time_range: {time_range}")
     return []
 
 def clean_memory_cache():
