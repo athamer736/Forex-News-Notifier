@@ -85,6 +85,8 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             end_time = week_end.replace(hour=23, minute=59, second=59, microsecond=999999)
             
             logger.info(f"Calculated previous week: {start_time.date()} to {end_time.date()}")
+            logger.info(f"Previous week in ISO format: {start_time.isoformat()} to {end_time.isoformat()}")
+            logger.info(f"Current time: {now.isoformat()}, Weekday: {now.weekday()}")
         elif time_range == 'next_week':
             # Calculate days to next Sunday
             if now.weekday() == 6:  # If today is Sunday
@@ -149,19 +151,34 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                 logger.error(f"Unexpected error in date range processing: {str(e)}")
                 raise ValueError(f"Error processing date range: {str(e)}")
 
+        # Process selected currencies and impacts
+        processed_currencies = None
+        if selected_currencies and any(c.strip() for c in selected_currencies):
+            processed_currencies = [c.strip().upper() for c in selected_currencies if c.strip()]
+            logger.info(f"Processed currencies: {processed_currencies}")
+            
+        processed_impacts = None
+        if selected_impacts and any(i.strip() for i in selected_impacts):
+            processed_impacts = [i.strip() for i in selected_impacts if i.strip()]
+            logger.info(f"Processed impacts: {processed_impacts}")
+
         # Get filtered events from database
         logger.info(f"Querying database for events between {start_time.isoformat()} and {end_time.isoformat()}")
+        logger.info(f"Time range: '{time_range}', Currencies: {processed_currencies}, Impacts: {processed_impacts}")
+        
         filtered_events = db_get_filtered_events(
             start_time=start_time,
             end_time=end_time,
-            currencies=selected_currencies if selected_currencies else None,
-            impact_levels=selected_impacts if selected_impacts else None
+            currencies=processed_currencies,
+            impact_levels=processed_impacts
         )
         
         if not filtered_events:
             logger.warning(f"No events found in database for {time_range} between {start_time} and {end_time}")
         else:
             logger.info(f"Found {len(filtered_events)} events in database for {time_range}")
+            logger.info(f"First event: {filtered_events[0]['event_title']} at {filtered_events[0]['time']}")
+            logger.info(f"Last event: {filtered_events[-1]['event_title']} at {filtered_events[-1]['time']}")
 
         # Convert times to user's timezone with proper DST handling
         converted_events = convert_to_local_time(filtered_events, user_id)
@@ -169,7 +186,6 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
         return converted_events, 200
             
     except ValueError as e:
-        logger.error(f"ValueError in events request: {str(e)}")
         return {'error': str(e)}, 400
     except Exception as e:
         logger.exception("Error processing events request")

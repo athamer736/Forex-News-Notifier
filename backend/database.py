@@ -198,33 +198,21 @@ def get_filtered_events(
             logger.info(f"Added result limit: {limit}")
         
         # Execute query
-        logger.info(f"Executing SQL query...")
         events = query.all()
-        logger.info(f"Query returned {len(events)} events from database")
+        logger.info(f"Database query returned {len(events)} events")
         
-        # Check for empty results
-        if not events:
-            # Log a sample query to help debugging
-            raw_sql = str(query.statement.compile(
-                dialect=db_session.bind.dialect,
-                compile_kwargs={"literal_binds": True}
-            ))
-            logger.warning(f"Query returned no results. SQL query (approximate): {raw_sql}")
-            
-            # Check if there are any events in the database around this time period
-            sample_query = db_session.query(ForexEvent).order_by(ForexEvent.time).limit(5)
-            sample_events = sample_query.all()
-            if sample_events:
-                logger.info(f"Database contains events. Sample event time range: {sample_events[0].time} to {sample_events[-1].time}")
-            else:
-                logger.warning("Database appears to contain no events at all")
+        # Debug output for first few events if available
+        if events:
+            logger.info(f"First event time: {events[0].time}, Last event time: {events[-1].time}")
+            for i, event in enumerate(events[:3]):  # Log first 3 events
+                logger.info(f"Event {i+1}: {event.event_title} at {event.time}")
         
         # Convert to dictionaries
         return [event.to_dict() for event in events]
         
     except Exception as e:
-        logger.error(f"Error getting filtered events: {str(e)}")
-        logger.exception("Database query exception details:")
+        logger.error(f"Error in get_filtered_events: {str(e)}")
+        logger.error("Error details:", exc_info=True)
         return []
     
 def get_events_by_date(date: datetime) -> List[dict]:

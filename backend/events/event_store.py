@@ -200,16 +200,15 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
     Filter stored events based on time range, user's timezone, currencies, and impact levels
     
     Args:
-        time_range: One of '24h', 'today', 'tomorrow', 'week', 'previous_week', 'next_week', 'specific_date'
+        time_range: One of '24h', 'today', 'yesterday', 'tomorrow', 'week', 'previous_week', 'next_week', 'specific_date'
         user_timezone: User's timezone (e.g., 'America/New_York')
         selected_currencies: List of currency codes to filter by (e.g., ['USD', 'GBP'])
         selected_impacts: List of impact levels to filter by (e.g., ['High', 'Medium'])
         specific_date: Date string in YYYY-MM-DD format for 'specific_date' time range
     """
-    # For 'previous_week', delegate to the database query directly via the route_handler
-    # The route_handler will handle the date range calculation and query the database
+    # For 'previous_week', always delegate to the database query directly via the route_handler
     if time_range == 'previous_week':
-        logger.info("'previous_week' time range - delegating to database query in route_handler")
+        logger.info("'previous_week' filter will be handled by direct database query in route_handler")
         return []
         
     if not event_store['events'] and time_range not in ['next_week', 'specific_date']:
