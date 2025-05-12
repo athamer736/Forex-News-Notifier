@@ -73,11 +73,28 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             week_end = week_start + timedelta(days=6)  # Saturday
             end_time = week_end.replace(hour=23, minute=59, second=59, microsecond=999999)
         elif time_range == 'previous_week':
-            start_time = (now - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
-            end_time = now
+            # Calculate days to previous Sunday, then go back one more week
+            if now.weekday() == 6:  # If today is Sunday
+                days_to_start = -7  # Go back one week
+            else:
+                days_to_start = -(now.weekday() + 1) - 7  # Go back to previous Sunday
+            week_start = now + timedelta(days=days_to_start)
+            start_time = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+            # End on Saturday of previous week
+            week_end = week_start + timedelta(days=6)  # Saturday
+            end_time = week_end.replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+            logger.info(f"Calculated previous week: {start_time.date()} to {end_time.date()}")
         elif time_range == 'next_week':
-            start_time = (now + timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
-            end_time = start_time + timedelta(days=7)
+            # Calculate days to next Sunday
+            if now.weekday() == 6:  # If today is Sunday
+                days_to_start = 7  # Go forward one week
+            else:
+                days_to_start = 6 - now.weekday()  # Days until next Sunday
+            week_start = now + timedelta(days=days_to_start)
+            start_time = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+            week_end = week_start + timedelta(days=6)  # Saturday
+            end_time = week_end.replace(hour=23, minute=59, second=59, microsecond=999999)
         elif time_range == 'specific_date':
             if not specific_date:
                 raise ValueError("No date provided for specific date filter")
@@ -133,12 +150,18 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                 raise ValueError(f"Error processing date range: {str(e)}")
 
         # Get filtered events from database
+        logger.info(f"Querying database for events between {start_time.isoformat()} and {end_time.isoformat()}")
         filtered_events = db_get_filtered_events(
             start_time=start_time,
             end_time=end_time,
             currencies=selected_currencies if selected_currencies else None,
             impact_levels=selected_impacts if selected_impacts else None
         )
+        
+        if not filtered_events:
+            logger.warning(f"No events found in database for {time_range} between {start_time} and {end_time}")
+        else:
+            logger.info(f"Found {len(filtered_events)} events in database for {time_range}")
 
         # Convert times to user's timezone with proper DST handling
         converted_events = convert_to_local_time(filtered_events, user_id)
@@ -146,6 +169,7 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
         return converted_events, 200
             
     except ValueError as e:
+        logger.error(f"ValueError in events request: {str(e)}")
         return {'error': str(e)}, 400
     except Exception as e:
         logger.exception("Error processing events request")

@@ -206,7 +206,13 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
         selected_impacts: List of impact levels to filter by (e.g., ['High', 'Medium'])
         specific_date: Date string in YYYY-MM-DD format for 'specific_date' time range
     """
-    if not event_store['events'] and time_range not in ['previous_week', 'next_week', 'specific_date']:
+    # For 'previous_week', delegate to the database query directly via the route_handler
+    # The route_handler will handle the date range calculation and query the database
+    if time_range == 'previous_week':
+        logger.info("'previous_week' time range - delegating to database query in route_handler")
+        return []
+        
+    if not event_store['events'] and time_range not in ['next_week', 'specific_date']:
         logger.warning("No events in store")
         return []
 
@@ -219,9 +225,7 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
 
         # Load appropriate events based on time range
         events_to_filter = []
-        if time_range == 'previous_week':
-            events_to_filter = load_weekly_events(weeks_offset=-1)
-        elif time_range == 'next_week':
+        if time_range == 'next_week':
             events_to_filter = load_weekly_events(weeks_offset=1)
         elif time_range == 'today' and local_now.weekday() == 6:  # If today is Sunday
             # Load both previous week's events (which contain Sunday) and current week's events
