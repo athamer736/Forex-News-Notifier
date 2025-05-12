@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple, Union
 from flask import jsonify, request
 import pytz
 
-from .timezone_handler import set_user_timezone as set_tz, get_user_timezone
+from .timezone_handler import set_user_timezone as set_tz, get_user_timezone, convert_to_local_time
 from ..database import get_filtered_events as db_get_filtered_events
 from ..events import get_cache_status, fetch_events
 
@@ -34,7 +34,7 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
     try:
         # Get query parameters
         time_range = request.args.get('time_range', '24h')
-        user_timezone = request.args.get('timezone', 'UTC')
+        user_id = request.args.get('userId', 'default')
         selected_currencies = request.args.get('currencies', '').split(',') if request.args.get('currencies') else None
         selected_impacts = request.args.get('impacts', '').split(',') if request.args.get('impacts') else None
         specific_date = request.args.get('date')
@@ -140,16 +140,10 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             impact_levels=selected_impacts if selected_impacts else None
         )
 
-        # Convert times to user's timezone
-        user_tz = pytz.timezone(user_timezone)
-        for event in filtered_events:
-            event_time = datetime.fromisoformat(event['time'])
-            if event_time.tzinfo is None:
-                event_time = pytz.UTC.localize(event_time)
-            local_time = event_time.astimezone(user_tz)
-            event['time'] = local_time.strftime('%Y-%m-%d %H:%M')
-
-        return filtered_events, 200
+        # Convert times to user's timezone with proper DST handling
+        converted_events = convert_to_local_time(filtered_events, user_id)
+        
+        return converted_events, 200
             
     except ValueError as e:
         return {'error': str(e)}, 400

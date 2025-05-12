@@ -182,9 +182,13 @@ def convert_to_user_timezone(event: Dict, user_tz: pytz.timezone) -> Dict:
         # Convert to user's timezone
         local_time = utc_time.astimezone(user_tz)
         
+        # Get timezone abbreviation (GMT/BST/EDT/EST etc.) that properly reflects DST status
+        tz_abbr = local_time.strftime('%Z')
+        
         # Create a copy with the converted time
         event_copy = event.copy()
         event_copy['time'] = local_time.strftime('%Y-%m-%d %H:%M')
+        event_copy['timezone_abbr'] = tz_abbr  # Add timezone abbreviation
         return event_copy
     except Exception as e:
         logger.error(f"Error converting event time: {event}")

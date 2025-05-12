@@ -69,12 +69,18 @@ def filter_events_by_range(events: List[Dict], time_range: TimeRange, user_timez
                 # Convert to user's timezone for comparison
                 event_local_time = event_time.astimezone(user_tz)
                 
+                # Get timezone abbreviation (GMT/BST/EDT/EST etc.) that properly reflects DST status
+                tz_abbr = event_local_time.strftime('%Z')
+                
                 # Check if event is within the specified range
                 if start_time <= event_local_time <= end_time:
-                    filtered_events.append(event)
-                    logger.debug(f"Including event at {event_local_time}")
+                    # Create a copy and add timezone abbreviation
+                    event_copy = event.copy()
+                    event_copy['timezone_abbr'] = tz_abbr
+                    filtered_events.append(event_copy)
+                    logger.debug(f"Including event at {event_local_time} {tz_abbr}")
                 else:
-                    logger.debug(f"Excluding event at {event_local_time}")
+                    logger.debug(f"Excluding event at {event_local_time} {tz_abbr}")
             except Exception as e:
                 logger.error(f"Error processing event: {event}")
                 logger.exception(e)

@@ -27,6 +27,7 @@ interface ForexEvent {
     forecast: string;
     previous: string;
     actual: string;
+    timezone_abbr?: string;
     ai_summary?: string;
     isNew: boolean;
 }
@@ -775,7 +776,7 @@ function EventsPage() {
     }, [events, groupEventsByDate, selectedTimezone]);
 
     // Helper function to format event time in the selected timezone
-    const formatEventTime = useCallback((timeString: string) => {
+    const formatEventTime = useCallback((timeString: string, timezone_abbr?: string) => {
         // If no timeString provided or invalid, return N/A
         if (!timeString || !timeString.trim()) {
             return 'N/A';
@@ -791,19 +792,27 @@ function EventsPage() {
             }
 
             // If using 'auto', use the browser's default timezone
+            let formattedTime = '';
             if (!selectedTimezone || selectedTimezone === 'auto') {
-                return eventDate.toLocaleTimeString([], {
+                formattedTime = eventDate.toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit'
                 });
+            } else {
+                // For specific timezones, use the Intl API with timezone option
+                formattedTime = eventDate.toLocaleString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: selectedTimezone
+                });
             }
 
-            // For specific timezones, use the Intl API with timezone option
-            return eventDate.toLocaleString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: selectedTimezone
-            });
+            // Append the timezone abbreviation if available
+            if (timezone_abbr) {
+                return `${formattedTime} ${timezone_abbr}`;
+            }
+            
+            return formattedTime;
         } catch (error) {
             console.error('Error formatting event time:', error);
             return 'N/A';
@@ -875,7 +884,7 @@ function EventsPage() {
                                                 }}
                                             >
                                                 <TableCell>
-                                                    {formatEventTime(event.time)}
+                                                    {formatEventTime(event.time, event.timezone_abbr)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Chip
@@ -1026,7 +1035,7 @@ function EventsPage() {
                                             <CardContent>
                                                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                     <Typography variant="h6" component="div">
-                                                        {formatEventTime(event.time)}
+                                                        {formatEventTime(event.time, event.timezone_abbr)}
                                                     </Typography>
                                                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                                                         <Chip

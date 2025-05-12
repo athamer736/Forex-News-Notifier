@@ -4,7 +4,7 @@ import "./globals.css";
 import dynamic from 'next/dynamic';
 import Script from 'next/script';
 
-// Import Footer with dynamic to avoid hydration issues
+// Import components with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
 
 const inter = Inter({
@@ -27,13 +27,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
+      </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
-        {/* Google AdSense Script */}
+        {/* Standard Google AdSense Script */}
         <Script
+          id="adsense-script"
+          strategy="afterInteractive"
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">

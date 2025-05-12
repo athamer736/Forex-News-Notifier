@@ -80,12 +80,20 @@
             color: #666;
             padding: 20px;
         }
+        .timezone-info {
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Weekly Forex Economic Calendar</h1>
         <h2>Week of {{ week_start }}</h2>
+        <div class="timezone-info">All times shown in your local timezone ({{ timezone_abbr }})</div>
     </div>
 
     {% for day, day_data in grouped_events.items() %}

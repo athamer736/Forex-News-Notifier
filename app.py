@@ -58,10 +58,11 @@ app = Flask(__name__)
 # Basic security headers with HTTPS
 csp = {
     'default-src': ["'self'", "https:", "http:"],
-    'img-src': ["'self'", 'data:', 'https:', "http:"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+    'img-src': ["'self'", 'data:', 'https:', "http:", "https://pagead2.googlesyndication.com", "https://adservice.google.com", "https://www.googletagmanager.com", "https://www.google-analytics.com"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://pagead2.googlesyndication.com", "https://adservice.google.com", "https://www.googletagmanager.com", "https://partner.googleadservices.com", "https://tpc.googlesyndication.com", "https://www.google-analytics.com"],
     'style-src': ["'self'", "'unsafe-inline'"],
     'font-src': ["'self'", 'data:', 'https:', "http:"],
+    'frame-src': ["'self'", "https://googleads.g.doubleclick.net", "https://tpc.googlesyndication.com", "https://www.google.com"],
     'frame-ancestors': "'none'",
     'form-action': "'self'",
     'connect-src': ["'self'", "https:", "http:", "*"]
