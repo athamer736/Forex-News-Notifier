@@ -146,9 +146,6 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                 if "does not match format" in str(e):
                     raise ValueError("Invalid date format. Please use YYYY-MM-DD")
                 logger.error(f"Date range error: {str(e)}")
-                raise
-            except Exception as e:
-                logger.error(f"Unexpected error in date range processing: {str(e)}")
                 raise ValueError(f"Error processing date range: {str(e)}")
 
         # Process selected currencies and impacts
@@ -177,8 +174,9 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             logger.warning(f"No events found in database for {time_range} between {start_time} and {end_time}")
         else:
             logger.info(f"Found {len(filtered_events)} events in database for {time_range}")
-            logger.info(f"First event: {filtered_events[0]['event_title']} at {filtered_events[0]['time']}")
-            logger.info(f"Last event: {filtered_events[-1]['event_title']} at {filtered_events[-1]['time']}")
+            if filtered_events:  # Double-check to avoid index error with empty list
+                logger.info(f"First event: {filtered_events[0]['event_title']} at {filtered_events[0]['time']}")
+                logger.info(f"Last event: {filtered_events[-1]['event_title']} at {filtered_events[-1]['time']}")
 
         # Convert times to user's timezone with proper DST handling
         converted_events = convert_to_local_time(filtered_events, user_id)
