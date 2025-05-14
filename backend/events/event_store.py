@@ -197,28 +197,50 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
         selected_impacts: List of impact levels to filter by (e.g., ['High', 'Medium'])
         specific_date: Date string in YYYY-MM-DD format for 'specific_date' time range
     """
-    logger.info(f"Getting filtered events for time_range: {time_range}")
+    logger.info(f"[DEBUG] get_filtered_events called with time_range: {time_range}, user_timezone: {user_timezone}")
+    logger.info(f"[DEBUG] selected_currencies: {selected_currencies}, selected_impacts: {selected_impacts}")
     
     # Special case for previous_week - use local JSON files
     if time_range == 'previous_week':
-        logger.info("Using local JSON file for previous week events")
+        logger.info("[DEBUG] Using local JSON file for previous week events")
+        
+        # List available weekly files
+        try:
+            if os.path.exists(WEEKLY_STORAGE_DIR):
+                files = os.listdir(WEEKLY_STORAGE_DIR)
+                logger.info(f"[DEBUG] Available weekly files: {files}")
+            else:
+                logger.warning(f"[DEBUG] Weekly storage directory not found: {WEEKLY_STORAGE_DIR}")
+        except Exception as e:
+            logger.error(f"[DEBUG] Error listing weekly files: {str(e)}")
+        
         events = load_weekly_events(weeks_offset=-1)
+        logger.info(f"[DEBUG] load_weekly_events returned {len(events)} events")
         
         # Filter by currency if needed
         if selected_currencies and len(selected_currencies) > 0:
+            before_count = len(events)
             events = [event for event in events if event['currency'] in selected_currencies]
-            logger.info(f"Filtered to {len(events)} events after currency filter")
+            logger.info(f"[DEBUG] Currency filter: {before_count} -> {len(events)} events")
         
         # Filter by impact if needed
         if selected_impacts and len(selected_impacts) > 0:
+            before_count = len(events)
             events = [event for event in events if event['impact'] in selected_impacts]
-            logger.info(f"Filtered to {len(events)} events after impact filter")
+            logger.info(f"[DEBUG] Impact filter: {before_count} -> {len(events)} events")
         
-        logger.info(f"Returning {len(events)} previous week events from local file")
+        logger.info(f"[DEBUG] Returning {len(events)} previous week events from local file")
+        
+        # If we have no events, try loading events from current week as fallback
+        if not events:
+            logger.warning("[DEBUG] No events found for previous week, trying current week as fallback")
+            events = load_weekly_events(weeks_offset=0)
+            logger.info(f"[DEBUG] Fallback: Found {len(events)} events for current week")
+        
         return events
     
     # For all other time ranges, return empty list to use database query
-    logger.info(f"Using database to get filtered events for time_range: {time_range}")
+    logger.info(f"[DEBUG] Using database to get filtered events for time_range: {time_range}")
     return []
 
 def clean_memory_cache():

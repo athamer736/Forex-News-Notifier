@@ -7,6 +7,7 @@ import pytz
 from .timezone_handler import set_user_timezone as set_tz, get_user_timezone, convert_to_local_time
 from ..database import get_filtered_events as db_get_filtered_events
 from ..events import get_cache_status, fetch_events
+from ..events.event_store import get_filtered_events as store_get_filtered_events
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,46 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
         # Add parameters for date range
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
+
+        # Process selected currencies and impacts
+        processed_currencies = None
+        if selected_currencies and any(c.strip() for c in selected_currencies):
+            processed_currencies = [c.strip().upper() for c in selected_currencies if c.strip()]
+            logger.info(f"Processed currencies: {processed_currencies}")
+            
+        processed_impacts = None
+        if selected_impacts and any(i.strip() for i in selected_impacts):
+            processed_impacts = [i.strip() for i in selected_impacts if i.strip()]
+            logger.info(f"Processed impacts: {processed_impacts}")
+        
+        # Special handling for previous_week - try to get events from local JSON files first
+        if time_range == 'previous_week':
+            logger.info("Attempting to get previous week events from local JSON files")
+            
+            try:
+                # Get user's timezone
+                user_timezone = get_user_timezone(user_id)
+                logger.info(f"User timezone from preferences: {user_timezone}")
+                
+                # Get events from event_store
+                events = store_get_filtered_events(
+                    time_range=time_range,
+                    user_timezone=user_timezone,
+                    selected_currencies=processed_currencies,
+                    selected_impacts=processed_impacts
+                )
+                
+                if events and len(events) > 0:
+                    logger.info(f"Found {len(events)} previous week events from local JSON files")
+                    
+                    # Convert times to user's timezone with proper DST handling
+                    converted_events = convert_to_local_time(events, user_id)
+                    return converted_events, 200
+                else:
+                    logger.warning("No events found in local JSON files for previous week, falling back to database")
+            except Exception as e:
+                logger.exception(f"Error getting previous week events from local JSON files: {str(e)}")
+                logger.warning("Falling back to database query for previous week events")
 
         # Get current time in UTC
         now = datetime.now(pytz.UTC)
@@ -147,17 +188,6 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                     raise ValueError("Invalid date format. Please use YYYY-MM-DD")
                 logger.error(f"Date range error: {str(e)}")
                 raise ValueError(f"Error processing date range: {str(e)}")
-
-        # Process selected currencies and impacts
-        processed_currencies = None
-        if selected_currencies and any(c.strip() for c in selected_currencies):
-            processed_currencies = [c.strip().upper() for c in selected_currencies if c.strip()]
-            logger.info(f"Processed currencies: {processed_currencies}")
-            
-        processed_impacts = None
-        if selected_impacts and any(i.strip() for i in selected_impacts):
-            processed_impacts = [i.strip() for i in selected_impacts if i.strip()]
-            logger.info(f"Processed impacts: {processed_impacts}")
 
         # Get filtered events from database
         logger.info(f"Querying database for events between {start_time.isoformat()} and {end_time.isoformat()}")
