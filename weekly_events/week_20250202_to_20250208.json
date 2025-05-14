@@ -1,946 +1,1046 @@
 [
   {
-    "title": "BOJ Summary of Opinions",
-    "country": "JPY",
-    "date": "2025-02-02T18:50:00-05:00",
+    "time": "2025-02-02T23:50:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "BOJ Summary of Opinions",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "MI Inflation Gauge m/m",
-    "country": "AUD",
-    "date": "2025-02-02T19:00:00-05:00",
+    "time": "2025-02-03T00:00:00+00:00",
+    "currency": "AUD",
     "impact": "Low",
+    "event_title": "MI Inflation Gauge m/m",
     "forecast": "",
-    "previous": "0.6%"
+    "previous": "0.6%",
+    "source": "forexfactory"
   },
   {
-    "title": "Retail Sales m/m",
-    "country": "AUD",
-    "date": "2025-02-02T19:30:00-05:00",
+    "time": "2025-02-03T00:30:00+00:00",
+    "currency": "AUD",
     "impact": "Medium",
+    "event_title": "Retail Sales m/m",
     "forecast": "-0.7%",
-    "previous": "0.8%"
+    "previous": "0.8%",
+    "source": "forexfactory"
   },
   {
-    "title": "ANZ Job Advertisements m/m",
-    "country": "AUD",
-    "date": "2025-02-02T19:30:00-05:00",
+    "time": "2025-02-03T00:30:00+00:00",
+    "currency": "AUD",
     "impact": "Low",
+    "event_title": "ANZ Job Advertisements m/m",
     "forecast": "",
-    "previous": "0.3%"
+    "previous": "0.3%",
+    "source": "forexfactory"
   },
   {
-    "title": "Building Approvals m/m",
-    "country": "AUD",
-    "date": "2025-02-02T19:30:00-05:00",
+    "time": "2025-02-03T00:30:00+00:00",
+    "currency": "AUD",
     "impact": "Low",
+    "event_title": "Building Approvals m/m",
     "forecast": "0.9%",
-    "previous": "-3.6%"
+    "previous": "-3.6%",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Manufacturing PMI",
-    "country": "JPY",
-    "date": "2025-02-02T19:30:00-05:00",
+    "time": "2025-02-03T00:30:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "Final Manufacturing PMI",
     "forecast": "48.8",
-    "previous": "48.8"
+    "previous": "48.8",
+    "source": "forexfactory"
   },
   {
-    "title": "Bank Holiday",
-    "country": "CNY",
-    "date": "2025-02-02T20:01:00-05:00",
+    "time": "2025-02-03T01:01:00+00:00",
+    "currency": "CNY",
     "impact": "Holiday",
+    "event_title": "Bank Holiday",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Caixin Manufacturing PMI",
-    "country": "CNY",
-    "date": "2025-02-02T20:45:00-05:00",
+    "time": "2025-02-03T01:45:00+00:00",
+    "currency": "CNY",
     "impact": "Low",
+    "event_title": "Caixin Manufacturing PMI",
     "forecast": "50.6",
-    "previous": "50.5"
+    "previous": "50.5",
+    "source": "forexfactory"
   },
   {
-    "title": "Commodity Prices y/y",
-    "country": "AUD",
-    "date": "2025-02-03T00:30:00-05:00",
+    "time": "2025-02-03T05:30:00+00:00",
+    "currency": "AUD",
     "impact": "Low",
+    "event_title": "Commodity Prices y/y",
     "forecast": "",
-    "previous": "-10.7%"
+    "previous": "-10.7%",
+    "source": "forexfactory"
   },
   {
-    "title": "Spanish Manufacturing PMI",
-    "country": "EUR",
-    "date": "2025-02-03T03:15:00-05:00",
+    "time": "2025-02-03T08:15:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Spanish Manufacturing PMI",
     "forecast": "53.5",
-    "previous": "53.3"
+    "previous": "53.3",
+    "source": "forexfactory"
   },
   {
-    "title": "Manufacturing PMI",
-    "country": "CHF",
-    "date": "2025-02-03T03:30:00-05:00",
+    "time": "2025-02-03T08:30:00+00:00",
+    "currency": "CHF",
     "impact": "Low",
+    "event_title": "Manufacturing PMI",
     "forecast": "49.0",
-    "previous": "48.4"
+    "previous": "48.4",
+    "source": "forexfactory"
   },
   {
-    "title": "Italian Manufacturing PMI",
-    "country": "EUR",
-    "date": "2025-02-03T03:45:00-05:00",
+    "time": "2025-02-03T08:45:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Italian Manufacturing PMI",
     "forecast": "46.8",
-    "previous": "46.2"
+    "previous": "46.2",
+    "source": "forexfactory"
   },
   {
-    "title": "French Final Manufacturing PMI",
-    "country": "EUR",
-    "date": "2025-02-03T03:50:00-05:00",
+    "time": "2025-02-03T08:50:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "French Final Manufacturing PMI",
     "forecast": "45.3",
-    "previous": "45.3"
+    "previous": "45.3",
+    "source": "forexfactory"
   },
   {
-    "title": "German Final Manufacturing PMI",
-    "country": "EUR",
-    "date": "2025-02-03T03:55:00-05:00",
+    "time": "2025-02-03T08:55:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "German Final Manufacturing PMI",
     "forecast": "44.1",
-    "previous": "44.1"
+    "previous": "44.1",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Manufacturing PMI",
-    "country": "EUR",
-    "date": "2025-02-03T04:00:00-05:00",
+    "time": "2025-02-03T09:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Final Manufacturing PMI",
     "forecast": "46.1",
-    "previous": "46.1"
+    "previous": "46.1",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Manufacturing PMI",
-    "country": "GBP",
-    "date": "2025-02-03T04:30:00-05:00",
+    "time": "2025-02-03T09:30:00+00:00",
+    "currency": "GBP",
     "impact": "Low",
+    "event_title": "Final Manufacturing PMI",
     "forecast": "48.2",
-    "previous": "48.2"
+    "previous": "48.2",
+    "source": "forexfactory"
   },
   {
-    "title": "Core CPI Flash Estimate y/y",
-    "country": "EUR",
-    "date": "2025-02-03T05:00:00-05:00",
+    "time": "2025-02-03T10:00:00+00:00",
+    "currency": "EUR",
     "impact": "Medium",
+    "event_title": "Core CPI Flash Estimate y/y",
     "forecast": "2.6%",
-    "previous": "2.7%"
+    "previous": "2.7%",
+    "source": "forexfactory"
   },
   {
-    "title": "CPI Flash Estimate y/y",
-    "country": "EUR",
-    "date": "2025-02-03T05:00:00-05:00",
+    "time": "2025-02-03T10:00:00+00:00",
+    "currency": "EUR",
     "impact": "Medium",
+    "event_title": "CPI Flash Estimate y/y",
     "forecast": "2.4%",
-    "previous": "2.4%"
+    "previous": "2.4%",
+    "source": "forexfactory"
   },
   {
-    "title": "Italian Prelim CPI m/m",
-    "country": "EUR",
-    "date": "2025-02-03T05:00:00-05:00",
+    "time": "2025-02-03T10:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Italian Prelim CPI m/m",
     "forecast": "0.4%",
-    "previous": "0.1%"
+    "previous": "0.1%",
+    "source": "forexfactory"
   },
   {
-    "title": "OPEC-JMMC Meetings",
-    "country": "All",
-    "date": "2025-02-03T05:15:00-05:00",
+    "time": "2025-02-03T10:15:00+00:00",
+    "currency": "All",
     "impact": "Medium",
+    "event_title": "OPEC-JMMC Meetings",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Manufacturing PMI",
-    "country": "CAD",
-    "date": "2025-02-03T09:30:00-05:00",
+    "time": "2025-02-03T14:30:00+00:00",
+    "currency": "CAD",
     "impact": "Low",
+    "event_title": "Manufacturing PMI",
     "forecast": "",
-    "previous": "52.2"
+    "previous": "52.2",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Manufacturing PMI",
-    "country": "USD",
-    "date": "2025-02-03T09:45:00-05:00",
+    "time": "2025-02-03T14:45:00+00:00",
+    "currency": "USD",
     "impact": "Medium",
+    "event_title": "Final Manufacturing PMI",
     "forecast": "50.1",
-    "previous": "50.1"
+    "previous": "50.1",
+    "source": "forexfactory"
   },
   {
-    "title": "ISM Manufacturing PMI",
-    "country": "USD",
-    "date": "2025-02-03T10:00:00-05:00",
+    "time": "2025-02-03T15:00:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "ISM Manufacturing PMI",
     "forecast": "49.3",
-    "previous": "49.3"
+    "previous": "49.3",
+    "source": "forexfactory"
   },
   {
-    "title": "ISM Manufacturing Prices",
-    "country": "USD",
-    "date": "2025-02-03T10:00:00-05:00",
+    "time": "2025-02-03T15:00:00+00:00",
+    "currency": "USD",
     "impact": "Medium",
+    "event_title": "ISM Manufacturing Prices",
     "forecast": "52.6",
-    "previous": "52.5"
+    "previous": "52.5",
+    "source": "forexfactory"
   },
   {
-    "title": "Construction Spending m/m",
-    "country": "USD",
-    "date": "2025-02-03T10:00:00-05:00",
+    "time": "2025-02-03T15:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Construction Spending m/m",
     "forecast": "0.3%",
-    "previous": "0.0%"
+    "previous": "0.0%",
+    "source": "forexfactory"
   },
   {
-    "title": "Wards Total Vehicle Sales",
-    "country": "USD",
-    "date": "2025-02-03T10:15:00-05:00",
+    "time": "2025-02-03T15:15:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Wards Total Vehicle Sales",
     "forecast": "16.0M",
-    "previous": "16.8M"
+    "previous": "16.8M",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Bostic Speaks",
-    "country": "USD",
-    "date": "2025-02-03T12:30:00-05:00",
+    "time": "2025-02-03T17:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Bostic Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Loan Officer Survey",
-    "country": "USD",
-    "date": "2025-02-03T14:00:00-05:00",
+    "time": "2025-02-03T19:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Loan Officer Survey",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Building Consents m/m",
-    "country": "NZD",
-    "date": "2025-02-03T16:45:00-05:00",
+    "time": "2025-02-03T21:45:00+00:00",
+    "currency": "NZD",
     "impact": "Low",
+    "event_title": "Building Consents m/m",
     "forecast": "",
-    "previous": "5.3%"
+    "previous": "5.3%",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Musalem Speaks",
-    "country": "USD",
-    "date": "2025-02-03T18:30:00-05:00",
+    "time": "2025-02-03T23:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Musalem Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Monetary Base y/y",
-    "country": "JPY",
-    "date": "2025-02-03T18:50:00-05:00",
+    "time": "2025-02-03T23:50:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "Monetary Base y/y",
     "forecast": "-0.5%",
-    "previous": "-1.0%"
+    "previous": "-1.0%",
+    "source": "forexfactory"
   },
   {
-    "title": "10-y Bond Auction",
-    "country": "JPY",
-    "date": "2025-02-03T22:35:00-05:00",
+    "time": "2025-02-04T03:35:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "10-y Bond Auction",
     "forecast": "",
-    "previous": "1.14|3.4"
+    "previous": "1.14|3.4",
+    "source": "forexfactory"
   },
   {
-    "title": "French Gov Budget Balance",
-    "country": "EUR",
-    "date": "2025-02-04T02:45:00-05:00",
+    "time": "2025-02-04T07:45:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "French Gov Budget Balance",
     "forecast": "",
-    "previous": "-172.5B"
+    "previous": "-172.5B",
+    "source": "forexfactory"
   },
   {
-    "title": "Spanish Unemployment Change",
-    "country": "EUR",
-    "date": "2025-02-04T03:00:00-05:00",
+    "time": "2025-02-04T08:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Spanish Unemployment Change",
     "forecast": "55.4K",
-    "previous": "-25.3K"
+    "previous": "-25.3K",
+    "source": "forexfactory"
   },
   {
-    "title": "JOLTS Job Openings",
-    "country": "USD",
-    "date": "2025-02-04T10:00:00-05:00",
+    "time": "2025-02-04T15:00:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "JOLTS Job Openings",
     "forecast": "8.01M",
-    "previous": "8.10M"
+    "previous": "8.10M",
+    "source": "forexfactory"
   },
   {
-    "title": "Factory Orders m/m",
-    "country": "USD",
-    "date": "2025-02-04T10:00:00-05:00",
+    "time": "2025-02-04T15:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Factory Orders m/m",
     "forecast": "-0.7%",
-    "previous": "-0.4%"
+    "previous": "-0.4%",
+    "source": "forexfactory"
   },
   {
-    "title": "GDT Price Index",
-    "country": "NZD",
-    "date": "2025-02-04T10:02:00-05:00",
+    "time": "2025-02-04T15:02:00+00:00",
+    "currency": "NZD",
     "impact": "Low",
+    "event_title": "GDT Price Index",
     "forecast": "",
-    "previous": "1.4%"
+    "previous": "1.4%",
+    "source": "forexfactory"
   },
   {
-    "title": "RCM/TIPP Economic Optimism",
-    "country": "USD",
-    "date": "2025-02-04T10:07:00-05:00",
+    "time": "2025-02-04T15:07:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "RCM/TIPP Economic Optimism",
     "forecast": "53.0",
-    "previous": "51.9"
+    "previous": "51.9",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Bostic Speaks",
-    "country": "USD",
-    "date": "2025-02-04T11:00:00-05:00",
+    "time": "2025-02-04T16:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Bostic Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Daly Speaks",
-    "country": "USD",
-    "date": "2025-02-04T14:00:00-05:00",
+    "time": "2025-02-04T19:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Daly Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Employment Change q/q",
-    "country": "NZD",
-    "date": "2025-02-04T16:45:00-05:00",
+    "time": "2025-02-04T21:45:00+00:00",
+    "currency": "NZD",
     "impact": "High",
+    "event_title": "Employment Change q/q",
     "forecast": "-0.2%",
-    "previous": "-0.5%"
+    "previous": "-0.5%",
+    "source": "forexfactory"
   },
   {
-    "title": "Unemployment Rate",
-    "country": "NZD",
-    "date": "2025-02-04T16:45:00-05:00",
+    "time": "2025-02-04T21:45:00+00:00",
+    "currency": "NZD",
     "impact": "High",
+    "event_title": "Unemployment Rate",
     "forecast": "5.1%",
-    "previous": "4.8%"
+    "previous": "4.8%",
+    "source": "forexfactory"
   },
   {
-    "title": "Labor Cost Index q/q",
-    "country": "NZD",
-    "date": "2025-02-04T16:45:00-05:00",
+    "time": "2025-02-04T21:45:00+00:00",
+    "currency": "NZD",
     "impact": "Low",
+    "event_title": "Labor Cost Index q/q",
     "forecast": "0.6%",
-    "previous": "0.6%"
+    "previous": "0.6%",
+    "source": "forexfactory"
   },
   {
-    "title": "President Trump Speaks",
-    "country": "USD",
-    "date": "2025-02-04T17:10:00-05:00",
+    "time": "2025-02-04T22:10:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "President Trump Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Average Cash Earnings y/y",
-    "country": "JPY",
-    "date": "2025-02-04T18:30:00-05:00",
+    "time": "2025-02-04T23:30:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "Average Cash Earnings y/y",
     "forecast": "3.6%",
-    "previous": "3.0%"
+    "previous": "3.0%",
+    "source": "forexfactory"
   },
   {
-    "title": "ANZ Commodity Prices m/m",
-    "country": "NZD",
-    "date": "2025-02-04T19:00:00-05:00",
+    "time": "2025-02-05T00:00:00+00:00",
+    "currency": "NZD",
     "impact": "Low",
+    "event_title": "ANZ Commodity Prices m/m",
     "forecast": "",
-    "previous": "0.2%"
+    "previous": "0.2%",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Jefferson Speaks",
-    "country": "USD",
-    "date": "2025-02-04T19:30:00-05:00",
+    "time": "2025-02-05T00:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Jefferson Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Caixin Services PMI",
-    "country": "CNY",
-    "date": "2025-02-04T20:45:00-05:00",
+    "time": "2025-02-05T01:45:00+00:00",
+    "currency": "CNY",
     "impact": "Low",
+    "event_title": "Caixin Services PMI",
     "forecast": "52.3",
-    "previous": "52.2"
+    "previous": "52.2",
+    "source": "forexfactory"
   },
   {
-    "title": "French Industrial Production m/m",
-    "country": "EUR",
-    "date": "2025-02-05T02:45:00-05:00",
+    "time": "2025-02-05T07:45:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "French Industrial Production m/m",
     "forecast": "-0.1%",
-    "previous": "0.2%"
+    "previous": "0.2%",
+    "source": "forexfactory"
   },
   {
-    "title": "Spanish Services PMI",
-    "country": "EUR",
-    "date": "2025-02-05T03:15:00-05:00",
+    "time": "2025-02-05T08:15:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Spanish Services PMI",
     "forecast": "56.7",
-    "previous": "57.3"
+    "previous": "57.3",
+    "source": "forexfactory"
   },
   {
-    "title": "Italian Services PMI",
-    "country": "EUR",
-    "date": "2025-02-05T03:45:00-05:00",
+    "time": "2025-02-05T08:45:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Italian Services PMI",
     "forecast": "50.5",
-    "previous": "50.7"
+    "previous": "50.7",
+    "source": "forexfactory"
   },
   {
-    "title": "French Final Services PMI",
-    "country": "EUR",
-    "date": "2025-02-05T03:50:00-05:00",
+    "time": "2025-02-05T08:50:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "French Final Services PMI",
     "forecast": "48.9",
-    "previous": "48.9"
+    "previous": "48.9",
+    "source": "forexfactory"
   },
   {
-    "title": "German Final Services PMI",
-    "country": "EUR",
-    "date": "2025-02-05T03:55:00-05:00",
+    "time": "2025-02-05T08:55:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "German Final Services PMI",
     "forecast": "52.5",
-    "previous": "52.5"
+    "previous": "52.5",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Services PMI",
-    "country": "EUR",
-    "date": "2025-02-05T04:00:00-05:00",
+    "time": "2025-02-05T09:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Final Services PMI",
     "forecast": "51.4",
-    "previous": "51.4"
+    "previous": "51.4",
+    "source": "forexfactory"
   },
   {
-    "title": "Italian Retail Sales m/m",
-    "country": "EUR",
-    "date": "2025-02-05T04:00:00-05:00",
+    "time": "2025-02-05T09:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Italian Retail Sales m/m",
     "forecast": "0.1%",
-    "previous": "-0.4%"
+    "previous": "-0.4%",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Services PMI",
-    "country": "GBP",
-    "date": "2025-02-05T04:30:00-05:00",
+    "time": "2025-02-05T09:30:00+00:00",
+    "currency": "GBP",
     "impact": "Low",
+    "event_title": "Final Services PMI",
     "forecast": "51.2",
-    "previous": "51.2"
+    "previous": "51.2",
+    "source": "forexfactory"
   },
   {
-    "title": "PPI m/m",
-    "country": "EUR",
-    "date": "2025-02-05T05:00:00-05:00",
+    "time": "2025-02-05T10:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "PPI m/m",
     "forecast": "0.5%",
-    "previous": "1.6%"
+    "previous": "1.6%",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Barkin Speaks",
-    "country": "USD",
-    "date": "2025-02-05T07:30:00-05:00",
+    "time": "2025-02-05T12:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Barkin Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "ADP Non-Farm Employment Change",
-    "country": "USD",
-    "date": "2025-02-05T08:15:00-05:00",
+    "time": "2025-02-05T13:15:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "ADP Non-Farm Employment Change",
     "forecast": "148K",
-    "previous": "122K"
+    "previous": "122K",
+    "source": "forexfactory"
   },
   {
-    "title": "Trade Balance",
-    "country": "CAD",
-    "date": "2025-02-05T08:30:00-05:00",
+    "time": "2025-02-05T13:30:00+00:00",
+    "currency": "CAD",
     "impact": "Low",
+    "event_title": "Trade Balance",
     "forecast": "1.0B",
-    "previous": "-0.3B"
+    "previous": "-0.3B",
+    "source": "forexfactory"
   },
   {
-    "title": "Trade Balance",
-    "country": "USD",
-    "date": "2025-02-05T08:30:00-05:00",
+    "time": "2025-02-05T13:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Trade Balance",
     "forecast": "-96.5B",
-    "previous": "-78.2B"
+    "previous": "-78.2B",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Barkin Speaks",
-    "country": "USD",
-    "date": "2025-02-05T09:00:00-05:00",
+    "time": "2025-02-05T14:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Barkin Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Services PMI",
-    "country": "USD",
-    "date": "2025-02-05T09:45:00-05:00",
+    "time": "2025-02-05T14:45:00+00:00",
+    "currency": "USD",
     "impact": "Medium",
+    "event_title": "Final Services PMI",
     "forecast": "52.9",
-    "previous": "52.8"
+    "previous": "52.8",
+    "source": "forexfactory"
   },
   {
-    "title": "ISM Services PMI",
-    "country": "USD",
-    "date": "2025-02-05T10:00:00-05:00",
+    "time": "2025-02-05T15:00:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "ISM Services PMI",
     "forecast": "54.2",
-    "previous": "54.1"
+    "previous": "54.1",
+    "source": "forexfactory"
   },
   {
-    "title": "Crude Oil Inventories",
-    "country": "USD",
-    "date": "2025-02-05T10:30:00-05:00",
+    "time": "2025-02-05T15:30:00+00:00",
+    "currency": "USD",
     "impact": "Medium",
+    "event_title": "Crude Oil Inventories",
     "forecast": "2.4M",
-    "previous": "3.5M"
+    "previous": "3.5M",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Goolsbee Speaks",
-    "country": "USD",
-    "date": "2025-02-05T14:30:00-05:00",
+    "time": "2025-02-05T19:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Goolsbee Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Bowman Speaks",
-    "country": "USD",
-    "date": "2025-02-05T15:00:00-05:00",
+    "time": "2025-02-05T20:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Bowman Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Bank Holiday",
-    "country": "NZD",
-    "date": "2025-02-05T15:00:00-05:00",
+    "time": "2025-02-05T20:00:00+00:00",
+    "currency": "NZD",
     "impact": "Holiday",
+    "event_title": "Bank Holiday",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Goods Trade Balance",
-    "country": "AUD",
-    "date": "2025-02-05T19:30:00-05:00",
+    "time": "2025-02-06T00:30:00+00:00",
+    "currency": "AUD",
     "impact": "Low",
+    "event_title": "Goods Trade Balance",
     "forecast": "6.52B",
-    "previous": "7.08B"
+    "previous": "7.08B",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Jefferson Speaks",
-    "country": "USD",
-    "date": "2025-02-05T19:30:00-05:00",
+    "time": "2025-02-06T00:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Jefferson Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "NAB Quarterly Business Confidence",
-    "country": "AUD",
-    "date": "2025-02-05T19:45:00-05:00",
+    "time": "2025-02-06T00:45:00+00:00",
+    "currency": "AUD",
     "impact": "Low",
+    "event_title": "NAB Quarterly Business Confidence",
     "forecast": "",
-    "previous": "-6"
+    "previous": "-6",
+    "source": "forexfactory"
   },
   {
-    "title": "30-y Bond Auction",
-    "country": "JPY",
-    "date": "2025-02-05T22:35:00-05:00",
+    "time": "2025-02-06T03:35:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "30-y Bond Auction",
     "forecast": "",
-    "previous": "2.30|3.7"
+    "previous": "2.30|3.7",
+    "source": "forexfactory"
   },
   {
-    "title": "Unemployment Rate",
-    "country": "CHF",
-    "date": "2025-02-06T01:45:00-05:00",
+    "time": "2025-02-06T06:45:00+00:00",
+    "currency": "CHF",
     "impact": "Low",
+    "event_title": "Unemployment Rate",
     "forecast": "2.7%",
-    "previous": "2.6%"
+    "previous": "2.6%",
+    "source": "forexfactory"
   },
   {
-    "title": "German Factory Orders m/m",
-    "country": "EUR",
-    "date": "2025-02-06T02:00:00-05:00",
+    "time": "2025-02-06T07:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "German Factory Orders m/m",
     "forecast": "1.9%",
-    "previous": "-5.4%"
+    "previous": "-5.4%",
+    "source": "forexfactory"
   },
   {
-    "title": "Construction PMI",
-    "country": "GBP",
-    "date": "2025-02-06T04:30:00-05:00",
+    "time": "2025-02-06T09:30:00+00:00",
+    "currency": "GBP",
     "impact": "Medium",
+    "event_title": "Construction PMI",
     "forecast": "53.5",
-    "previous": "53.3"
+    "previous": "53.3",
+    "source": "forexfactory"
   },
   {
-    "title": "Retail Sales m/m",
-    "country": "EUR",
-    "date": "2025-02-06T05:00:00-05:00",
+    "time": "2025-02-06T10:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "Retail Sales m/m",
     "forecast": "-0.1%",
-    "previous": "0.1%"
+    "previous": "0.1%",
+    "source": "forexfactory"
   },
   {
-    "title": "French 10-y Bond Auction",
-    "country": "EUR",
-    "date": "2025-02-06T05:02:00-05:00",
+    "time": "2025-02-06T10:02:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "French 10-y Bond Auction",
     "forecast": "",
-    "previous": "3.40|2.0"
+    "previous": "3.40|2.0",
+    "source": "forexfactory"
   },
   {
-    "title": "BOE Monetary Policy Report",
-    "country": "GBP",
-    "date": "2025-02-06T07:00:00-05:00",
+    "time": "2025-02-06T12:00:00+00:00",
+    "currency": "GBP",
     "impact": "High",
+    "event_title": "BOE Monetary Policy Report",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Monetary Policy Summary",
-    "country": "GBP",
-    "date": "2025-02-06T07:00:00-05:00",
+    "time": "2025-02-06T12:00:00+00:00",
+    "currency": "GBP",
     "impact": "High",
+    "event_title": "Monetary Policy Summary",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "MPC Official Bank Rate Votes",
-    "country": "GBP",
-    "date": "2025-02-06T07:00:00-05:00",
+    "time": "2025-02-06T12:00:00+00:00",
+    "currency": "GBP",
     "impact": "High",
+    "event_title": "MPC Official Bank Rate Votes",
     "forecast": "0-8-1",
-    "previous": "0-3-6"
+    "previous": "0-3-6",
+    "source": "forexfactory"
   },
   {
-    "title": "Official Bank Rate",
-    "country": "GBP",
-    "date": "2025-02-06T07:00:00-05:00",
+    "time": "2025-02-06T12:00:00+00:00",
+    "currency": "GBP",
     "impact": "High",
+    "event_title": "Official Bank Rate",
     "forecast": "4.50%",
-    "previous": "4.75%"
+    "previous": "4.75%",
+    "source": "forexfactory"
   },
   {
-    "title": "BOE Gov Bailey Speaks",
-    "country": "GBP",
-    "date": "2025-02-06T07:30:00-05:00",
+    "time": "2025-02-06T12:30:00+00:00",
+    "currency": "GBP",
     "impact": "High",
+    "event_title": "BOE Gov Bailey Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Challenger Job Cuts y/y",
-    "country": "USD",
-    "date": "2025-02-06T07:30:00-05:00",
+    "time": "2025-02-06T12:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Challenger Job Cuts y/y",
     "forecast": "",
-    "previous": "11.4%"
+    "previous": "11.4%",
+    "source": "forexfactory"
   },
   {
-    "title": "Unemployment Claims",
-    "country": "USD",
-    "date": "2025-02-06T08:30:00-05:00",
+    "time": "2025-02-06T13:30:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "Unemployment Claims",
     "forecast": "214K",
-    "previous": "207K"
+    "previous": "207K",
+    "source": "forexfactory"
   },
   {
-    "title": "Prelim Nonfarm Productivity q/q",
-    "country": "USD",
-    "date": "2025-02-06T08:30:00-05:00",
+    "time": "2025-02-06T13:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Prelim Nonfarm Productivity q/q",
     "forecast": "1.5%",
-    "previous": "2.2%"
+    "previous": "2.2%",
+    "source": "forexfactory"
   },
   {
-    "title": "Prelim Unit Labor Costs q/q",
-    "country": "USD",
-    "date": "2025-02-06T08:30:00-05:00",
+    "time": "2025-02-06T13:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Prelim Unit Labor Costs q/q",
     "forecast": "3.4%",
-    "previous": "1.9%"
+    "previous": "1.9%",
+    "source": "forexfactory"
   },
   {
-    "title": "Ivey PMI",
-    "country": "CAD",
-    "date": "2025-02-06T10:00:00-05:00",
+    "time": "2025-02-06T15:00:00+00:00",
+    "currency": "CAD",
     "impact": "Medium",
+    "event_title": "Ivey PMI",
     "forecast": "53.0",
-    "previous": "54.7"
+    "previous": "54.7",
+    "source": "forexfactory"
   },
   {
-    "title": "Mortgage Delinquencies",
-    "country": "USD",
-    "date": "2025-02-06T10:00:00-05:00",
+    "time": "2025-02-06T15:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Mortgage Delinquencies",
     "forecast": "",
-    "previous": "3.92%"
+    "previous": "3.92%",
+    "source": "forexfactory"
   },
   {
-    "title": "Natural Gas Storage",
-    "country": "USD",
-    "date": "2025-02-06T10:30:00-05:00",
+    "time": "2025-02-06T15:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Natural Gas Storage",
     "forecast": "-167B",
-    "previous": "-321B"
+    "previous": "-321B",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Waller Speaks",
-    "country": "USD",
-    "date": "2025-02-06T14:30:00-05:00",
+    "time": "2025-02-06T19:30:00+00:00",
+    "currency": "USD",
     "impact": "Medium",
+    "event_title": "FOMC Member Waller Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Daly Speaks",
-    "country": "USD",
-    "date": "2025-02-06T15:30:00-05:00",
+    "time": "2025-02-06T20:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Daly Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "BOE Gov Bailey Speaks",
-    "country": "GBP",
-    "date": "2025-02-06T16:05:00-05:00",
+    "time": "2025-02-06T21:05:00+00:00",
+    "currency": "GBP",
     "impact": "High",
+    "event_title": "BOE Gov Bailey Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Logan Speaks",
-    "country": "USD",
-    "date": "2025-02-06T17:10:00-05:00",
+    "time": "2025-02-06T22:10:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Logan Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Household Spending y/y",
-    "country": "JPY",
-    "date": "2025-02-06T18:30:00-05:00",
+    "time": "2025-02-06T23:30:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "Household Spending y/y",
     "forecast": "0.5%",
-    "previous": "-0.4%"
+    "previous": "-0.4%",
+    "source": "forexfactory"
   },
   {
-    "title": "Leading Indicators",
-    "country": "JPY",
-    "date": "2025-02-07T00:00:00-05:00",
+    "time": "2025-02-07T05:00:00+00:00",
+    "currency": "JPY",
     "impact": "Low",
+    "event_title": "Leading Indicators",
     "forecast": "108.2%",
-    "previous": "107.0%"
+    "previous": "107.0%",
+    "source": "forexfactory"
   },
   {
-    "title": "German Industrial Production m/m",
-    "country": "EUR",
-    "date": "2025-02-07T02:00:00-05:00",
+    "time": "2025-02-07T07:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "German Industrial Production m/m",
     "forecast": "-0.7%",
-    "previous": "1.5%"
+    "previous": "1.5%",
+    "source": "forexfactory"
   },
   {
-    "title": "German Trade Balance",
-    "country": "EUR",
-    "date": "2025-02-07T02:00:00-05:00",
+    "time": "2025-02-07T07:00:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "German Trade Balance",
     "forecast": "17.0B",
-    "previous": "19.7B"
+    "previous": "19.7B",
+    "source": "forexfactory"
   },
   {
-    "title": "Halifax HPI m/m",
-    "country": "GBP",
-    "date": "2025-02-07T02:00:00-05:00",
+    "time": "2025-02-07T07:00:00+00:00",
+    "currency": "GBP",
     "impact": "Low",
+    "event_title": "Halifax HPI m/m",
     "forecast": "0.4%",
-    "previous": "-0.2%"
+    "previous": "-0.2%",
+    "source": "forexfactory"
   },
   {
-    "title": "French Prelim Private Payrolls q/q",
-    "country": "EUR",
-    "date": "2025-02-07T02:45:00-05:00",
+    "time": "2025-02-07T07:45:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "French Prelim Private Payrolls q/q",
     "forecast": "-0.1%",
-    "previous": "-0.1%"
+    "previous": "-0.1%",
+    "source": "forexfactory"
   },
   {
-    "title": "French Trade Balance",
-    "country": "EUR",
-    "date": "2025-02-07T02:45:00-05:00",
+    "time": "2025-02-07T07:45:00+00:00",
+    "currency": "EUR",
     "impact": "Low",
+    "event_title": "French Trade Balance",
     "forecast": "-5.3B",
-    "previous": "-7.1B"
+    "previous": "-7.1B",
+    "source": "forexfactory"
   },
   {
-    "title": "Foreign Currency Reserves",
-    "country": "CHF",
-    "date": "2025-02-07T03:00:00-05:00",
+    "time": "2025-02-07T08:00:00+00:00",
+    "currency": "CHF",
     "impact": "Low",
+    "event_title": "Foreign Currency Reserves",
     "forecast": "",
-    "previous": "731B"
+    "previous": "731B",
+    "source": "forexfactory"
   },
   {
-    "title": "SECO Consumer Climate",
-    "country": "CHF",
-    "date": "2025-02-07T03:00:00-05:00",
+    "time": "2025-02-07T08:00:00+00:00",
+    "currency": "CHF",
     "impact": "Low",
+    "event_title": "SECO Consumer Climate",
     "forecast": "-31",
-    "previous": "-30"
+    "previous": "-30",
+    "source": "forexfactory"
   },
   {
-    "title": "MPC Member Pill Speaks",
-    "country": "GBP",
-    "date": "2025-02-07T07:15:00-05:00",
+    "time": "2025-02-07T12:15:00+00:00",
+    "currency": "GBP",
     "impact": "Low",
+    "event_title": "MPC Member Pill Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Employment Change",
-    "country": "CAD",
-    "date": "2025-02-07T08:30:00-05:00",
+    "time": "2025-02-07T13:30:00+00:00",
+    "currency": "CAD",
     "impact": "High",
+    "event_title": "Employment Change",
     "forecast": "25.5K",
-    "previous": "90.9K"
+    "previous": "90.9K",
+    "source": "forexfactory"
   },
   {
-    "title": "Unemployment Rate",
-    "country": "CAD",
-    "date": "2025-02-07T08:30:00-05:00",
+    "time": "2025-02-07T13:30:00+00:00",
+    "currency": "CAD",
     "impact": "High",
+    "event_title": "Unemployment Rate",
     "forecast": "6.8%",
-    "previous": "6.7%"
+    "previous": "6.7%",
+    "source": "forexfactory"
   },
   {
-    "title": "Average Hourly Earnings m/m",
-    "country": "USD",
-    "date": "2025-02-07T08:30:00-05:00",
+    "time": "2025-02-07T13:30:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "Average Hourly Earnings m/m",
     "forecast": "0.3%",
-    "previous": "0.3%"
+    "previous": "0.3%",
+    "source": "forexfactory"
   },
   {
-    "title": "Non-Farm Employment Change",
-    "country": "USD",
-    "date": "2025-02-07T08:30:00-05:00",
+    "time": "2025-02-07T13:30:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "Non-Farm Employment Change",
     "forecast": "169K",
-    "previous": "256K"
+    "previous": "256K",
+    "source": "forexfactory"
   },
   {
-    "title": "Unemployment Rate",
-    "country": "USD",
-    "date": "2025-02-07T08:30:00-05:00",
+    "time": "2025-02-07T13:30:00+00:00",
+    "currency": "USD",
     "impact": "High",
+    "event_title": "Unemployment Rate",
     "forecast": "4.1%",
-    "previous": "4.1%"
+    "previous": "4.1%",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Bowman Speaks",
-    "country": "USD",
-    "date": "2025-02-07T09:25:00-05:00",
+    "time": "2025-02-07T14:25:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Bowman Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Prelim UoM Consumer Sentiment",
-    "country": "USD",
-    "date": "2025-02-07T10:00:00-05:00",
+    "time": "2025-02-07T15:00:00+00:00",
+    "currency": "USD",
     "impact": "Medium",
+    "event_title": "Prelim UoM Consumer Sentiment",
     "forecast": "71.9",
-    "previous": "73.2"
+    "previous": "73.2",
+    "source": "forexfactory"
   },
   {
-    "title": "Prelim UoM Inflation Expectations",
-    "country": "USD",
-    "date": "2025-02-07T10:00:00-05:00",
+    "time": "2025-02-07T15:00:00+00:00",
+    "currency": "USD",
     "impact": "Medium",
+    "event_title": "Prelim UoM Inflation Expectations",
     "forecast": "",
-    "previous": "3.3%"
+    "previous": "3.3%",
+    "source": "forexfactory"
   },
   {
-    "title": "Final Wholesale Inventories m/m",
-    "country": "USD",
-    "date": "2025-02-07T10:00:00-05:00",
+    "time": "2025-02-07T15:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Final Wholesale Inventories m/m",
     "forecast": "-0.5%",
-    "previous": "-0.5%"
+    "previous": "-0.5%",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Goolsbee Speaks",
-    "country": "USD",
-    "date": "2025-02-07T10:30:00-05:00",
+    "time": "2025-02-07T15:30:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Goolsbee Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Fed Monetary Policy Report",
-    "country": "USD",
-    "date": "2025-02-07T11:00:00-05:00",
+    "time": "2025-02-07T16:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Fed Monetary Policy Report",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "FOMC Member Kugler Speaks",
-    "country": "USD",
-    "date": "2025-02-07T12:00:00-05:00",
+    "time": "2025-02-07T17:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "FOMC Member Kugler Speaks",
     "forecast": "",
-    "previous": ""
+    "previous": "",
+    "source": "forexfactory"
   },
   {
-    "title": "Consumer Credit m/m",
-    "country": "USD",
-    "date": "2025-02-07T15:00:00-05:00",
+    "time": "2025-02-07T20:00:00+00:00",
+    "currency": "USD",
     "impact": "Low",
+    "event_title": "Consumer Credit m/m",
     "forecast": "17.7B",
-    "previous": "-7.5B"
-  },
-  {
-    "title": "CPI y/y",
-    "country": "CNY",
-    "date": "2025-02-08T20:30:00-05:00",
-    "impact": "Medium",
-    "forecast": "0.4%",
-    "previous": "0.1%"
-  },
-  {
-    "title": "PPI y/y",
-    "country": "CNY",
-    "date": "2025-02-08T20:30:00-05:00",
-    "impact": "Medium",
-    "forecast": "-2.2%",
-    "previous": "-2.3%"
+    "previous": "-7.5B",
+    "source": "forexfactory"
   }
 ]
