@@ -1,0 +1,47 @@
+[
+  {
+    "time": "2025-03-02T21:45:00+00:00",
+    "currency": "NZD",
+    "impact": "Low",
+    "event_title": "Overseas Trade Index q/q",
+    "forecast": "1.5%",
+    "previous": "2.4%",
+    "source": "forexfactory"
+  },
+  {
+    "time": "2025-03-03T00:00:00+00:00",
+    "currency": "AUD",
+    "impact": "Low",
+    "event_title": "MI Inflation Gauge m/m",
+    "forecast": "",
+    "previous": "0.1%",
+    "source": "forexfactory"
+  },
+  {
+    "time": "2025-03-03T00:30:00+00:00",
+    "currency": "AUD",
+    "impact": "Low",
+    "event_title": "ANZ Job Advertisements m/m",
+    "forecast": "",
+    "previous": "0.2%",
+    "source": "forexfactory"
+  },
+  {
+    "time": "2025-03-03T00:30:00+00:00",
+    "currency": "AUD",
+    "impact": "Low",
+    "event_title": "Company Operating Profits q/q",
+    "forecast": "1.7%",
+    "previous": "-4.6%",
+    "source": "forexfactory"
+  },
+  {
+    "time": "2025-03-03T00:30:00+00:00",
+    "currency": "JPY",
+    "impact": "Low",
+    "event_title": "Final Manufacturing PMI",
+    "forecast": "48.9",
+    "previous": "48.9",
+    "source": "forexfactory"
+  }
+] 

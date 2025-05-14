@@ -91,24 +91,18 @@ def fetch_events_for_week(week_offset: int = 0) -> list:
             cursor.execute(query, (start_str, end_str))
             events = cursor.fetchall()
             
-            # Convert datetime objects to strings for JSON serialization
+            # Convert to the correct format for JSON serialization
             formatted_events = []
             for event in events:
-                # Format the event for JSON storage
+                # Format the event according to the required JSON structure
                 formatted_event = {
-                    'id': event['id'],
-                    'time': event['time'].isoformat() if event['time'] else None,
+                    'time': event['time'].strftime('%Y-%m-%dT%H:%M:%S+00:00') if event['time'] else None,
                     'currency': event['currency'],
                     'impact': event['impact'],
                     'event_title': event['event_title'],
                     'forecast': event['forecast'],
                     'previous': event['previous'],
-                    'actual': event['actual'],
-                    'source': event['source'],
-                    'url': event['url'],
-                    'ai_summary': event['ai_summary'],
-                    'created_at': event['created_at'].isoformat() if event['created_at'] else None,
-                    'updated_at': event['updated_at'].isoformat() if event['updated_at'] else None
+                    'source': event['source'] if event['source'] else 'forexfactory'
                 }
                 formatted_events.append(formatted_event)
             
@@ -116,20 +110,15 @@ def fetch_events_for_week(week_offset: int = 0) -> list:
             conn.close()
             
             logger.info(f"Found {len(formatted_events)} events for the week")
-            return {
-                'events': formatted_events,
-                'week_start': start_time.isoformat(),
-                'week_end': end_time.isoformat(),
-                'last_updated': now.isoformat()
-            }
+            return formatted_events
                 
     except Exception as e:
         logger.error(f"Error fetching events for week: {str(e)}")
         logger.exception("Exception details:")
-        return {'events': [], 'error': str(e)}
+        return []
 
-def store_weekly_events(week_data: dict, week_offset: int = 0) -> bool:
-    """Store events in a weekly file"""
+def store_weekly_events(events: list, week_offset: int = 0) -> bool:
+    """Store events in a weekly file with the correct format"""
     try:
         # Get current time and calculate the target week date
         now = datetime.now(pytz.UTC)
@@ -139,11 +128,11 @@ def store_weekly_events(week_data: dict, week_offset: int = 0) -> bool:
         filename = get_week_filename(target_date)
         filepath = os.path.join(WEEKLY_STORAGE_DIR, filename)
         
-        # Write data to JSON file
+        # Write events directly as an array to JSON file
         with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(week_data, f, indent=2, ensure_ascii=False)
+            json.dump(events, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"Successfully stored {len(week_data['events'])} events in {filepath}")
+        logger.info(f"Successfully stored {len(events)} events in {filepath}")
         return True
         
     except Exception as e:
@@ -161,10 +150,10 @@ def process_weeks(start_offset: int = -4, end_offset: int = 4) -> None:
     
     for offset in range(start_offset, end_offset + 1):
         logger.info(f"Processing week with offset {offset}")
-        week_data = fetch_events_for_week(offset)
+        events = fetch_events_for_week(offset)
         
-        if week_data and 'events' in week_data and week_data['events']:
-            success = store_weekly_events(week_data, offset)
+        if events:
+            success = store_weekly_events(events, offset)
             if success:
                 logger.info(f"Successfully processed week with offset {offset}")
             else:
