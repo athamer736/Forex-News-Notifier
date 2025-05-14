@@ -117,6 +117,85 @@ def fetch_events_for_week(week_offset: int = 0) -> list:
         logger.exception("Exception details:")
         return []
 
+def fetch_all_weeks_from_database() -> dict:
+    """
+    Fetch all events from the database and organize them by week
+    Returns a dictionary with ISO week keys and event lists as values
+    """
+    try:
+        # Connect directly to the database
+        conn = pymysql.connect(
+            host='141.95.123.145',
+            user='forex_user',
+            password='UltraFX#736',
+            db='forex_db',
+            charset='utf8mb4',
+            connect_timeout=60
+        )
+        
+        # Create a cursor and execute the query
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Query all events, not just limited to specific dates
+            query = """
+            SELECT id, event_title, currency, impact, time, forecast, previous, actual, 
+                   source, url, ai_summary, created_at, updated_at
+            FROM forex_events 
+            ORDER BY time
+            """
+            
+            cursor.execute(query)
+            all_events = cursor.fetchall()
+            
+            # Close the connection
+            conn.close()
+            
+            logger.info(f"Fetched {len(all_events)} events from database")
+            
+            # Organize events by week
+            events_by_week = {}
+            for event in all_events:
+                # Get event time
+                event_time = event['time']
+                if not event_time:
+                    continue
+                
+                # Determine the week of the event
+                # Calculate days to the start of the week (Sunday)
+                current_weekday = event_time.weekday()
+                if current_weekday == 6:  # If Sunday
+                    days_to_start = 0
+                else:
+                    days_to_start = -(current_weekday + 1)  # Go back to previous Sunday
+                
+                # Get the week start date (Sunday)
+                week_start = event_time + timedelta(days=days_to_start)
+                week_key = week_start.strftime('%Y%m%d')
+                
+                # Initialize the week if it doesn't exist
+                if week_key not in events_by_week:
+                    events_by_week[week_key] = []
+                
+                # Format the event for JSON storage in the correct format
+                formatted_event = {
+                    'time': event_time.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
+                    'currency': event['currency'],
+                    'impact': event['impact'],
+                    'event_title': event['event_title'],
+                    'forecast': event['forecast'] or '',
+                    'previous': event['previous'] or '',
+                    'source': event['source'] or 'forexfactory'
+                }
+                
+                events_by_week[week_key].append(formatted_event)
+            
+            logger.info(f"Organized events into {len(events_by_week)} weeks")
+            return events_by_week
+                
+    except Exception as e:
+        logger.error(f"Error fetching events from database: {str(e)}")
+        logger.exception("Exception details:")
+        return {}
+
 def store_weekly_events(events: list, week_offset: int = 0) -> bool:
     """Store events in a weekly file with the correct format"""
     try:
@@ -140,6 +219,46 @@ def store_weekly_events(events: list, week_offset: int = 0) -> bool:
         logger.exception("Exception details:")
         return False
 
+def generate_all_event_files(events_by_week: dict) -> None:
+    """
+    Generate JSON event files for each week
+    """
+    try:
+        file_count = 0
+        event_count = 0
+        
+        for week_key, events in events_by_week.items():
+            # Skip weeks with no events
+            if not events:
+                continue
+                
+            # Parse the week start date
+            week_start = datetime.strptime(week_key, '%Y%m%d')
+            
+            # Create a timezone-aware datetime
+            week_start = pytz.UTC.localize(week_start)
+            
+            # Calculate the week end date (Saturday)
+            week_end = week_start + timedelta(days=6)
+            
+            # Generate the filename
+            filename = f"week_{week_start.strftime('%Y%m%d')}_to_{week_end.strftime('%Y%m%d')}.json"
+            filepath = os.path.join(WEEKLY_STORAGE_DIR, filename)
+            
+            # Write events to file in the new format (direct array)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(events, f, indent=2, ensure_ascii=False)
+            
+            file_count += 1
+            event_count += len(events)
+            logger.info(f"Generated file {filename} with {len(events)} events")
+        
+        logger.info(f"Generated {file_count} weekly event files with {event_count} total events")
+        
+    except Exception as e:
+        logger.error(f"Error generating event files: {str(e)}")
+        logger.exception("Exception details:")
+
 def process_weeks(start_offset: int = -4, end_offset: int = 4) -> None:
     """
     Process a range of weeks and store their events
@@ -161,10 +280,29 @@ def process_weeks(start_offset: int = -4, end_offset: int = 4) -> None:
         else:
             logger.warning(f"No events found for week with offset {offset}")
 
+def process_all_weeks() -> None:
+    """
+    Process all weeks from the database and generate JSON files
+    This is a more comprehensive approach that ensures all events are stored
+    """
+    logger.info("Processing all weeks from database")
+    
+    # Fetch all events and organize by week
+    events_by_week = fetch_all_weeks_from_database()
+    
+    # Generate JSON files for each week
+    generate_all_event_files(events_by_week)
+    
+    logger.info("All weeks processed successfully")
+
 def main():
     try:
-        # Process a range of weeks: from 4 weeks ago to 4 weeks in the future
-        process_weeks(start_offset=-4, end_offset=4)
+        # Process all weeks from the database (more comprehensive)
+        process_all_weeks()
+        
+        # Also process specific range of weeks as backup
+        process_weeks(start_offset=-8, end_offset=8)
+        
         logger.info("Weekly events processing completed successfully")
     except Exception as e:
         logger.error(f"Error in main function: {str(e)}")
