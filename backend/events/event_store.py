@@ -39,6 +39,52 @@ def get_week_filename(date: datetime) -> str:
     
     return f"week_{week_start.strftime('%Y%m%d')}_to_{week_end.strftime('%Y%m%d')}.json"
 
+def find_week_file_by_date(target_date: datetime) -> str:
+    """
+    Find the weekly file that contains the given date
+    Returns the filename if found, None otherwise
+    """
+    # Calculate the week start date (Sunday) for the target date
+    weekday = target_date.weekday()
+    days_to_start = 0 if weekday == 6 else -(weekday + 1)
+    week_start = target_date + timedelta(days=days_to_start)
+    week_start_str = week_start.strftime('%Y%m%d')
+    
+    # Calculate week end date (Saturday)
+    week_end = week_start + timedelta(days=6)
+    week_end_str = week_end.strftime('%Y%m%d')
+    
+    # Generate expected filename
+    expected_filename = f"week_{week_start_str}_to_{week_end_str}.json"
+    
+    if os.path.exists(os.path.join(WEEKLY_STORAGE_DIR, expected_filename)):
+        return expected_filename
+    
+    # If file not found, try to find any file that might contain the week
+    try:
+        if os.path.exists(WEEKLY_STORAGE_DIR):
+            for filename in os.listdir(WEEKLY_STORAGE_DIR):
+                if filename.startswith("week_") and filename.endswith(".json"):
+                    # Parse week start and end dates from filename
+                    parts = filename.replace("week_", "").replace(".json", "").split("_to_")
+                    if len(parts) == 2:
+                        file_start = datetime.strptime(parts[0], '%Y%m%d')
+                        file_end = datetime.strptime(parts[1], '%Y%m%d')
+                        
+                        # Convert to UTC
+                        file_start = pytz.UTC.localize(file_start) if file_start.tzinfo is None else file_start
+                        file_end = pytz.UTC.localize(file_end) if file_end.tzinfo is None else file_end
+                        
+                        # Check if target date falls within this week
+                        if file_start <= target_date <= file_end:
+                            logger.info(f"Found matching week file: {filename} for date {target_date.strftime('%Y-%m-%d')}")
+                            return filename
+    except Exception as e:
+        logger.error(f"Error searching for week file: {str(e)}")
+    
+    logger.warning(f"No weekly file found for date: {target_date.strftime('%Y-%m-%d')}")
+    return None
+
 def store_weekly_events(events: List[Dict]) -> None:
     """Store events in a weekly file"""
     try:
@@ -57,12 +103,7 @@ def store_weekly_events(events: List[Dict]) -> None:
         week_end = week_start + timedelta(days=6)
 
         with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump({
-                'events': events,
-                'week_start': week_start.isoformat(),
-                'week_end': week_end.isoformat(),
-                'last_updated': current_time.isoformat()
-            }, f, indent=2)
+            json.dump(events, f, indent=2, ensure_ascii=False)
         logger.info(f"Stored weekly events in {filepath}")
     except Exception as e:
         logger.error(f"Error storing weekly events: {str(e)}")
@@ -78,18 +119,131 @@ def load_weekly_events(weeks_offset: int = 0) -> List[Dict]:
         filename = get_week_filename(target_date)
         filepath = os.path.join(WEEKLY_STORAGE_DIR, filename)
 
+        # Try with the calculated filename first
         if os.path.exists(filepath):
+            logger.info(f"Found week file at calculated path: {filepath}")
             with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                events = data.get('events', [])
-                
+                events = json.load(f)
                 logger.info(f"Loaded {len(events)} events from {filename}")
                 return events
-        else:
-            logger.warning(f"Weekly events file not found: {filepath}")
+                
+        # If file not found, try to find by date
+        alternative_filename = find_week_file_by_date(target_date)
+        if alternative_filename:
+            alternative_filepath = os.path.join(WEEKLY_STORAGE_DIR, alternative_filename)
+            with open(alternative_filepath, 'r', encoding='utf-8') as f:
+                events = json.load(f)
+                logger.info(f"Loaded {len(events)} events from alternative file {alternative_filename}")
+                return events
+                
+        # If no file found, list all available files
+        logger.warning(f"Weekly events file not found: {filepath}")
+        if os.path.exists(WEEKLY_STORAGE_DIR):
+            available_files = os.listdir(WEEKLY_STORAGE_DIR)
+            logger.info(f"Available weekly files: {available_files}")
         return []
     except Exception as e:
         logger.error(f"Error loading weekly events: {str(e)}")
+        return []
+
+def load_weekly_events_by_date(specific_date: str) -> List[Dict]:
+    """
+    Load events for a specific date from the appropriate weekly JSON file
+    specific_date: date string in YYYY-MM-DD format
+    """
+    try:
+        # Parse the date string
+        date_obj = datetime.strptime(specific_date, '%Y-%m-%d')
+        # Add UTC timezone if missing
+        if date_obj.tzinfo is None:
+            date_obj = pytz.UTC.localize(date_obj)
+            
+        logger.info(f"Loading events for specific date: {specific_date}")
+        
+        # Find the appropriate weekly file
+        filename = find_week_file_by_date(date_obj)
+        if not filename:
+            logger.warning(f"No weekly file found for date: {specific_date}")
+            return []
+            
+        filepath = os.path.join(WEEKLY_STORAGE_DIR, filename)
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            all_events = json.load(f)
+            
+        # Filter events for the specific date
+        date_events = []
+        for event in all_events:
+            event_date = event['time'].split('T')[0]  # Extract date part from ISO format
+            if event_date == specific_date:
+                date_events.append(event)
+                
+        logger.info(f"Found {len(date_events)} events for {specific_date} in {filename}")
+        return date_events
+        
+    except Exception as e:
+        logger.error(f"Error loading events for specific date {specific_date}: {str(e)}")
+        return []
+
+def load_weekly_events_by_date_range(start_date: str, end_date: str) -> List[Dict]:
+    """
+    Load events for a date range from the appropriate weekly JSON files
+    start_date, end_date: date strings in YYYY-MM-DD format
+    """
+    try:
+        # Parse the date strings
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Add UTC timezone if missing
+        if start_date_obj.tzinfo is None:
+            start_date_obj = pytz.UTC.localize(start_date_obj)
+        if end_date_obj.tzinfo is None:
+            end_date_obj = pytz.UTC.localize(end_date_obj)
+            
+        logger.info(f"Loading events for date range: {start_date} to {end_date}")
+        
+        # Calculate number of days in range
+        days_in_range = (end_date_obj - start_date_obj).days + 1
+        
+        # Initialize list for all events in the range
+        range_events = []
+        
+        # Process each day in the range
+        current_date = start_date_obj
+        for _ in range(days_in_range):
+            current_date_str = current_date.strftime('%Y-%m-%d')
+            
+            # Find the appropriate weekly file for this date
+            filename = find_week_file_by_date(current_date)
+            if filename:
+                filepath = os.path.join(WEEKLY_STORAGE_DIR, filename)
+                
+                # Read all events from the file (if we haven't already)
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    all_events = json.load(f)
+                
+                # Filter events for the current date
+                for event in all_events:
+                    event_date = event['time'].split('T')[0]  # Extract date part from ISO format
+                    event_date_obj = datetime.strptime(event_date, '%Y-%m-%d')
+                    
+                    # Check if the event falls within our range
+                    if start_date <= event_date <= end_date:
+                        # Add to list if not already present
+                        event_id = f"{event['time']}-{event['event_title']}"
+                        # Check if event is already in range_events
+                        if not any(f"{e['time']}-{e['event_title']}" == event_id for e in range_events):
+                            range_events.append(event)
+            
+            # Move to next day
+            current_date += timedelta(days=1)
+            
+        logger.info(f"Found {len(range_events)} events in date range {start_date} to {end_date}")
+        return range_events
+        
+    except Exception as e:
+        logger.error(f"Error loading events for date range {start_date} to {end_date}: {str(e)}")
         return []
 
 def store_events(events: List[Dict]) -> None:
@@ -185,63 +339,67 @@ def convert_to_user_timezone(event: Dict, user_tz: pytz.timezone) -> Dict:
         logger.exception(e)
         return event
 
-def get_filtered_events(time_range: str, user_timezone: str, selected_currencies: List[str] = None, selected_impacts: List[str] = None, specific_date: str = None) -> List[Dict]:
+def get_filtered_events(time_range: str, user_timezone: str, selected_currencies: List[str] = None, selected_impacts: List[str] = None, specific_date: str = None, start_date: str = None, end_date: str = None) -> List[Dict]:
     """
     Filter events based on time range, user's timezone, currencies, and impact levels
     Uses local JSON files for 'previous_week' time range, returns empty list for other ranges
     
     Args:
-        time_range: One of '24h', 'today', 'yesterday', 'tomorrow', 'week', 'previous_week', 'next_week', 'specific_date'
+        time_range: One of '24h', 'today', 'yesterday', 'tomorrow', 'week', 'previous_week', 'next_week', 'specific_date', 'date_range'
         user_timezone: User's timezone (e.g., 'America/New_York')
         selected_currencies: List of currency codes to filter by (e.g., ['USD', 'GBP'])
         selected_impacts: List of impact levels to filter by (e.g., ['High', 'Medium'])
         specific_date: Date string in YYYY-MM-DD format for 'specific_date' time range
+        start_date: Start date for 'date_range' time range
+        end_date: End date for 'date_range' time range
     """
     logger.info(f"[DEBUG] get_filtered_events called with time_range: {time_range}, user_timezone: {user_timezone}")
     logger.info(f"[DEBUG] selected_currencies: {selected_currencies}, selected_impacts: {selected_impacts}")
+    logger.info(f"[DEBUG] specific_date: {specific_date}, date_range: {start_date} to {end_date}")
     
-    # Special case for previous_week - use local JSON files
+    events = []
+    
+    # Handle different time ranges
     if time_range == 'previous_week':
         logger.info("[DEBUG] Using local JSON file for previous week events")
-        
-        # List available weekly files
-        try:
-            if os.path.exists(WEEKLY_STORAGE_DIR):
-                files = os.listdir(WEEKLY_STORAGE_DIR)
-                logger.info(f"[DEBUG] Available weekly files: {files}")
-            else:
-                logger.warning(f"[DEBUG] Weekly storage directory not found: {WEEKLY_STORAGE_DIR}")
-        except Exception as e:
-            logger.error(f"[DEBUG] Error listing weekly files: {str(e)}")
-        
         events = load_weekly_events(weeks_offset=-1)
-        logger.info(f"[DEBUG] load_weekly_events returned {len(events)} events")
-        
-        # Filter by currency if needed
-        if selected_currencies and len(selected_currencies) > 0:
-            before_count = len(events)
-            events = [event for event in events if event['currency'] in selected_currencies]
-            logger.info(f"[DEBUG] Currency filter: {before_count} -> {len(events)} events")
-        
-        # Filter by impact if needed
-        if selected_impacts and len(selected_impacts) > 0:
-            before_count = len(events)
-            events = [event for event in events if event['impact'] in selected_impacts]
-            logger.info(f"[DEBUG] Impact filter: {before_count} -> {len(events)} events")
-        
-        logger.info(f"[DEBUG] Returning {len(events)} previous week events from local file")
-        
-        # If we have no events, try loading events from current week as fallback
-        if not events:
-            logger.warning("[DEBUG] No events found for previous week, trying current week as fallback")
-            events = load_weekly_events(weeks_offset=0)
-            logger.info(f"[DEBUG] Fallback: Found {len(events)} events for current week")
-        
-        return events
+    elif time_range == 'week':
+        logger.info("[DEBUG] Using local JSON file for current week events")
+        events = load_weekly_events(weeks_offset=0)
+    elif time_range == 'next_week':
+        logger.info("[DEBUG] Using local JSON file for next week events")
+        events = load_weekly_events(weeks_offset=1)
+    elif time_range == 'specific_date' and specific_date:
+        logger.info(f"[DEBUG] Using local JSON file for specific date: {specific_date}")
+        events = load_weekly_events_by_date(specific_date)
+    elif time_range == 'date_range' and start_date and end_date:
+        logger.info(f"[DEBUG] Using local JSON file for date range: {start_date} to {end_date}")
+        events = load_weekly_events_by_date_range(start_date, end_date)
     
-    # For all other time ranges, return empty list to use database query
-    logger.info(f"[DEBUG] Using database to get filtered events for time_range: {time_range}")
-    return []
+    # Log available files
+    try:
+        if os.path.exists(WEEKLY_STORAGE_DIR):
+            available_files = os.listdir(WEEKLY_STORAGE_DIR)
+            logger.info(f"[DEBUG] Available weekly files: {available_files}")
+    except Exception as e:
+        logger.error(f"[DEBUG] Error listing weekly files: {str(e)}")
+        
+    logger.info(f"[DEBUG] Initially loaded {len(events)} events")
+    
+    # Filter by currency if needed
+    if selected_currencies and len(selected_currencies) > 0:
+        before_count = len(events)
+        events = [event for event in events if event['currency'] in selected_currencies]
+        logger.info(f"[DEBUG] Currency filter: {before_count} -> {len(events)} events")
+    
+    # Filter by impact if needed
+    if selected_impacts and len(selected_impacts) > 0:
+        before_count = len(events)
+        events = [event for event in events if event['impact'] in selected_impacts]
+        logger.info(f"[DEBUG] Impact filter: {before_count} -> {len(events)} events")
+    
+    logger.info(f"[DEBUG] Returning {len(events)} events")
+    return events
 
 def clean_memory_cache():
     """Clean up the events cache to free memory."""
@@ -288,4 +446,5 @@ def get_cached_events():
         return None
     except Exception as e:
         logger.error(f"Error getting cached events: {str(e)}")
+        return None 
         return None 
