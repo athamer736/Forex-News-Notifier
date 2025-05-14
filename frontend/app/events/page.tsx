@@ -1180,6 +1180,26 @@ function EventsPage() {
                 pb: 12
             }}
         >
+            {/* System Alert Notification Banner */}
+            <Box
+                sx={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    backgroundColor: '#d32f2f',
+                    color: 'white',
+                    padding: '12px',
+                    zIndex: 9999,
+                    textAlign: 'center',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                }}
+            >
+                <Typography variant="subtitle1" fontWeight="bold">
+                    SYSTEM ALERT: We are experiencing issues displaying news events from previous weeks. Our team is working tirelessly to fix this issue. Thank you for your patience.
+                </Typography>
+            </Box>
+
             {/* Development memory indicator - only shows in development */}
             {process.env.NODE_ENV === 'development' && memoryUsage !== null && (
                 <Box 
