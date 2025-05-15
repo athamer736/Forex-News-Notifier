@@ -54,34 +54,37 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
             processed_impacts = [i.strip() for i in selected_impacts if i.strip()]
             logger.info(f"Processed impacts: {processed_impacts}")
         
-        # Special handling for previous_week - try to get events from local JSON files first
-        if time_range == 'previous_week':
-            logger.info("Attempting to get previous week events from local JSON files")
+        # Check for time ranges that can use the local JSON files
+        if time_range in ['previous_week', 'week', 'next_week', 'specific_date', 'date_range']:
+            logger.info(f"Attempting to get events for {time_range} from local JSON files")
             
             try:
                 # Get user's timezone
                 user_timezone = get_user_timezone(user_id)
                 logger.info(f"User timezone from preferences: {user_timezone}")
                 
-                # Get events from event_store
+                # Get events from event_store with all parameters
                 events = store_get_filtered_events(
                     time_range=time_range,
                     user_timezone=user_timezone,
                     selected_currencies=processed_currencies,
-                    selected_impacts=processed_impacts
+                    selected_impacts=processed_impacts,
+                    specific_date=specific_date,
+                    start_date=start_date,
+                    end_date=end_date
                 )
                 
                 if events and len(events) > 0:
-                    logger.info(f"Found {len(events)} previous week events from local JSON files")
+                    logger.info(f"Found {len(events)} events for {time_range} from local JSON files")
                     
                     # Convert times to user's timezone with proper DST handling
-                    converted_events = convert_to_local_time(events, user_id)
+                    converted_events = convert_to_local_time(events, user_id, time_range)
                     return converted_events, 200
                 else:
-                    logger.warning("No events found in local JSON files for previous week, falling back to database")
+                    logger.warning(f"No events found in local JSON files for {time_range}, falling back to database")
             except Exception as e:
-                logger.exception(f"Error getting previous week events from local JSON files: {str(e)}")
-                logger.warning("Falling back to database query for previous week events")
+                logger.exception(f"Error getting events from local JSON files: {str(e)}")
+                logger.warning(f"Falling back to database query for {time_range} events")
 
         # Get current time in UTC
         now = datetime.now(pytz.UTC)
@@ -147,11 +150,6 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                 if start_time.tzinfo is None:
                     start_time = pytz.UTC.localize(start_time)
                 
-                # Check if date is before our data start date
-                min_date = datetime(2025, 2, 2, tzinfo=pytz.UTC)
-                if start_time < min_date:
-                    raise ValueError("Sorry, we do not have data from before February 2, 2025")
-                
                 # Set end time to end of the selected day
                 end_time = start_time + timedelta(days=1) - timedelta(microseconds=1)
             except ValueError as e:
@@ -177,11 +175,6 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                 # Ensure start_time is before end_time
                 if start_time > end_time:
                     raise ValueError("Start date must be before end date")
-                
-                # Check if dates are before our data start date
-                min_date = datetime(2025, 2, 2, tzinfo=pytz.UTC)
-                if start_time < min_date:
-                    raise ValueError("Sorry, we do not have data from before February 2, 2025")
                 
             except ValueError as e:
                 if "does not match format" in str(e):
@@ -209,7 +202,7 @@ def handle_events_request() -> Tuple[Union[Dict, List], int]:
                 logger.info(f"Last event: {filtered_events[-1]['event_title']} at {filtered_events[-1]['time']}")
 
         # Convert times to user's timezone with proper DST handling
-        converted_events = convert_to_local_time(filtered_events, user_id)
+        converted_events = convert_to_local_time(filtered_events, user_id, time_range)
         
         return converted_events, 200
             
