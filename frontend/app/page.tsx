@@ -347,7 +347,7 @@ const HomePage = () => {
             Advertisement
           </Typography>
 
-          {/* Direct AdSense implementation using the code provided by user */}
+          {/* Raw HTML AdSense implementation for maximum compatibility */}
           <Box
             component="div"
             sx={{
@@ -355,43 +355,25 @@ const HomePage = () => {
               minHeight: '600px',
               background: 'rgba(255, 255, 255, 0.15)',
               borderRadius: '4px',
-              padding: '10px',
-              "& ins": { backgroundColor: 'transparent !important' }
+              padding: '10px'
             }}
           >
-            <Script
-              id="adsense-autorelaxed-script"
-              strategy="beforeInteractive"
-              src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
-              crossOrigin="anonymous"
-            />
             <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%'
+              dangerouslySetInnerHTML={{
+                __html: `
+                  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
+                    crossorigin="anonymous"></script>
+                  <ins class="adsbygoogle"
+                    style="display:block;min-height:600px;width:100%;"
+                    data-ad-format="autorelaxed"
+                    data-ad-client="ca-pub-3681278136187746"
+                    data-ad-slot="3528778902"></ins>
+                  <script>
+                    (adsbygoogle = window.adsbygoogle || []).push({});
+                  </script>
+                `
               }}
-            >
-              <ins
-                className="adsbygoogle"
-                style={{
-                  display: 'block',
-                  minWidth: '250px',
-                  width: '100%',
-                  minHeight: '400px'
-                }}
-                data-ad-format="autorelaxed"
-                data-ad-client="ca-pub-3681278136187746"
-                data-ad-slot="3528778902"
-              />
-            </div>
-            <Script id="ad-autorelaxed-push" strategy="lazyOnload">
-              {`
-              (adsbygoogle = window.adsbygoogle || []).push({});
-              console.log("Auto-relaxed ad push executed");
-              `}
-            </Script>
+            />
           </Box>
         </Box>
       </Container>

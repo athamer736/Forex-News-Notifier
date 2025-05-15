@@ -35,7 +35,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://www.googletagmanager.com" />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
-        {/* Use GoogleAdsense client component */}
+        {/* GoogleAdsense component temporarily removed to prevent script duplication */}
         {/* <GoogleAdsense /> */}
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
