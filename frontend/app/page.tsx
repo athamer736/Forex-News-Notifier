@@ -360,18 +360,7 @@ const HomePage = () => {
           >
             <div
               dangerouslySetInnerHTML={{
-                __html: `
-                  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
-                    crossorigin="anonymous"></script>
-                  <ins class="adsbygoogle"
-                    style="display:block;min-height:600px;width:100%;"
-                    data-ad-format="autorelaxed"
-                    data-ad-client="ca-pub-3681278136187746"
-                    data-ad-slot="3528778902"></ins>
-                  <script>
-                    (adsbygoogle = window.adsbygoogle || []).push({});
-                  </script>
-                `
+                               __html: `                  <ins class="adsbygoogle"                    style="display:block;min-height:600px;width:100%;"                    data-ad-format="autorelaxed"                    data-ad-client="ca-pub-3681278136187746"                    data-ad-slot="3528778902"></ins>                  <script>                    (adsbygoogle = window.adsbygoogle || []).push({});                  </script>                `
               }}
             />
           </Box>
