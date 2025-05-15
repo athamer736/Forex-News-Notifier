@@ -41,6 +41,19 @@ const nextConfig = {
         source: '/timezone',
         destination: `${apiUrl}/timezone`,
       },
+      // Add Stripe and PayPal payment endpoints
+      {
+        source: '/payment/create-stripe-session',
+        destination: `${apiUrl}/payment/create-stripe-session`,
+      },
+      {
+        source: '/payment/create-paypal-order',
+        destination: `${apiUrl}/payment/create-paypal-order`,
+      },
+      {
+        source: '/payment/capture-paypal-order',
+        destination: `${apiUrl}/payment/capture-paypal-order`,
+      },
     ];
   },
   

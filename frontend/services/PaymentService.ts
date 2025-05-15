@@ -6,11 +6,11 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 export class PaymentService {
   static async createStripeSession(amount: number) {
     try {
-      // Use Next.js API route instead of direct backend access
-      const apiUrl = '/api/create-stripe-session';
-      console.log('Using Next.js API route for Stripe:', apiUrl);
+      // Use Next.js rewrite to forward to backend API
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      console.log('Using origin for Stripe:', origin);
       
-      const response = await fetch(apiUrl, {
+      const response = await fetch(`${origin}/payment/create-stripe-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,9 +49,9 @@ export class PaymentService {
   }
 
   static getPayPalOptions(amount: number) {
-    // Use backend API on port 5000
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
-    console.log('Using base URL for PayPal:', baseUrl);
+    // Use Next.js rewrite to forward to backend API
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    console.log('Using origin for PayPal:', origin);
     
     return {
       'client-id': process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
@@ -60,7 +60,7 @@ export class PaymentService {
       components: 'buttons',
       createOrder: async () => {
         try {
-          const response = await fetch(`${baseUrl}/payment/create-paypal-order`, {
+          const response = await fetch(`${origin}/payment/create-paypal-order`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ export class PaymentService {
       },
       onApprove: async (data: any) => {
         try {
-          const response = await fetch(`${baseUrl}/payment/capture-paypal-order`, {
+          const response = await fetch(`${origin}/payment/capture-paypal-order`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

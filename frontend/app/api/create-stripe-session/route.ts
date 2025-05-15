@@ -28,45 +28,79 @@ export async function OPTIONS() {
   });
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const data = await request.json();
-    
-    if (!data || !data.amount) {
-      return NextResponse.json({ error: 'Missing amount parameter' }, { status: 400 });
-    }
-    
-    // Forward the request to the backend
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
-    
-    const response = await fetch(`${baseUrl}/payment/create-stripe-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Origin': request.headers.get('origin') || '',
-      },
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Stripe API error:', response.status, errorText);
-      return NextResponse.json(
-        { error: `Error from payment service: ${response.status}` }, 
-        { status: response.status }
+    const headersList = headers();
+    const origin = headersList.get('origin') || 'https://fxalert.co.uk:3000';
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Credentials': 'true',
+      'Content-Type': 'application/json',
+    };
+
+    const { amount } = await req.json();
+
+    if (!amount || amount <= 0) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid amount' }),
+        {
+          status: 400,
+          headers: corsHeaders,
+        }
       );
     }
+
+    // Use the origin or the NEXT_PUBLIC_BASE_URL with port 3000
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || origin;
+    console.log('Using base URL for success/cancel:', baseUrl);
     
-    const sessionData = await response.json();
-    return NextResponse.json(sessionData);
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Donation to Forex News Notifier',
+              description: 'Thank you for supporting our project!',
+            },
+            unit_amount: Math.round(amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${baseUrl}/donate?success=true`,
+      cancel_url: `${baseUrl}/donate?canceled=true`,
+    });
+
+    console.log('Stripe session created:', session.id);
     
+    return new Response(
+      JSON.stringify({ id: session.id }),
+      {
+        status: 200,
+        headers: corsHeaders,
+      }
+    );
   } catch (error) {
-    console.error('Stripe session error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' }, 
-      { status: 500 }
+    console.error('Stripe session creation error:', error);
+    const headersList = headers();
+    const origin = headersList.get('origin') || 'https://fxalert.co.uk:3000';
+    
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Failed to create payment session',
+        details: error instanceof Error ? error.stack : undefined
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Credentials': 'true',
+        },
+      }
     );
   }
 } 
