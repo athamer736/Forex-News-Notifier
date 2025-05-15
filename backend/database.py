@@ -150,22 +150,29 @@ def get_filtered_events(
     try:
         # Start with base query
         query = db_session.query(ForexEvent)
+        logger.info(f"Building database query with filters: start_time={start_time}, end_time={end_time}")
         
         # Apply time filter
         if start_time:
             query = query.filter(ForexEvent.time >= start_time)
+            logger.info(f"Added filter: ForexEvent.time >= {start_time}")
         if end_time:
             query = query.filter(ForexEvent.time <= end_time)
+            logger.info(f"Added filter: ForexEvent.time <= {end_time}")
         
         # Apply currency filter
         if currencies:
             # Convert both the database values and input to uppercase for comparison
-            query = query.filter(ForexEvent.currency.in_([c.strip().upper() for c in currencies if c.strip()]))
+            normalized_currencies = [c.strip().upper() for c in currencies if c.strip()]
+            query = query.filter(ForexEvent.currency.in_(normalized_currencies))
+            logger.info(f"Added filter: ForexEvent.currency in {normalized_currencies}")
         
         # Apply impact filter
         if impact_levels:
             # Handle non-economic events specially and normalize case
             normalized_impacts = [imp.strip().title() for imp in impact_levels if imp.strip()]
+            logger.info(f"Normalized impact levels: {normalized_impacts}")
+            
             if 'Non-Economic' in normalized_impacts:
                 # Create a list of all other impact levels
                 other_impacts = [imp for imp in normalized_impacts if imp != 'Non-Economic']
@@ -177,8 +184,10 @@ def get_filtered_events(
                 conditions.append(~ForexEvent.impact.in_(['High', 'Medium', 'Low']))
                 
                 query = query.filter(or_(*conditions))
+                logger.info(f"Added complex filter for Non-Economic and {other_impacts}")
             else:
                 query = query.filter(ForexEvent.impact.in_(normalized_impacts))
+                logger.info(f"Added filter: ForexEvent.impact in {normalized_impacts}")
         
         # Order by time
         query = query.order_by(ForexEvent.time)
@@ -186,13 +195,24 @@ def get_filtered_events(
         # Apply limit if specified
         if limit:
             query = query.limit(limit)
+            logger.info(f"Added result limit: {limit}")
         
-        # Execute query and convert to dictionaries
+        # Execute query
         events = query.all()
+        logger.info(f"Database query returned {len(events)} events")
+        
+        # Debug output for first few events if available
+        if events:
+            logger.info(f"First event time: {events[0].time}, Last event time: {events[-1].time}")
+            for i, event in enumerate(events[:3]):  # Log first 3 events
+                logger.info(f"Event {i+1}: {event.event_title} at {event.time}")
+        
+        # Convert to dictionaries
         return [event.to_dict() for event in events]
         
     except Exception as e:
-        logger.error(f"Error getting filtered events: {str(e)}")
+        logger.error(f"Error in get_filtered_events: {str(e)}")
+        logger.error("Error details:", exc_info=True)
         return []
     
 def get_events_by_date(date: datetime) -> List[dict]:

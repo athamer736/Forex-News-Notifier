@@ -65,13 +65,14 @@ def save_user_preferences(user_id: str, preferences: Dict) -> None:
         logger.error(f"Error saving preferences for user {user_id}: {str(e)}")
         raise
 
-def convert_to_local_time(events: List[Dict], user_id: str = 'default') -> List[Dict]:
+def convert_to_local_time(events: List[Dict], user_id: str = 'default', time_range: str = None) -> List[Dict]:
     """
     Convert event times from UTC to user's local timezone and sort by local time
     
     Args:
         events (List[Dict]): List of events with UTC times in ISO format
         user_id (str): The user identifier
+        time_range (str): The time range filter being used (e.g., 'previous_week')
         
     Returns:
         List[Dict]: Events with times converted to user's timezone and sorted by time
@@ -81,7 +82,12 @@ def convert_to_local_time(events: List[Dict], user_id: str = 'default') -> List[
         return events
 
     user_tz = get_user_timezone(user_id)
-    logger.info(f"Converting times to timezone: {user_tz} for user: {user_id}")
+    logger.info(f"Converting times to timezone: {user_tz} for user: {user_id}, time_range: {time_range}")
+    
+    # Determine if we should include past events based on time_range
+    include_past_events = time_range in ['week', 'previous_week', 'yesterday', 'specific_date', 'date_range']
+    if include_past_events:
+        logger.info(f"Including past events for time_range: {time_range}")
     
     converted_events = []
     current_utc = datetime.now(pytz.UTC)
@@ -105,17 +111,21 @@ def convert_to_local_time(events: List[Dict], user_id: str = 'default') -> List[
                 
                 logger.debug(f"Converting {event['time']} UTC to {local_time.strftime('%Y-%m-%d %H:%M')} {tz_abbr} ({user_tz})")
                 
-                # Only include future events and events from the last hour
-                time_difference = (utc_time - current_utc).total_seconds() / 3600
-                if time_difference > -1:  # Include events from the last hour
+                # Only filter past events if not viewing historical data
+                include_event = True
+                if not include_past_events:
+                    time_difference = (utc_time - current_utc).total_seconds() / 3600
+                    if time_difference <= -1:  # More than 1 hour in the past
+                        include_event = False
+                        logger.debug(f"Skipping past event: {event['time']}")
+                
+                if include_event:
                     converted_event = event.copy()
                     # Format the time in a user-friendly format with timezone abbreviation
                     converted_event['time'] = local_time.strftime('%Y-%m-%d %H:%M')
                     converted_event['timezone_abbr'] = tz_abbr  # Add timezone abbreviation
                     converted_event['_datetime'] = local_time  # For sorting
                     converted_events.append(converted_event)
-                else:
-                    logger.debug(f"Skipping past event: {event['time']}")
                     
             except Exception as e:
                 logger.error(f"Error converting time for event: {event}")

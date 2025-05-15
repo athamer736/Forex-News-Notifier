@@ -77,6 +77,26 @@ const HomePage = () => {
         pb: 12
       }}
     >
+      {/* System Alert Notification Banner */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          backgroundColor: '#ed6c02', // Amber color
+          color: 'white',
+          padding: '12px',
+          zIndex: 9999,
+          textAlign: 'center',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }}
+      >
+        <Typography variant="subtitle1" fontWeight="bold">
+          SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
+        </Typography>
+      </Box>
+
       <Container maxWidth="lg">
         <motion.div
           variants={containerVariants}
