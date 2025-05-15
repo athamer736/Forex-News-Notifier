@@ -84,7 +84,7 @@ const HomePage = () => {
           top: 0,
           left: 0,
           width: '100%',
-          backgroundColor: '#d32f2f',
+          backgroundColor: '#ed6c02', // Amber color
           color: 'white',
           padding: '12px',
           zIndex: 9999,
@@ -93,7 +93,7 @@ const HomePage = () => {
         }}
       >
         <Typography variant="subtitle1" fontWeight="bold">
-          SYSTEM ALERT: We are experiencing issues displaying news events from previous weeks. Our team is working tirelessly to fix this issue. Thank you for your patience.
+          SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
         </Typography>
       </Box>
 
