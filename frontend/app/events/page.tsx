@@ -353,15 +353,7 @@ function EventsPage() {
                     setIsUpdating(false);
                     return;
                 }
-                
-                const selectedDateTime = new Date(selectedDate);
-                const cutoffDate = new Date('2025-02-02');
-                if (selectedDateTime < cutoffDate) {
-                    setError('Sorry, we do not have data from before February 2, 2025');
-                    setEvents([]);
-                    setIsUpdating(false);
-                    return;
-                }
+                // Date validation removed to allow past events
             } else if (timeRange === 'date_range') {
                 if (!startDate || !endDate) {
                     setError('Please select both start and end dates');
@@ -369,17 +361,7 @@ function EventsPage() {
                     setIsUpdating(false);
                     return;
                 }
-                
-                const startDateTime = new Date(startDate);
-                const endDateTime = new Date(endDate);
-                const cutoffDate = new Date('2025-02-02');
-                
-                if (startDateTime < cutoffDate || endDateTime < cutoffDate) {
-                    setError('Sorry, we do not have data from before February 2, 2025');
-                    setEvents([]);
-                    setIsUpdating(false);
-                    return;
-                }
+                // Date validation removed to allow past events
             }
 
             const userId = localStorage.getItem('userId') || 'default';
@@ -438,8 +420,6 @@ function EventsPage() {
                         const seconds = parseInt(errorMessage.match(/\d+/)[0]);
                         setRetryTimer(seconds);
                         throw new Error(`Rate limit exceeded. Retrying in ${seconds} seconds...`);
-                    } else if (errorMessage.includes('before February 2, 2025')) {
-                        throw new Error('Sorry, we do not have data from before February 2, 2025');
                     }
                     
                     throw new Error(errorMessage);
@@ -462,9 +442,7 @@ function EventsPage() {
             console.error('Error fetching events:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch events';
             setError(errorMessage);
-            if (!errorMessage.includes('before February 2, 2025')) {
-                setEvents([]);
-            }
+            setEvents([]);
         } finally {
             setLoading(false);
             setInitialLoad(false);
