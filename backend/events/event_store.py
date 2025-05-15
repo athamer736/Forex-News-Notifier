@@ -360,13 +360,13 @@ def get_filtered_events(time_range: str, user_timezone: str, selected_currencies
     events = []
     
     # Handle different time ranges
-    if time_range == 'previous_week':
+        if time_range == 'previous_week':
         logger.info("[DEBUG] Using local JSON file for previous week events")
         events = load_weekly_events(weeks_offset=-1)
     elif time_range == 'week':
         logger.info("[DEBUG] Using local JSON file for current week events")
         events = load_weekly_events(weeks_offset=0)
-    elif time_range == 'next_week':
+        elif time_range == 'next_week':
         logger.info("[DEBUG] Using local JSON file for next week events")
         events = load_weekly_events(weeks_offset=1)
     elif time_range == 'specific_date' and specific_date:
@@ -430,7 +430,7 @@ def save_events_to_cache(events):
         _events_cache = events
         logger.info(f"Saved {len(events)} events to cache")
         return True
-    except Exception as e:
+            except Exception as e:
         logger.error(f"Error saving events to cache: {str(e)}")
         return False
 

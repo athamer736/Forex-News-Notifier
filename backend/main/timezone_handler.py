@@ -85,7 +85,7 @@ def convert_to_local_time(events: List[Dict], user_id: str = 'default', time_ran
     logger.info(f"Converting times to timezone: {user_tz} for user: {user_id}, time_range: {time_range}")
     
     # Determine if we should include past events based on time_range
-    include_past_events = time_range in ['previous_week', 'yesterday', 'specific_date', 'date_range']
+    include_past_events = time_range in ['week', 'previous_week', 'yesterday', 'specific_date', 'date_range']
     if include_past_events:
         logger.info(f"Including past events for time_range: {time_range}")
     
