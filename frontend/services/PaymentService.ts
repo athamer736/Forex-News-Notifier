@@ -6,11 +6,11 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 export class PaymentService {
   static async createStripeSession(amount: number) {
     try {
-      // Use backend API on port 5000
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
-      console.log('Using base URL for Stripe:', baseUrl);
+      // Use Next.js API route instead of direct backend access
+      const apiUrl = '/api/create-stripe-session';
+      console.log('Using Next.js API route for Stripe:', apiUrl);
       
-      const response = await fetch(`${baseUrl}/payment/create-stripe-session`, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

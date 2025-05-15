@@ -1,91 +1,44 @@
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 
-export async function POST(req: Request) {
-  const headersList = headers();
-  const origin = headersList.get('origin') || 'https://fxalert.co.uk:3000';
-  
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Credentials': 'true',
-      }
-    });
-  }
-
+export async function POST(request: Request) {
   try {
-    const { orderId } = await req.json();
-
-    if (!orderId) {
-      return NextResponse.json(
-        { error: 'Missing order ID' },
-        { 
-          status: 400,
-          headers: {
-            'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Allow-Credentials': 'true',
-          }
-        }
-      );
+    const data = await request.json();
+    
+    if (!data || !data.orderId) {
+      return NextResponse.json({ error: 'Missing orderId parameter' }, { status: 400 });
     }
-
-    // Ensure PayPal environment variables are set
-    if (!process.env.PAYPAL_API_URL || !process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
-      throw new Error('PayPal configuration is missing');
-    }
-
-    const response = await fetch(
-      `${process.env.PAYPAL_API_URL}/v2/checkout/orders/${orderId}/capture`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
-          ).toString('base64')}`,
-        },
-      }
-    );
-
-    const data = await response.json();
+    
+    // Forward the request to the backend
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fxalert.co.uk:5000';
+    
+    const response = await fetch(`${baseUrl}/payment/capture-paypal-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Origin': request.headers.get('origin') || '',
+      },
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
     
     if (!response.ok) {
-      console.error('PayPal API error:', data);
-      throw new Error(data.message || 'Failed to capture PayPal payment');
+      const errorText = await response.text();
+      console.error('PayPal capture API error:', response.status, errorText);
+      return NextResponse.json(
+        { error: `Error from payment service: ${response.status}` }, 
+        { status: response.status }
+      );
     }
-
-    console.log('PayPal payment captured successfully:', orderId);
     
-    return NextResponse.json(data, {
-      headers: {
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Credentials': 'true',
-      }
-    });
+    const captureData = await response.json();
+    return NextResponse.json(captureData);
+    
   } catch (error) {
     console.error('PayPal capture error:', error);
-    const headersList = headers();
-    const origin = headersList.get('origin') || 'https://fxalert.co.uk:3000';
-    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to capture PayPal payment' },
-      { 
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': origin,
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Credentials': 'true',
-        }
-      }
+      { error: error instanceof Error ? error.message : 'Unknown error' }, 
+      { status: 500 }
     );
   }
 } 
