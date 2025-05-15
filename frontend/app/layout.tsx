@@ -5,8 +5,8 @@ import dynamic from 'next/dynamic';
 
 // Import Footer with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
-// Import GoogleAdsense as a client component
-const GoogleAdsense = dynamic(() => import('../components/GoogleAdsense'), { ssr: false });
+// GoogleAdsense component temporarily commented out to prevent script duplication
+// const GoogleAdsense = dynamic(() => import('../components/GoogleAdsense'), { ssr: false });
 
 const inter = Inter({
   subsets: ["latin"],
@@ -36,7 +36,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
         {/* Use GoogleAdsense client component */}
-        <GoogleAdsense />
+        {/* <GoogleAdsense /> */}
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
             {children}

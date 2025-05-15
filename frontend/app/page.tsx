@@ -332,62 +332,64 @@ const HomePage = () => {
 
       {/* AdSense Display */}
       <Container maxWidth="md" sx={{ mt: 6, mb: 4 }}>
-        <Box sx={{ 
+        <Box sx={{
           width: '100%',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '8px',
           overflow: 'hidden',
           padding: '20px',
-          background: 'rgba(255, 255, 255, 0.05)',
+          background: 'rgba(255, 255, 255, 0.1)',
         }}>
-          <Typography 
-            variant="subtitle2" 
-            sx={{ mb: 2, textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}
+          <Typography
+            variant="subtitle2"
+            sx={{ mb: 2, textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}
           >
             Advertisement
           </Typography>
-          
-          {/* Auto-relaxed format ad */}
+
+          {/* Direct AdSense implementation using the code provided by user */}
           <Box
             component="div"
             sx={{
-              display: 'block',
-              width: '100%',
+              position: 'relative',
               minHeight: '600px',
-              overflow: 'hidden',
-              textAlign: 'center'
+              background: 'rgba(255, 255, 255, 0.15)',
+              borderRadius: '4px',
+              padding: '10px',
+              "& ins": { backgroundColor: 'transparent !important' }
             }}
           >
             <Script
-              id="adsense-init-script"
-              strategy="afterInteractive"
+              id="adsense-autorelaxed-script"
+              strategy="beforeInteractive"
               src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
               crossOrigin="anonymous"
-              onError={(e) => {
-                console.error('Error loading AdSense script:', e);
-              }}
             />
-            
-            <ins
-              className="adsbygoogle"
+            <div
               style={{
-                display: 'block',
-                width: '100%',
-                minHeight: '600px'
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%'
               }}
-              data-ad-format="autorelaxed"
-              data-ad-client="ca-pub-3681278136187746"
-              data-ad-slot="3528778902"
-            />
-            
-            <Script id="ad-push" strategy="afterInteractive">
+            >
+              <ins
+                className="adsbygoogle"
+                style={{
+                  display: 'block',
+                  minWidth: '250px',
+                  width: '100%',
+                  minHeight: '400px'
+                }}
+                data-ad-format="autorelaxed"
+                data-ad-client="ca-pub-3681278136187746"
+                data-ad-slot="3528778902"
+              />
+            </div>
+            <Script id="ad-autorelaxed-push" strategy="lazyOnload">
               {`
-                try {
-                  (adsbygoogle = window.adsbygoogle || []).push({});
-                  console.log('Auto-relaxed AdSense push successful');
-                } catch (e) {
-                  console.error('AdSense push error:', e);
-                }
+              (adsbygoogle = window.adsbygoogle || []).push({});
+              console.log("Auto-relaxed ad push executed");
               `}
             </Script>
           </Box>
