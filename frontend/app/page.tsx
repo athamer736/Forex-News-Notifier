@@ -347,39 +347,48 @@ const HomePage = () => {
             Advertisement
           </Typography>
           
-          {/* Updated ad container with matched content format */}
+          {/* Auto-relaxed format ad */}
           <Box
             component="div"
             sx={{
               display: 'block',
               width: '100%',
-              minHeight: '250px',
+              minHeight: '600px',
               overflow: 'hidden',
               textAlign: 'center'
             }}
           >
-            <ins 
+            <Script
+              id="adsense-init-script"
+              strategy="afterInteractive"
+              src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
+              crossOrigin="anonymous"
+              onError={(e) => {
+                console.error('Error loading AdSense script:', e);
+              }}
+            />
+            
+            <ins
               className="adsbygoogle"
-              style={{ 
+              style={{
                 display: 'block',
                 width: '100%',
-                height: '250px'
+                minHeight: '600px'
               }}
+              data-ad-format="autorelaxed"
               data-ad-client="ca-pub-3681278136187746"
-              data-ad-slot="3868550810"
-              data-ad-format="auto"
-              data-matched-content-ui-type="image_card_stacked"
-              data-matched-content-rows-num="2"
-              data-matched-content-columns-num="2"
-              data-full-width-responsive="true"
+              data-ad-slot="3528778902"
             />
-            <Script id="ad-init" strategy="afterInteractive">
-              {`try {
-                (adsbygoogle = window.adsbygoogle || []).push({});
-                console.log('AdSense push successful');
-              } catch (e) {
-                console.error('AdSense push error:', e);
-              }`}
+            
+            <Script id="ad-push" strategy="afterInteractive">
+              {`
+                try {
+                  (adsbygoogle = window.adsbygoogle || []).push({});
+                  console.log('Auto-relaxed AdSense push successful');
+                } catch (e) {
+                  console.error('AdSense push error:', e);
+                }
+              `}
             </Script>
           </Box>
         </Box>
