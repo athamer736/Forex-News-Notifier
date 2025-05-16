@@ -446,4 +446,4 @@ def get_cached_events():
         return None
     except Exception as e:
         logger.error(f"Error getting cached events: {str(e)}")
-        return None 
+        return None
