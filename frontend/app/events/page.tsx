@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
+import CloseIcon from '@mui/icons-material/Close';
 import Image from 'next/image';
 import { GB, US, FR, DE, JP, CN, SG, AU, BR, AE, NZ } from 'country-flag-icons/react/3x2';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -243,6 +244,7 @@ function EventsPage() {
     const [isRangeSelectionActive, setIsRangeSelectionActive] = useState<boolean>(false);
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [showAlert, setShowAlert] = useState(true);
 
     const handleExpandClick = useCallback((eventId: string, e?: React.MouseEvent) => {
         if (e) {
@@ -1183,24 +1185,41 @@ function EventsPage() {
             }}
         >
             {/* System Alert Notification Banner */}
-            <Box
-                sx={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    backgroundColor: '#ed6c02', // Amber color
-                    color: 'white',
-                    padding: '12px',
-                    zIndex: 9999,
-                    textAlign: 'center',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                }}
-            >
-                <Typography variant="subtitle1" fontWeight="bold">
-                    SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
-                </Typography>
-            </Box>
+            {showAlert && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        backgroundColor: '#ed6c02', // Amber color
+                        color: 'white',
+                        padding: '12px',
+                        zIndex: 9999,
+                        textAlign: 'center',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                        SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
+                    </Typography>
+                    <IconButton 
+                        aria-label="close alert" 
+                        onClick={() => setShowAlert(false)}
+                        sx={{ 
+                            color: 'white',
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)'
+                            }
+                        }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+            )}
 
             {/* Development memory indicator - only shows in development */}
             {process.env.NODE_ENV === 'development' && memoryUsage !== null && (
