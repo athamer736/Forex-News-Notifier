@@ -14,8 +14,6 @@ import {
   InputAdornment,
   Alert,
   Snackbar,
-  Tabs,
-  Tab,
   CircularProgress,
   IconButton
 } from '@mui/material';
@@ -24,7 +22,6 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import StarIcon from '@mui/icons-material/Star';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import { PaymentService } from '../../services/PaymentService';
 import { useRouter } from 'next/navigation';
 
 const DonationPage = () => {
@@ -32,7 +29,6 @@ const DonationPage = () => {
   const [customAmount, setCustomAmount] = useState('');
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,34 +86,13 @@ const DonationPage = () => {
     { amount: 25, icon: <StarIcon />, text: "Be a star" }
   ];
 
-  const handleDonation = async (amount: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      if (paymentMethod === 'stripe') {
-        await PaymentService.createStripeSession(amount);
-      }
-      // PayPal is handled by the PayPal button component
-      
-      setSelectedAmount(amount);
-    } catch (error) {
-      console.error('Payment error:', error);
-      setError('Failed to process payment. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleDonation = (amount: number) => {
+    setSelectedAmount(amount);
   };
 
-  const handleCustomDonation = () => {
-    const amount = parseFloat(customAmount);
-    if (!isNaN(amount) && amount > 0) {
-      handleDonation(amount);
-    }
-  };
-
-  const handlePaymentMethodChange = (_event: React.SyntheticEvent, newValue: 'stripe' | 'paypal') => {
-    setPaymentMethod(newValue);
+  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomAmount(e.target.value);
+    setSelectedAmount(parseFloat(e.target.value));
   };
 
   const paypalOptions = {
@@ -190,41 +165,6 @@ const DonationPage = () => {
             </Typography>
           </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
-              <Tabs
-                value={paymentMethod}
-                onChange={handlePaymentMethodChange}
-                sx={{
-                  '& .MuiTabs-indicator': {
-                    backgroundColor: '#2196F3'
-                  }
-                }}
-              >
-                <Tab
-                  value="stripe"
-                  label="Credit Card"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    '&.Mui-selected': {
-                      color: '#2196F3'
-                    }
-                  }}
-                />
-                <Tab
-                  value="paypal"
-                  label="PayPal"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    '&.Mui-selected': {
-                      color: '#2196F3'
-                    }
-                  }}
-                />
-              </Tabs>
-            </Box>
-          </motion.div>
-
           <Grid container spacing={3} sx={{ mb: 6 }}>
             {donationAmounts.map((option) => (
               <Grid item xs={12} md={4} key={option.amount}>
@@ -236,9 +176,9 @@ const DonationPage = () => {
                   <Card
                     onClick={() => handleDonation(option.amount)}
                     sx={{
-                      background: 'rgba(255, 255, 255, 0.05)',
+                      background: selectedAmount === option.amount ? 'rgba(33, 150, 243, 0.1)' : 'rgba(255, 255, 255, 0.05)',
                       backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      border: selectedAmount === option.amount ? '1px solid rgba(33, 150, 243, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
                       cursor: 'pointer',
                       height: '100%'
                     }}
@@ -287,19 +227,24 @@ const DonationPage = () => {
                 p: 4
               }}
             >
-              {paymentMethod === 'stripe' ? (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    alignItems: 'center',
-                    gap: 2
-                  }}
-                >
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3
+                }}
+              >
+                <Box sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: 'center',
+                  gap: 2,
+                  mb: 3
+                }}>
                   <TextField
                     value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    placeholder="Enter amount"
+                    onChange={handleCustomAmountChange}
+                    placeholder="Enter custom amount"
                     type="number"
                     InputProps={{
                       startAdornment: (
@@ -321,29 +266,23 @@ const DonationPage = () => {
                         }
                       }
                     }}
-                    sx={{ flex: 1 }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleCustomDonation}
-                    disabled={!customAmount || parseFloat(customAmount) <= 0 || loading}
-                    sx={{
-                      px: 4,
-                      py: 2,
-                      background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                      color: 'white',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '1.1rem',
-                      '&:hover': {
-                        background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)'
-                      }
+                    sx={{ 
+                      flex: 1, 
+                      width: '100%',
+                      maxWidth: '100%' 
                     }}
-                  >
-                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Donate'}
-                  </Button>
+                  />
                 </Box>
-              ) : (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textAlign: 'center',
+                    mb: 2
+                  }}
+                >
+                  {selectedAmount ? `You will donate: $${selectedAmount}` : 'Please select or enter an amount to donate'}
+                </Typography>
                 <PayPalScriptProvider options={paypalOptions}>
                   <Box sx={{ 
                     width: '100%', 
@@ -364,16 +303,20 @@ const DonationPage = () => {
                         shape: 'rect',
                         label: 'donate'
                       }}
+                      disabled={!selectedAmount || (selectedAmount <= 0)}
                       createOrder={async () => {
                         try {
-                          const amount = selectedAmount || parseFloat(customAmount) || 5;
+                          if (!selectedAmount || selectedAmount <= 0) {
+                            throw new Error('Please select a valid donation amount');
+                          }
+                          
                           const response = await fetch('/api/create-paypal-order', {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
                             },
                             body: JSON.stringify({
-                              amount: amount,
+                              amount: selectedAmount,
                             }),
                           });
 
@@ -384,7 +327,7 @@ const DonationPage = () => {
                           return orderData.id;
                         } catch (error) {
                           console.error('PayPal order creation error:', error);
-                          setError('Failed to create PayPal order. Please try again.');
+                          setError(error instanceof Error ? error.message : 'Failed to create PayPal order. Please try again.');
                           throw error;
                         }
                       }}
@@ -407,6 +350,8 @@ const DonationPage = () => {
                           }
                           
                           setShowThankYou(true);
+                          setSelectedAmount(null);
+                          setCustomAmount('');
                           return orderData;
                         } catch (error) {
                           console.error('PayPal capture error:', error);
@@ -423,7 +368,7 @@ const DonationPage = () => {
                     />
                   </Box>
                 </PayPalScriptProvider>
-              )}
+              </Box>
             </Box>
           </motion.div>
         </motion.div>

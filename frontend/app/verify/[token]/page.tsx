@@ -11,7 +11,7 @@ export default function VerifyPage() {
   const [message, setMessage] = useState('');
   const router = useRouter();
   const params = useParams();
-  const token = params.token as string;
+  const token = params?.token as string;
 
   useEffect(() => {
     const verifyToken = async () => {
