@@ -55,17 +55,17 @@ logger.setLevel(logging.INFO)
 
 app = Flask(__name__)
 
-# Basic security headers with HTTPS
+# Modify the Content Security Policy to better support AdSense
 csp = {
     'default-src': ["'self'", "https:", "http:"],
-    'img-src': ["'self'", 'data:', 'https:', "http:", "https://pagead2.googlesyndication.com", "https://adservice.google.com", "https://www.googletagmanager.com", "https://www.google-analytics.com"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://pagead2.googlesyndication.com", "https://adservice.google.com", "https://www.googletagmanager.com", "https://partner.googleadservices.com", "https://tpc.googlesyndication.com", "https://www.google-analytics.com"],
+    'img-src': ["'self'", 'data:', 'https:', "http:", "https://pagead2.googlesyndication.com", "https://adservice.google.com", "https://www.googletagmanager.com", "https://www.google-analytics.com", "https://googleads.g.doubleclick.net"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://pagead2.googlesyndication.com", "https://adservice.google.com", "https://www.googletagmanager.com", "https://partner.googleadservices.com", "https://tpc.googlesyndication.com", "https://www.google-analytics.com", "https://ads.google.com"],
     'style-src': ["'self'", "'unsafe-inline'"],
     'font-src': ["'self'", 'data:', 'https:', "http:"],
-    'frame-src': ["'self'", "https://googleads.g.doubleclick.net", "https://tpc.googlesyndication.com", "https://www.google.com"],
-    'frame-ancestors': "'none'",
+    'frame-src': ["'self'", "https://googleads.g.doubleclick.net", "https://tpc.googlesyndication.com", "https://www.google.com", "https://www.googletagservices.com"],
+    'frame-ancestors': ["'self'", "'none'"],  # Allow self for AdSense iframes
     'form-action': "'self'",
-    'connect-src': ["'self'", "https:", "http:", "*"]
+    'connect-src': ["'self'", "https:", "http:", "*", "https://pagead2.googlesyndication.com", "https://googleads.g.doubleclick.net", "https://adservice.google.com"]
 }
 
 # Enable HTTPS and security features
@@ -143,19 +143,21 @@ def add_cors_headers(response):
         response.headers['Access-Control-Allow-Origin'] = '*'
     
     response.headers['Access-Control-Allow-Credentials'] = 'true'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
-    response.headers['Access-Control-Max-Age'] = '3600'
-    response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With, X-CSRF-Token, Access-Control-Allow-Origin'
+    response.headers['Access-Control-Max-Age'] = '86400'  # 24 hours
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization, Content-Length, X-Requested-With'
     
-    # Add security headers
+    # Add security headers, but modify X-Frame-Options to allow AdSense frames
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
+    # Using SAMEORIGIN instead of DENY to allow AdSense iframes
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     
     # Handle OPTIONS requests explicitly
     if request.method == 'OPTIONS':
+        response.status_code = 200
         return response
         
     return response
