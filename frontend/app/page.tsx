@@ -11,7 +11,7 @@ import dynamic from 'next/dynamic';
 import Script from 'next/script';
 
 // Import AdSenseDisplay with dynamic to avoid SSR issues
-const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
+// const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
 
 const HomePage = () => {
   const theme = useTheme();
@@ -330,7 +330,8 @@ const HomePage = () => {
         </motion.div>
       </Container>
 
-      {/* AdSense Display */}
+      {/* 
+      <!-- AdSense Display - Temporarily removed -->
       <Container maxWidth="md" sx={{ mt: 6, mb: 4 }}>
         <Box sx={{
           width: '100%',
@@ -347,7 +348,6 @@ const HomePage = () => {
             Advertisement
           </Typography>
 
-          {/* Raw HTML AdSense implementation for maximum compatibility */}
           <Box
             component="div"
             sx={{
@@ -366,6 +366,7 @@ const HomePage = () => {
           </Box>
         </Box>
       </Container>
+      */}
     </Box>
   );
 };

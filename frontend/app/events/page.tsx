@@ -1278,16 +1278,24 @@ function EventsPage() {
                             sx={{
                                 background: '#fff',
                                 borderRadius: 2,
-                                p: 4,
+                                p: { xs: 2, sm: 4 },
                                 mb: 4,
                                 color: '#000',
                                 maxWidth: '100%',
                                 overflowX: 'auto'
                             }}
                         >
-                            <Grid container spacing={3} sx={{ mb: 4, flexWrap: 'nowrap', minWidth: { xs: 'auto', lg: '1200px' } }}>
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ minWidth: '100%', mt: 1 }}>
+                            <Grid 
+                                container 
+                                spacing={2} 
+                                sx={{ 
+                                    mb: 4, 
+                                    flexWrap: { xs: 'wrap', md: 'nowrap' },
+                                    width: '100%'
+                                }}
+                            >
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="time-range-filter-label"
                                             sx={{ 
@@ -1424,8 +1432,8 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="currency-filter-label"
                                             sx={{ 
@@ -1515,8 +1523,8 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="impact-filter-label"
                                             sx={{ 
@@ -1606,8 +1614,8 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="timezone-filter-label"
                                             sx={{ 
