@@ -31,18 +31,24 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
-        {/* Google AdSense script as provided by Google */}
+        
+        {/* Preconnect links for faster loading - should come BEFORE scripts */}
+        <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+        <link rel="preconnect" href="https://googleads.g.doubleclick.net" />
+        <link rel="preconnect" href="https://adservice.google.com" />
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+        
+        {/* Google AdSense script with corrected attributes */}
         <Script
           id="google-adsense"
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
+          onError={(e) => console.error('AdSense script failed to load', e)}
+          onLoad={() => console.log('AdSense script loaded successfully')}
         />
-        <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
-        <link rel="preconnect" href="https://googleads.g.doubleclick.net" />
-        <link rel="preconnect" href="https://adservice.google.com" />
-        <link rel="preconnect" href="https://www.googletagmanager.com" />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
         {/* GoogleAdsense component temporarily removed to prevent script duplication */}
