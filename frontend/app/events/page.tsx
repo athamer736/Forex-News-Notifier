@@ -201,14 +201,34 @@ function EventsPage() {
             return [];
         }
     });
+    
+    // Function to detect if the device is mobile
+    const isMobileDevice = () => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth <= 768 || 
+                   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        return false;
+    };
+    
+    // Set the initial view mode based on device type or saved preference
     const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
         try {
-            return (localStorage.getItem('viewMode') as 'grid' | 'table') || 'table';
+            // For mobile devices, default to grid view
+            if (isMobileDevice()) {
+                console.log('Mobile device detected, using grid view');
+                return 'grid';
+            }
+            
+            // Otherwise, use saved preference or default to table
+            const savedViewMode = localStorage.getItem('viewMode') as 'grid' | 'table';
+            return savedViewMode || 'table';
         } catch (error) {
-            console.error('Error loading saved view mode:', error);
+            console.error('Error setting view mode:', error);
             return 'table';
         }
     });
+    
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
     const [selectedTimezone, setSelectedTimezone] = useState<string>('');
     const [isUpdating, setIsUpdating] = useState<boolean>(false);
@@ -246,17 +266,21 @@ function EventsPage() {
 
     useEffect(() => {
         try {
-            if (!viewMode) {
-                const savedViewMode = localStorage.getItem('viewMode') as 'grid' | 'table';
-                if (savedViewMode) {
-                    setViewMode(savedViewMode);
-                    console.log('Loaded saved view mode:', savedViewMode);
-                }
+            // Save the current view mode to localStorage
+            if (viewMode) {
+                localStorage.setItem('viewMode', viewMode);
+                console.log('Saved view mode:', viewMode);
+            }
+            
+            // For initial load, check if we need to override based on mobile
+            if (initialLoad && isMobileDevice() && viewMode !== 'grid') {
+                setViewMode('grid');
+                console.log('Setting grid view for mobile device');
             }
         } catch (error) {
-            console.error('Error loading saved filters:', error);
+            console.error('Error handling view mode:', error);
         }
-    }, []);
+    }, [viewMode, initialLoad]);
 
     useEffect(() => {
         const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
