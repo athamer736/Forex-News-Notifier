@@ -60,7 +60,7 @@ const nextConfig = {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          // Set X-Frame-Options to SAMEORIGIN to allow AdSense iframes
+          // Allow AdSense iframes
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           
@@ -68,10 +68,13 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Origin, Authorization' },
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
           { key: 'Access-Control-Max-Age', value: '86400' },
           
-          // Content Security Policy is completely disabled to allow AdSense to work
-          // This removes any CSP restrictions
+          // Cross-Origin settings for AdSense
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'credentialless' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
       {

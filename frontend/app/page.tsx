@@ -13,6 +13,7 @@ import Script from 'next/script';
 
 // Import AdSenseDisplay with dynamic to avoid SSR issues
 const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
+const AdSenseAd = dynamic(() => import('../components/AdSenseAd'), { ssr: false });
 
 const HomePage = () => {
   const theme = useTheme();
@@ -376,10 +377,10 @@ const HomePage = () => {
               padding: '10px'
             }}
           >
-            <div
-              dangerouslySetInnerHTML={{
-                               __html: `                  <ins class="adsbygoogle"                    style="display:block;min-height:600px;width:100%;"                    data-ad-format="autorelaxed"                    data-ad-client="ca-pub-3681278136187746"                    data-ad-slot="3528778902"></ins>                  <script>                    (adsbygoogle = window.adsbygoogle || []).push({});                  </script>                `
-              }}
+            <AdSenseAd 
+              adSlot="3528778902"
+              adFormat="autorelaxed"
+              style={{ minHeight: '600px' }}
             />
           </Box>
         </Box>
