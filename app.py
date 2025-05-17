@@ -243,59 +243,6 @@ def unsubscribe(token):
     return response, status_code
 
 # Payment endpoints
-@app.route("/payment/create-stripe-session", methods=["POST", "OPTIONS"])
-@limiter.limit("20 per minute")
-def create_stripe_session():
-    """Handle Stripe session creation"""
-    if request.method == "OPTIONS":
-        return "", 204
-    
-    try:
-        data = request.get_json()
-        if not data or 'amount' not in data:
-            return {"error": "Missing amount parameter"}, 400
-        
-        amount = data['amount']
-        
-        # Check if STRIPE_SECRET_KEY is defined
-        stripe_secret_key = os.environ.get('STRIPE_SECRET_KEY')
-        if not stripe_secret_key:
-            logger.error("STRIPE_SECRET_KEY is not defined in environment variables")
-            return {"error": "Payment configuration error"}, 500
-            
-        # Import Stripe
-        import stripe
-        stripe.api_key = stripe_secret_key
-        
-        # Create a Stripe Checkout Session
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://fxalert.co.uk')
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[
-                {
-                    'price_data': {
-                        'currency': 'usd',
-                        'product_data': {
-                            'name': 'Donation to Forex News Notifier',
-                            'description': 'Thank you for supporting our project!',
-                        },
-                        'unit_amount': int(float(amount) * 100),  # Convert to cents
-                    },
-                    'quantity': 1,
-                },
-            ],
-            mode='payment',
-            success_url=f"{frontend_url}/donate?success=true",
-            cancel_url=f"{frontend_url}/donate?canceled=true",
-        )
-        
-        logger.info(f"Stripe session created: {session.id}")
-        return {"id": session.id}, 200
-        
-    except Exception as e:
-        logger.exception(f"Error creating Stripe session: {str(e)}")
-        return {"error": str(e)}, 500
-
 @app.route("/payment/create-paypal-order", methods=["POST", "OPTIONS"])
 @limiter.limit("20 per minute")
 def create_paypal_order():
@@ -309,6 +256,14 @@ def create_paypal_order():
             return {"error": "Missing amount parameter"}, 400
         
         amount = data['amount']
+        
+        # Validate the amount
+        try:
+            amount_float = float(amount)
+            if amount_float <= 0:
+                return {"error": "Invalid amount. Amount must be greater than 0."}, 400
+        except (ValueError, TypeError):
+            return {"error": "Invalid amount. Please provide a valid number."}, 400
         
         # Check if PayPal credentials are defined
         paypal_client_id = os.environ.get('PAYPAL_CLIENT_ID')
@@ -349,12 +304,12 @@ def create_paypal_order():
             json=payload
         )
         
-        if response.status_code != 201:
+        if response.status_code not in [200, 201]:
             logger.error(f"PayPal API error: {response.status_code}, {response.text}")
             return {"error": "Failed to create PayPal order"}, 500
         
         order_data = response.json()
-        logger.info(f"PayPal order created: {order_data['id']}")
+        logger.info(f"PayPal order created: {order_data['id']} for amount: ${amount}")
         
         return order_data, 200
         
