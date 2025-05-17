@@ -9,74 +9,79 @@ interface AdSenseAdProps {
 }
 
 export default function AdSenseAd({ adSlot, adFormat = 'auto', style = {} }: AdSenseAdProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const adContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !iframeRef.current) return;
-
-    // Give AdSense time to initialize
-    const timer = setTimeout(() => {
-      const iframe = iframeRef.current;
-      if (!iframe) return;
-
-      // Set sandbox attributes that allow scripts but preserve security
-      iframe.setAttribute('sandbox', 'allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation');
-      
-      // Create the ad content with the proper credentials setting
-      const adContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { margin: 0; padding: 0; overflow: hidden; }
-            .ad-container { width: 100%; height: 100%; }
-          </style>
-          <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746" crossorigin="anonymous"></script>
-        </head>
-        <body>
-          <div class="ad-container">
-            <ins class="adsbygoogle"
-                 style="display:block; width:100%; height:100%;"
-                 data-ad-client="ca-pub-3681278136187746"
-                 data-ad-slot="${adSlot}"
-                 data-ad-format="${adFormat}"
-                 data-full-width-responsive="true"></ins>
-            <script>
-              (adsbygoogle = window.adsbygoogle || []).push({});
-            </script>
-          </div>
-        </body>
-        </html>
-      `;
-      
-      // Set the content
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (doc) {
-          doc.open();
-          doc.write(adContent);
-          doc.close();
-          console.log('AdSense content written to iframe');
-        }
-      } catch (err) {
-        console.error('Error writing AdSense content to iframe:', err);
-      }
-    }, 1000);
+    // Only execute on client side
+    if (typeof window === 'undefined') return;
     
-    return () => clearTimeout(timer);
-  }, [adSlot, adFormat]);
+    // Make sure window.adsbygoogle is defined
+    window.adsbygoogle = window.adsbygoogle || [];
+    
+    // Remove any existing AdSense scripts first
+    const existingScripts = document.querySelectorAll('script[src*="adsbygoogle"]');
+    existingScripts.forEach(script => {
+      script.remove();
+    });
+    
+    // Create a fresh AdSense script
+    const adScript = document.createElement('script');
+    adScript.async = true;
+    adScript.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746`;
+    adScript.crossOrigin = "anonymous";
+    document.head.appendChild(adScript);
+    
+    // Wait for the script to load
+    adScript.onload = () => {
+      // Find the ad container
+      if (!adContainerRef.current) return;
+      
+      // Clear previous ad if any
+      adContainerRef.current.innerHTML = '';
+      
+      // Create ad element
+      const adElement = document.createElement('ins');
+      adElement.className = 'adsbygoogle';
+      adElement.style.display = 'block';
+      adElement.style.width = '100%';
+      adElement.style.height = '100%';
+      adElement.style.minHeight = style.minHeight?.toString() || '280px';
+      adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+      adElement.setAttribute('data-ad-slot', adSlot);
+      adElement.setAttribute('data-ad-format', adFormat);
+      adElement.setAttribute('data-full-width-responsive', 'true');
+      
+      // Add to DOM
+      adContainerRef.current.appendChild(adElement);
+      
+      try {
+        // Push the ad
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        console.log('AdSense ad pushed for slot:', adSlot);
+      } catch (e) {
+        console.error('Error pushing AdSense ad:', e);
+      }
+    };
+    
+    adScript.onerror = (e) => {
+      console.error('Failed to load AdSense script:', e);
+    };
+    
+    // Cleanup
+    return () => {
+      if (adContainerRef.current) {
+        adContainerRef.current.innerHTML = '';
+      }
+    };
+  }, [adSlot, adFormat, style.minHeight]);
 
   return (
-    <iframe
-      ref={iframeRef}
-      title={`AdSense Ad ${adSlot}`}
+    <div 
+      ref={adContainerRef}
       style={{
         width: '100%',
         minHeight: '280px',
-        border: 'none',
-        overflow: 'hidden',
+        background: 'transparent',
         ...style
       }}
     />

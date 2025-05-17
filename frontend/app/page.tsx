@@ -377,11 +377,29 @@ const HomePage = () => {
               padding: '10px'
             }}
           >
-            <AdSenseAd 
-              adSlot="3528778902"
-              adFormat="autorelaxed"
-              style={{ minHeight: '600px' }}
-            />
+            {/* Direct AdSense implementation */}
+            <div style={{ minHeight: '600px', width: '100%' }}>
+              <script
+                async
+                src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
+                crossOrigin="anonymous"
+              />
+              <ins
+                className="adsbygoogle"
+                style={{ display: 'block', minHeight: '600px', width: '100%' }}
+                data-ad-client="ca-pub-3681278136187746"
+                data-ad-slot="3528778902"
+                data-ad-format="autorelaxed"
+                data-full-width-responsive="true"
+              />
+              <script
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    (adsbygoogle = window.adsbygoogle || []).push({});
+                  `
+                }}
+              />
+            </div>
           </Box>
         </Box>
       </Container>

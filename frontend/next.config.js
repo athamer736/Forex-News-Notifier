@@ -53,27 +53,27 @@ const nextConfig = {
     ];
   },
   
-  // Add security headers - with CSP completely disabled for AdSense
+  // Completely disable security headers that might interfere with AdSense
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          // Allow AdSense iframes
+          // Set to SAMEORIGIN to allow iframes
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           
-          // CORS headers to allow AdSense and other Google services
+          // Allow all origins for CORS
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Origin, Authorization' },
+          { key: 'Access-Control-Allow-Headers', value: '*' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
           { key: 'Access-Control-Max-Age', value: '86400' },
           
-          // Cross-Origin settings for AdSense
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
-          { key: 'Cross-Origin-Embedder-Policy', value: 'credentialless' },
+          // Disable all Cross-Origin restrictions
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
