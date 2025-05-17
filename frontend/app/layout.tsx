@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from 'next/dynamic';
+import Script from 'next/script';
 
 // Import Footer with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
@@ -38,7 +39,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
         
-        {/* AdSense script is loaded via Client Component */}
+        {/* Add the exact AdSense script from the dashboard */}
+        <Script
+          id="adsense-script"
+          strategy="beforeInteractive"
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
+          crossOrigin="anonymous"
+        />
+        
+        {/* AdSense script is loaded via Client Component as a backup */}
         <AdSenseScript />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>

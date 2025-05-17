@@ -53,15 +53,15 @@ const nextConfig = {
     ];
   },
   
-  // Add security headers
+  // Add security headers - with CSP completely disabled for AdSense
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          // Remove X-Frame-Options to allow AdSense iframes
-          // { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          // Set X-Frame-Options to SAMEORIGIN to allow AdSense iframes
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           
           // CORS headers to allow AdSense and other Google services
@@ -70,11 +70,8 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Origin, Authorization' },
           { key: 'Access-Control-Max-Age', value: '86400' },
           
-          // Temporarily disable CSP for testing AdSense integration
-          // { 
-          //   key: 'Content-Security-Policy', 
-          //   value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://www.googletagmanager.com https://adservice.google.com; frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com; img-src 'self' data: https: https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google-analytics.com https://www.googletagmanager.com https://adservice.google.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https: https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.google-analytics.com;"
-          // },
+          // Content Security Policy is completely disabled to allow AdSense to work
+          // This removes any CSP restrictions
         ],
       },
       {
