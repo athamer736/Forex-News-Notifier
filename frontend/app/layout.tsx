@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
+import Script from 'next/script';
 
 // Import Footer with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
@@ -31,11 +31,13 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
-        {/* Add AdSense script directly */}
-        <script 
-          async 
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746" 
+        {/* Google AdSense script as provided by Google */}
+        <Script
+          id="google-adsense"
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
           crossOrigin="anonymous"
+          strategy="afterInteractive"
         />
         <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
         <link rel="preconnect" href="https://googleads.g.doubleclick.net" />
