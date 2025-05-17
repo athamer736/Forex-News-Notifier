@@ -217,9 +217,9 @@ start "Frontend Server" pwsh -NoExit -Command "^
 echo %YELLOW%Starting event scheduler...%RESET%
 start "Event Scheduler" cmd /k "cd /d %PROJECT_ROOT% && call %VENV_PATH%\Scripts\activate.bat && python %SCRIPTS_PATH%\run_scheduler.py"
 
-:: Start AI Summary Generator in a new CMD window
-echo %YELLOW%Starting AI summary generator...%RESET%
-start "AI Summary Generator" cmd /k "cd /d %PROJECT_ROOT% && call %VENV_PATH%\Scripts\activate.bat && python %SCRIPTS_PATH%\generate_summaries.py && timeout /t 3600 /nobreak && exit"
+:: Start AI Summary Generator in a new CMD window with continuous loop
+echo %YELLOW%Starting AI summary generator (continuous mode)...%RESET%
+start "AI Summary Generator" cmd /k "cd /d %PROJECT_ROOT% && call %VENV_PATH%\Scripts\activate.bat && python %SCRIPTS_PATH%\ai_summary_scheduler.py"
 
 :: Start Email Scheduler in a new CMD window
 echo %YELLOW%Starting email scheduler...%RESET%
