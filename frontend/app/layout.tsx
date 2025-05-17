@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from 'next/dynamic';
-import Script from 'next/script';
 
 // Import Footer with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
-// GoogleAdsense component temporarily commented out to prevent script duplication
-// const GoogleAdsense = dynamic(() => import('../components/GoogleAdsense'), { ssr: false });
+// Dynamic import for AdSense script (client component)
+const AdSenseScript = dynamic(() => import('../components/AdSenseScript'), { ssr: false });
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,27 +31,17 @@ export default function RootLayout({
       <head>
         <meta name="google-adsense-account" content="ca-pub-3681278136187746" />
         
-        {/* Preconnect links for faster loading - should come BEFORE scripts */}
+        {/* Preconnect to AdSense domains for faster loading */}
         <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
         <link rel="preconnect" href="https://googleads.g.doubleclick.net" />
         <link rel="preconnect" href="https://adservice.google.com" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
         
-        {/* Google AdSense script with corrected attributes */}
-        <Script
-          id="google-adsense"
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
-          crossOrigin="anonymous"
-          strategy="lazyOnload"
-          onError={(e) => console.error('AdSense script failed to load', e)}
-          onLoad={() => console.log('AdSense script loaded successfully')}
-        />
+        {/* AdSense script is loaded via Client Component */}
+        <AdSenseScript />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
-        {/* GoogleAdsense component temporarily removed to prevent script duplication */}
-        {/* <GoogleAdsense /> */}
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
             {children}
@@ -62,4 +51,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-}
+} 
