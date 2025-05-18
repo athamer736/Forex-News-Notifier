@@ -2,7 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
@@ -21,8 +21,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 
-// Import AdSense components
-const AdSenseDisplay = dynamic(() => import('../../components/AdSenseDisplay'), { ssr: false });
+// Import AdSense components - simplify to just one approach
+const AdUnit = dynamic(() => import('../../components/AdUnit'), { ssr: false });
 
 interface ForexEvent {
     time: string;
@@ -994,48 +994,11 @@ function EventsPage() {
                 >
                     Advertisement
                 </Typography>
-                <Box
-                    sx={{
-                        width: '100%',
-                        minHeight: '250px',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    }}
-                >
-                    <div id="tableViewAdBanner" style={{ width: '100%', minHeight: '250px' }}></div>
-                    <Script id="adSenseTableViewBanner" strategy="afterInteractive">
-                        {`
-                            (function() {
-                                try {
-                                    const adContainer = document.getElementById('tableViewAdBanner');
-                                    if (!adContainer) return;
-                                    
-                                    // Create and append ad elements to DOM directly
-                                    const ins = document.createElement('ins');
-                                    ins.className = 'adsbygoogle';
-                                    ins.style.display = 'block';
-                                    ins.style.width = '100%';
-                                    ins.style.height = 'auto';
-                                    ins.style.minHeight = '250px';
-                                    ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-                                    ins.setAttribute('data-ad-slot', '1823654912');
-                                    ins.setAttribute('data-ad-format', 'rectangle');
-                                    ins.setAttribute('data-full-width-responsive', 'true');
-                                    
-                                    adContainer.appendChild(ins);
-                                    
-                                    // Push the ad after a slight delay to ensure DOM is ready
-                                    setTimeout(() => {
-                                        (window.adsbygoogle = window.adsbygoogle || []).push({});
-                                    }, 100);
-                                } catch (e) {
-                                    console.error('AdSense error:', e);
-                                }
-                            })();
-                        `}
-                    </Script>
-                </Box>
+                <AdUnit 
+                    adSlot="1823654912"
+                    adFormat="rectangle"
+                    style={{ minHeight: '250px' }}
+                />
             </Box>
             </>
         );
@@ -1228,48 +1191,11 @@ function EventsPage() {
                         >
                             Advertisement
                         </Typography>
-                        <Box
-                            sx={{
-                                width: '100%',
-                                minHeight: '250px',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <div id="gridViewAdBanner" style={{ width: '100%', minHeight: '250px' }}></div>
-                            <Script id="adSenseGridViewBanner" strategy="afterInteractive">
-                                {`
-                                    (function() {
-                                        try {
-                                            const adContainer = document.getElementById('gridViewAdBanner');
-                                            if (!adContainer) return;
-                                            
-                                            // Create and append ad elements to DOM directly
-                                            const ins = document.createElement('ins');
-                                            ins.className = 'adsbygoogle';
-                                            ins.style.display = 'block';
-                                            ins.style.width = '100%';
-                                            ins.style.height = 'auto';
-                                            ins.style.minHeight = '250px';
-                                            ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-                                            ins.setAttribute('data-ad-slot', '7349821523');
-                                            ins.setAttribute('data-ad-format', 'rectangle');
-                                            ins.setAttribute('data-full-width-responsive', 'true');
-                                            
-                                            adContainer.appendChild(ins);
-                                            
-                                            // Push the ad after a slight delay to ensure DOM is ready
-                                            setTimeout(() => {
-                                                (window.adsbygoogle = window.adsbygoogle || []).push({});
-                                            }, 100);
-                                        } catch (e) {
-                                            console.error('AdSense error:', e);
-                                        }
-                                    })();
-                                `}
-                            </Script>
-                        </Box>
+                        <AdUnit 
+                            adSlot="7349821523"
+                            adFormat="rectangle"
+                            style={{ minHeight: '250px' }}
+                        />
                     </Box>
                 </Grid>
             </Grid>
@@ -1863,48 +1789,11 @@ function EventsPage() {
                                 >
                                     Advertisement
                                 </Typography>
-                                <Box
-                                    sx={{
-                                        width: '100%',
-                                        minHeight: '90px',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <div id="eventsAdBanner" style={{ width: '100%', minHeight: '90px' }}></div>
-                                    <Script id="adSenseEventsBanner" strategy="afterInteractive">
-                                        {`
-                                            (function() {
-                                                try {
-                                                    const adContainer = document.getElementById('eventsAdBanner');
-                                                    if (!adContainer) return;
-                                                    
-                                                    // Create and append ad elements to DOM directly
-                                                    const ins = document.createElement('ins');
-                                                    ins.className = 'adsbygoogle';
-                                                    ins.style.display = 'block';
-                                                    ins.style.width = '100%';
-                                                    ins.style.height = 'auto';
-                                                    ins.style.minHeight = '90px';
-                                                    ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-                                                    ins.setAttribute('data-ad-slot', '5864395274');
-                                                    ins.setAttribute('data-ad-format', 'horizontal');
-                                                    ins.setAttribute('data-full-width-responsive', 'true');
-                                                    
-                                                    adContainer.appendChild(ins);
-                                                    
-                                                    // Push the ad after a slight delay to ensure DOM is ready
-                                                    setTimeout(() => {
-                                                        (window.adsbygoogle = window.adsbygoogle || []).push({});
-                                                    }, 100);
-                                                } catch (e) {
-                                                    console.error('AdSense error:', e);
-                                                }
-                                            })();
-                                        `}
-                                    </Script>
-                                </Box>
+                                <AdUnit 
+                                    adSlot="5864395274"
+                                    adFormat="horizontal"
+                                    style={{ minHeight: '90px' }}
+                                />
                             </Box>
 
                             {loading ? (

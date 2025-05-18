@@ -6,8 +6,6 @@ import Script from 'next/script';
 
 // Import Footer with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
-// Dynamic import for AdSense script (client component)
-const AdSenseScript = dynamic(() => import('../components/AdSenseScript'), { ssr: false });
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,20 +36,22 @@ export default function RootLayout({
         <link rel="preconnect" href="https://adservice.google.com" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
-        
-        {/* Add the exact AdSense script from the dashboard */}
-        <Script
-          id="adsense-script"
-          strategy="beforeInteractive"
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
-          crossOrigin="anonymous"
-        />
-        
-        {/* AdSense script is loaded via Client Component as a backup */}
-        <AdSenseScript />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
+        {/* Load AdSense script once for the entire app */}
+        <Script
+          id="adsense-script"
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
+          crossOrigin="anonymous"
+          onError={(e) => {
+            console.error('Error loading AdSense script:', e);
+          }}
+          onLoad={() => {
+            console.log('AdSense script loaded successfully');
+          }}
+        />
+        
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
             {children}

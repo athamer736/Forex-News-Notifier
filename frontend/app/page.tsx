@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Box, Container, Typography, Button, Grid, useTheme, IconButton } from '@mui/material';
 import { useRouter } from 'next/navigation';
@@ -9,11 +9,9 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import CloseIcon from '@mui/icons-material/Close';
 import dynamic from 'next/dynamic';
-import Script from 'next/script';
 
-// Import AdSenseDisplay with dynamic to avoid SSR issues
-const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
-const AdSenseAd = dynamic(() => import('../components/AdSenseAd'), { ssr: false });
+// Import AdUnit component
+const AdUnit = dynamic(() => import('../components/AdUnit'), { ssr: false });
 
 const HomePage = () => {
   const theme = useTheme();
@@ -366,49 +364,19 @@ const HomePage = () => {
           >
             Advertisement
           </Typography>
-
-          <Box
-            component="div"
-            sx={{
-              position: 'relative',
-              minHeight: '600px',
-              background: 'rgba(255, 255, 255, 0.15)',
-              borderRadius: '4px',
-              padding: '10px'
-            }}
-          >
-            {/* Safe AdSense implementation */}
-            <div style={{ minHeight: '600px', width: '100%' }} id="adContainer" />
-            <Script id="adSenseInit" strategy="afterInteractive">
-              {`
-                (function() {
-                  try {
-                    const adContainer = document.getElementById('adContainer');
-                    if (!adContainer) return;
-                    
-                    // Create and append ad elements to DOM directly
-                    const ins = document.createElement('ins');
-                    ins.className = 'adsbygoogle';
-                    ins.style.display = 'block';
-                    ins.style.width = '100%';
-                    ins.style.minHeight = '600px';
-                    ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-                    ins.setAttribute('data-ad-slot', '3528778902');
-                    ins.setAttribute('data-ad-format', 'autorelaxed');
-                    ins.setAttribute('data-full-width-responsive', 'true');
-                    
-                    adContainer.appendChild(ins);
-                    
-                    // Push the ad after a slight delay to ensure DOM is ready
-                    setTimeout(() => {
-                      (window.adsbygoogle = window.adsbygoogle || []).push({});
-                    }, 100);
-                  } catch (e) {
-                    console.error('AdSense error:', e);
-                  }
-                })();
-              `}
-            </Script>
+          
+          <Box sx={{
+            position: 'relative',
+            minHeight: '600px',
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '4px',
+            padding: '10px'
+          }}>
+            <AdUnit 
+              adSlot="3528778902"
+              adFormat="autorelaxed"
+              style={{ minHeight: '600px' }}
+            />
           </Box>
         </Box>
       </Container>
