@@ -39,6 +39,7 @@ const Footer = () => {
               Real-time forex events tracker providing timely notifications for critical market movements.
             </Typography>
             <Box sx={{ mt: 2 }}>
+              {/* LinkedIn link temporarily commented out
               <IconButton 
                 aria-label="LinkedIn" 
                 size="small"
@@ -50,6 +51,7 @@ const Footer = () => {
               >
                 <LinkedInIcon />
               </IconButton>
+              */}
               {/* X (Twitter) link temporarily commented out
               <IconButton 
                 aria-label="X (formerly Twitter)" 
