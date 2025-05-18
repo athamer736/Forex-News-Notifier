@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from 'next/dynamic';
-import Script from 'next/script';
 
 // Import Footer with dynamic to avoid hydration issues
 const Footer = dynamic(() => import('../components/Footer'), { ssr: true });
+// Import AdSenseLoader as client component
+const AdSenseLoader = dynamic(() => import('../components/AdSenseLoader'), { ssr: false });
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,19 +39,8 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-white flex flex-col" suppressHydrationWarning>
-        {/* Load AdSense script once for the entire app */}
-        <Script
-          id="adsense-script"
-          strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
-          crossOrigin="anonymous"
-          onError={(e) => {
-            console.error('Error loading AdSense script:', e);
-          }}
-          onLoad={() => {
-            console.log('AdSense script loaded successfully');
-          }}
-        />
+        {/* Load AdSense script using client component */}
+        <AdSenseLoader />
         
         <div className="flex-grow">
           <main className="flex min-h-screen flex-col">
