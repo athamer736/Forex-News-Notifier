@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Box, Container, Typography, Button, Grid, useTheme, IconButton } from '@mui/material';
 import { useRouter } from 'next/navigation';
@@ -377,29 +377,38 @@ const HomePage = () => {
               padding: '10px'
             }}
           >
-            {/* Direct AdSense implementation */}
-            <div style={{ minHeight: '600px', width: '100%' }}>
-              <script
-                async
-                src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746"
-                crossOrigin="anonymous"
-              />
-              <ins
-                className="adsbygoogle"
-                style={{ display: 'block', minHeight: '600px', width: '100%' }}
-                data-ad-client="ca-pub-3681278136187746"
-                data-ad-slot="3528778902"
-                data-ad-format="autorelaxed"
-                data-full-width-responsive="true"
-              />
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `
-                    (adsbygoogle = window.adsbygoogle || []).push({});
-                  `
-                }}
-              />
-            </div>
+            {/* Safe AdSense implementation */}
+            <div style={{ minHeight: '600px', width: '100%' }} id="adContainer" />
+            <Script id="adSenseInit" strategy="afterInteractive">
+              {`
+                (function() {
+                  try {
+                    const adContainer = document.getElementById('adContainer');
+                    if (!adContainer) return;
+                    
+                    // Create and append ad elements to DOM directly
+                    const ins = document.createElement('ins');
+                    ins.className = 'adsbygoogle';
+                    ins.style.display = 'block';
+                    ins.style.width = '100%';
+                    ins.style.minHeight = '600px';
+                    ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+                    ins.setAttribute('data-ad-slot', '3528778902');
+                    ins.setAttribute('data-ad-format', 'autorelaxed');
+                    ins.setAttribute('data-full-width-responsive', 'true');
+                    
+                    adContainer.appendChild(ins);
+                    
+                    // Push the ad after a slight delay to ensure DOM is ready
+                    setTimeout(() => {
+                      (window.adsbygoogle = window.adsbygoogle || []).push({});
+                    }, 100);
+                  } catch (e) {
+                    console.error('AdSense error:', e);
+                  }
+                })();
+              `}
+            </Script>
           </Box>
         </Box>
       </Container>

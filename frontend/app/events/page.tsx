@@ -19,6 +19,10 @@ import { Collapse } from '@mui/material';
 import { CardActions } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script';
+
+// Import AdSense components
+const AdSenseDisplay = dynamic(() => import('../../components/AdSenseDisplay'), { ssr: false });
 
 interface ForexEvent {
     time: string;
@@ -848,6 +852,7 @@ function EventsPage() {
         }
 
         return (
+            <>
             <TableContainer component={Paper} sx={{ mt: 2 }}>
                 <Table>
                     <TableHead>
@@ -968,6 +973,71 @@ function EventsPage() {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* AdSense ad at the bottom of TableView */}
+            <Box sx={{ 
+                width: '100%', 
+                mt: 4,
+                overflow: 'hidden',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                padding: '10px'
+            }}>
+                <Typography
+                    variant="caption"
+                    sx={{ 
+                        display: 'block', 
+                        textAlign: 'center', 
+                        color: 'rgba(0, 0, 0, 0.6)',
+                        mb: 1
+                    }}
+                >
+                    Advertisement
+                </Typography>
+                <Box
+                    sx={{
+                        width: '100%',
+                        minHeight: '250px',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                >
+                    <div id="tableViewAdBanner" style={{ width: '100%', minHeight: '250px' }}></div>
+                    <Script id="adSenseTableViewBanner" strategy="afterInteractive">
+                        {`
+                            (function() {
+                                try {
+                                    const adContainer = document.getElementById('tableViewAdBanner');
+                                    if (!adContainer) return;
+                                    
+                                    // Create and append ad elements to DOM directly
+                                    const ins = document.createElement('ins');
+                                    ins.className = 'adsbygoogle';
+                                    ins.style.display = 'block';
+                                    ins.style.width = '100%';
+                                    ins.style.height = 'auto';
+                                    ins.style.minHeight = '250px';
+                                    ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+                                    ins.setAttribute('data-ad-slot', '1823654912');
+                                    ins.setAttribute('data-ad-format', 'rectangle');
+                                    ins.setAttribute('data-full-width-responsive', 'true');
+                                    
+                                    adContainer.appendChild(ins);
+                                    
+                                    // Push the ad after a slight delay to ensure DOM is ready
+                                    setTimeout(() => {
+                                        (window.adsbygoogle = window.adsbygoogle || []).push({});
+                                    }, 100);
+                                } catch (e) {
+                                    console.error('AdSense error:', e);
+                                }
+                            })();
+                        `}
+                    </Script>
+                </Box>
+            </Box>
+            </>
         );
     }, [events, groupedEventsByDate, expanded, getImpactColor, handleInfoButtonClick, formatEventTime]);
 
@@ -1137,6 +1207,71 @@ function EventsPage() {
                         })}
                     </React.Fragment>
                 ))}
+
+                {/* AdSense ad at the bottom of GridView */}
+                <Grid item xs={12} sx={{ mt: 4 }}>
+                    <Box sx={{ 
+                        width: '100%', 
+                        overflow: 'hidden',
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        padding: '10px'
+                    }}>
+                        <Typography
+                            variant="caption"
+                            sx={{ 
+                                display: 'block', 
+                                textAlign: 'center', 
+                                color: 'rgba(0, 0, 0, 0.6)',
+                                mb: 1
+                            }}
+                        >
+                            Advertisement
+                        </Typography>
+                        <Box
+                            sx={{
+                                width: '100%',
+                                minHeight: '250px',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <div id="gridViewAdBanner" style={{ width: '100%', minHeight: '250px' }}></div>
+                            <Script id="adSenseGridViewBanner" strategy="afterInteractive">
+                                {`
+                                    (function() {
+                                        try {
+                                            const adContainer = document.getElementById('gridViewAdBanner');
+                                            if (!adContainer) return;
+                                            
+                                            // Create and append ad elements to DOM directly
+                                            const ins = document.createElement('ins');
+                                            ins.className = 'adsbygoogle';
+                                            ins.style.display = 'block';
+                                            ins.style.width = '100%';
+                                            ins.style.height = 'auto';
+                                            ins.style.minHeight = '250px';
+                                            ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+                                            ins.setAttribute('data-ad-slot', '7349821523');
+                                            ins.setAttribute('data-ad-format', 'rectangle');
+                                            ins.setAttribute('data-full-width-responsive', 'true');
+                                            
+                                            adContainer.appendChild(ins);
+                                            
+                                            // Push the ad after a slight delay to ensure DOM is ready
+                                            setTimeout(() => {
+                                                (window.adsbygoogle = window.adsbygoogle || []).push({});
+                                            }, 100);
+                                        } catch (e) {
+                                            console.error('AdSense error:', e);
+                                        }
+                                    })();
+                                `}
+                            </Script>
+                        </Box>
+                    </Box>
+                </Grid>
             </Grid>
         );
     };
@@ -1707,6 +1842,69 @@ function EventsPage() {
                                 >
                                     <GridViewIcon />
                                 </IconButton>
+                            </Box>
+
+                            {/* AdSense Banner */}
+                            <Box sx={{ 
+                                width: '100%', 
+                                mb: 4, 
+                                overflow: 'hidden',
+                                borderRadius: '8px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            }}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{ 
+                                        display: 'block', 
+                                        textAlign: 'center', 
+                                        color: 'rgba(0, 0, 0, 0.6)',
+                                        padding: '4px 0'
+                                    }}
+                                >
+                                    Advertisement
+                                </Typography>
+                                <Box
+                                    sx={{
+                                        width: '100%',
+                                        minHeight: '90px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <div id="eventsAdBanner" style={{ width: '100%', minHeight: '90px' }}></div>
+                                    <Script id="adSenseEventsBanner" strategy="afterInteractive">
+                                        {`
+                                            (function() {
+                                                try {
+                                                    const adContainer = document.getElementById('eventsAdBanner');
+                                                    if (!adContainer) return;
+                                                    
+                                                    // Create and append ad elements to DOM directly
+                                                    const ins = document.createElement('ins');
+                                                    ins.className = 'adsbygoogle';
+                                                    ins.style.display = 'block';
+                                                    ins.style.width = '100%';
+                                                    ins.style.height = 'auto';
+                                                    ins.style.minHeight = '90px';
+                                                    ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+                                                    ins.setAttribute('data-ad-slot', '5864395274');
+                                                    ins.setAttribute('data-ad-format', 'horizontal');
+                                                    ins.setAttribute('data-full-width-responsive', 'true');
+                                                    
+                                                    adContainer.appendChild(ins);
+                                                    
+                                                    // Push the ad after a slight delay to ensure DOM is ready
+                                                    setTimeout(() => {
+                                                        (window.adsbygoogle = window.adsbygoogle || []).push({});
+                                                    }, 100);
+                                                } catch (e) {
+                                                    console.error('AdSense error:', e);
+                                                }
+                                            })();
+                                        `}
+                                    </Script>
+                                </Box>
                             </Box>
 
                             {loading ? (
