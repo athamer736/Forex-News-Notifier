@@ -18,54 +18,34 @@ export default function AdSenseAd({ adSlot, adFormat = 'auto', style = {} }: AdS
     // Make sure window.adsbygoogle is defined
     window.adsbygoogle = window.adsbygoogle || [];
     
-    // Remove any existing AdSense scripts first
-    const existingScripts = document.querySelectorAll('script[src*="adsbygoogle"]');
-    existingScripts.forEach(script => {
-      script.remove();
-    });
+    // Find the ad container
+    if (!adContainerRef.current) return;
     
-    // Create a fresh AdSense script
-    const adScript = document.createElement('script');
-    adScript.async = true;
-    adScript.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3681278136187746`;
-    adScript.crossOrigin = "anonymous";
-    document.head.appendChild(adScript);
+    // Clear previous ad if any
+    adContainerRef.current.innerHTML = '';
     
-    // Wait for the script to load
-    adScript.onload = () => {
-      // Find the ad container
-      if (!adContainerRef.current) return;
-      
-      // Clear previous ad if any
-      adContainerRef.current.innerHTML = '';
-      
-      // Create ad element
-      const adElement = document.createElement('ins');
-      adElement.className = 'adsbygoogle';
-      adElement.style.display = 'block';
-      adElement.style.width = '100%';
-      adElement.style.height = '100%';
-      adElement.style.minHeight = style.minHeight?.toString() || '280px';
-      adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-      adElement.setAttribute('data-ad-slot', adSlot);
-      adElement.setAttribute('data-ad-format', adFormat);
-      adElement.setAttribute('data-full-width-responsive', 'true');
-      
-      // Add to DOM
-      adContainerRef.current.appendChild(adElement);
-      
-      try {
-        // Push the ad
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-        console.log('AdSense ad pushed for slot:', adSlot);
-      } catch (e) {
-        console.error('Error pushing AdSense ad:', e);
-      }
-    };
+    // Create ad element
+    const adElement = document.createElement('ins');
+    adElement.className = 'adsbygoogle';
+    adElement.style.display = 'block';
+    adElement.style.width = '100%';
+    adElement.style.height = '100%';
+    adElement.style.minHeight = style.minHeight?.toString() || '280px';
+    adElement.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
+    adElement.setAttribute('data-ad-slot', adSlot);
+    adElement.setAttribute('data-ad-format', adFormat);
+    adElement.setAttribute('data-full-width-responsive', 'true');
     
-    adScript.onerror = (e) => {
-      console.error('Failed to load AdSense script:', e);
-    };
+    // Add to DOM
+    adContainerRef.current.appendChild(adElement);
+    
+    try {
+      // Push the ad
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      console.log('AdSense ad pushed for slot:', adSlot);
+    } catch (e) {
+      console.error('Error pushing AdSense ad:', e);
+    }
     
     // Cleanup
     return () => {
