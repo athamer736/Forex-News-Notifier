@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import Script from 'next/script';
 
 interface MultiplexAdProps {
   adSlot?: string;
@@ -8,48 +9,53 @@ interface MultiplexAdProps {
 }
 
 export default function MultiplexAd({ adSlot = "3528778902", style = {} }: MultiplexAdProps) {
-  const adRef = useRef<HTMLDivElement>(null);
-  
+  const adContainerRef = useRef<HTMLDivElement>(null);
+
+  // This will run after the component mounts to push the ad
   useEffect(() => {
-    // Only run on client-side
-    if (typeof window === 'undefined' || !adRef.current) return;
+    // Safety check for window object
+    if (typeof window === 'undefined') return;
     
-    // Clear previous content
-    adRef.current.innerHTML = '';
+    // Initialize adsbygoogle if not defined
+    if (!window.adsbygoogle) {
+      window.adsbygoogle = [];
+    }
     
-    // Create ins element
-    const ins = document.createElement('ins');
-    ins.className = 'adsbygoogle';
-    ins.style.display = 'block';
-    ins.setAttribute('data-ad-format', 'autorelaxed');
-    ins.setAttribute('data-ad-client', 'ca-pub-3681278136187746');
-    ins.setAttribute('data-ad-slot', adSlot);
-    
-    // Create script element for pushing the ad
-    const script = document.createElement('script');
-    script.innerHTML = '(adsbygoogle = window.adsbygoogle || []).push({});';
-    
-    // Add elements to the DOM
-    adRef.current.appendChild(ins);
-    adRef.current.appendChild(script);
-    
-    return () => {
-      // Cleanup
-      if (adRef.current) {
-        adRef.current.innerHTML = '';
+    // Push the ad with a delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        console.log('Multiplex ad push attempted');
+      } catch (e) {
+        console.error('Error pushing multiplex ad:', e);
       }
-    };
-  }, [adSlot]);
-  
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div 
-      ref={adRef}
-      style={{
-        width: '100%',
-        minHeight: '600px',
-        background: 'transparent',
-        ...style
-      }}
-    />
+    <div ref={adContainerRef} style={{ minHeight: '600px', width: '100%', ...style }}>
+      {/* AdSense script is loaded in layout.tsx, so we don't need to include it here */}
+      <ins
+        className="adsbygoogle"
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          minHeight: '600px'
+        }}
+        data-ad-format="autorelaxed"
+        data-ad-client="ca-pub-3681278136187746"
+        data-ad-slot={adSlot}
+      />
+    </div>
   );
+}
+
+// Add TypeScript declarations for AdSense
+declare global {
+  interface Window {
+    adsbygoogle: any[];
+  }
 } 
