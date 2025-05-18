@@ -12,6 +12,8 @@ import dynamic from 'next/dynamic';
 
 // Import AdUnit component
 const AdUnit = dynamic(() => import('../components/AdUnit'), { ssr: false });
+// Import MultiplexAd component
+const MultiplexAd = dynamic(() => import('../components/MultiplexAd'), { ssr: false });
 
 const HomePage = () => {
   const theme = useTheme();
@@ -372,9 +374,8 @@ const HomePage = () => {
             borderRadius: '4px',
             padding: '10px'
           }}>
-            <AdUnit 
+            <MultiplexAd 
               adSlot="3528778902"
-              adFormat="autorelaxed"
               style={{ minHeight: '600px' }}
             />
           </Box>
