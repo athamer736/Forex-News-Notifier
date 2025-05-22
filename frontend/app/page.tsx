@@ -80,7 +80,7 @@ const HomePage = () => {
         pb: 12
       }}
     >
-      {/* System Alert Notification Banner */}
+      {/* System Alert Notification Banner - Commented out per user request 
       {showAlert && (
         <Box
           sx={{
@@ -116,6 +116,7 @@ const HomePage = () => {
           </IconButton>
         </Box>
       )}
+      */}
 
       <Container maxWidth="lg">
         <motion.div

@@ -1238,14 +1238,13 @@ function EventsPage() {
     return (
         <Box
             sx={{
+                position: 'relative', 
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-                color: '#fff',
-                pt: 8,
-                pb: 12
+                paddingBottom: '24px', 
+                backgroundColor: theme.palette.mode === 'dark' ? '#121212' : '#f5f5f5'
             }}
         >
-            {/* System Alert Notification Banner */}
+            {/* System Alert - Commented out per user request 
             {showAlert && (
                 <Box
                     sx={{
@@ -1281,6 +1280,7 @@ function EventsPage() {
                     </IconButton>
                 </Box>
             )}
+            */}
 
             {/* Development memory indicator - only shows in development */}
             {process.env.NODE_ENV === 'development' && memoryUsage !== null && (
