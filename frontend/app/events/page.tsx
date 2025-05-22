@@ -1242,7 +1242,7 @@ function EventsPage() {
             position: 'relative', 
             minHeight: '100vh',
             paddingBottom: '24px', 
-            backgroundColor: theme.palette.mode === 'dark' ? '#121212' : '#f5f5f5'
+            backgroundColor: '#222222'
         }}>
             {/* System Alert - Commented out per user request */}
             {/* 
