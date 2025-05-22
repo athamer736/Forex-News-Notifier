@@ -4,7 +4,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel } from '@mui/material';
+import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel, useTheme } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
 import CloseIcon from '@mui/icons-material/Close';
@@ -184,6 +184,7 @@ const cardVariants = {
 };
 
 function EventsPage() {
+    const theme = useTheme();
     const [events, setEvents] = useState<ForexEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -1241,7 +1242,7 @@ function EventsPage() {
                 position: 'relative', 
                 minHeight: '100vh',
                 paddingBottom: '24px', 
-                backgroundColor: theme.palette.mode === 'dark' ? '#121212' : '#f5f5f5'
+                backgroundColor: '#f5f5f5'
             }}
         >
             {/* System Alert - Commented out per user request 
