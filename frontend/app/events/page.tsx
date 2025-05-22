@@ -4,7 +4,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel, useTheme } from '@mui/material';
+import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
 import CloseIcon from '@mui/icons-material/Close';
@@ -20,6 +20,7 @@ import { CardActions } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
+import { useTheme } from '@mui/material/styles';
 
 // Import AdSense components - simplify to just one approach
 const AdUnit = dynamic(() => import('../../components/AdUnit'), { ssr: false });
@@ -184,7 +185,6 @@ const cardVariants = {
 };
 
 function EventsPage() {
-    const theme = useTheme();
     const [events, setEvents] = useState<ForexEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -250,6 +250,7 @@ function EventsPage() {
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
     const [showAlert, setShowAlert] = useState(true);
+    const theme = useTheme();
 
     const handleExpandClick = useCallback((eventId: string, e?: React.MouseEvent) => {
         if (e) {
@@ -1237,15 +1238,14 @@ function EventsPage() {
     }
 
     return (
-        <Box
-            sx={{
-                position: 'relative', 
-                minHeight: '100vh',
-                paddingBottom: '24px', 
-                backgroundColor: '#f5f5f5'
-            }}
-        >
-            {/* System Alert - Commented out per user request 
+        <Box sx={{ 
+            position: 'relative', 
+            minHeight: '100vh',
+            paddingBottom: '24px', 
+            backgroundColor: theme.palette.mode === 'dark' ? '#121212' : '#f5f5f5'
+        }}>
+            {/* System Alert - Commented out per user request */}
+            {/* 
             {showAlert && (
                 <Box
                     sx={{

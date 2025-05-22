@@ -80,7 +80,8 @@ const HomePage = () => {
         pb: 12
       }}
     >
-      {/* System Alert Notification Banner - Commented out per user request 
+      {/* System Alert Notification Banner - Commented out per user request */}
+      {/* 
       {showAlert && (
         <Box
           sx={{
