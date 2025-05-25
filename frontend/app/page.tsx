@@ -1,21 +1,23 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Box, Container, Typography, Button, Grid, useTheme } from '@mui/material';
+import { Box, Container, Typography, Button, Grid, useTheme, IconButton } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import CloseIcon from '@mui/icons-material/Close';
 import dynamic from 'next/dynamic';
 import Script from 'next/script';
 
 // Import AdSenseDisplay with dynamic to avoid SSR issues
-const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
+// const AdSenseDisplay = dynamic(() => import('../components/AdSenseDisplay'), { ssr: false });
 
 const HomePage = () => {
   const theme = useTheme();
   const router = useRouter();
+  const [showAlert, setShowAlert] = useState(true);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -78,24 +80,41 @@ const HomePage = () => {
       }}
     >
       {/* System Alert Notification Banner */}
-      <Box
-        sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          backgroundColor: '#ed6c02', // Amber color
-          color: 'white',
-          padding: '12px',
-          zIndex: 9999,
-          textAlign: 'center',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-        }}
-      >
-        <Typography variant="subtitle1" fontWeight="bold">
-          SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
-        </Typography>
-      </Box>
+      {showAlert && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            backgroundColor: '#ed6c02', // Amber color
+            color: 'white',
+            padding: '12px',
+            zIndex: 9999,
+            textAlign: 'center',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+            SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
+          </Typography>
+          <IconButton 
+            aria-label="close alert" 
+            onClick={() => setShowAlert(false)}
+            sx={{ 
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      )}
 
       <Container maxWidth="lg">
         <motion.div
@@ -330,7 +349,8 @@ const HomePage = () => {
         </motion.div>
       </Container>
 
-      {/* AdSense Display */}
+      {/* 
+      <!-- AdSense Display - Temporarily removed -->
       <Container maxWidth="md" sx={{ mt: 6, mb: 4 }}>
         <Box sx={{
           width: '100%',
@@ -347,7 +367,6 @@ const HomePage = () => {
             Advertisement
           </Typography>
 
-          {/* Raw HTML AdSense implementation for maximum compatibility */}
           <Box
             component="div"
             sx={{
@@ -366,6 +385,7 @@ const HomePage = () => {
           </Box>
         </Box>
       </Container>
+      */}
     </Box>
   );
 };

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, Typography, Box, Container, CircularProgress, Chip, Alert, Select, MenuItem, FormControl, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, SelectChangeEvent, TextField, Button, Menu, Popover, InputLabel } from '@mui/material';
 import TableViewIcon from '@mui/icons-material/TableView';
 import GridViewIcon from '@mui/icons-material/GridView';
+import CloseIcon from '@mui/icons-material/Close';
 import Image from 'next/image';
 import { GB, US, FR, DE, JP, CN, SG, AU, BR, AE, NZ } from 'country-flag-icons/react/3x2';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -201,14 +202,34 @@ function EventsPage() {
             return [];
         }
     });
+    
+    // Function to detect if the device is mobile
+    const isMobileDevice = () => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth <= 768 || 
+                   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        return false;
+    };
+    
+    // Set the initial view mode based on device type or saved preference
     const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
         try {
-            return (localStorage.getItem('viewMode') as 'grid' | 'table') || 'table';
+            // For mobile devices, default to grid view
+            if (isMobileDevice()) {
+                console.log('Mobile device detected, using grid view');
+                return 'grid';
+            }
+            
+            // Otherwise, use saved preference or default to table
+            const savedViewMode = localStorage.getItem('viewMode') as 'grid' | 'table';
+            return savedViewMode || 'table';
         } catch (error) {
-            console.error('Error loading saved view mode:', error);
+            console.error('Error setting view mode:', error);
             return 'table';
         }
     });
+    
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
     const [selectedTimezone, setSelectedTimezone] = useState<string>('');
     const [isUpdating, setIsUpdating] = useState<boolean>(false);
@@ -223,6 +244,7 @@ function EventsPage() {
     const [isRangeSelectionActive, setIsRangeSelectionActive] = useState<boolean>(false);
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [showAlert, setShowAlert] = useState(true);
 
     const handleExpandClick = useCallback((eventId: string, e?: React.MouseEvent) => {
         if (e) {
@@ -246,17 +268,21 @@ function EventsPage() {
 
     useEffect(() => {
         try {
-            if (!viewMode) {
-                const savedViewMode = localStorage.getItem('viewMode') as 'grid' | 'table';
-                if (savedViewMode) {
-                    setViewMode(savedViewMode);
-                    console.log('Loaded saved view mode:', savedViewMode);
-                }
+            // Save the current view mode to localStorage
+            if (viewMode) {
+                localStorage.setItem('viewMode', viewMode);
+                console.log('Saved view mode:', viewMode);
+            }
+            
+            // For initial load, check if we need to override based on mobile
+            if (initialLoad && isMobileDevice() && viewMode !== 'grid') {
+                setViewMode('grid');
+                console.log('Setting grid view for mobile device');
             }
         } catch (error) {
-            console.error('Error loading saved filters:', error);
+            console.error('Error handling view mode:', error);
         }
-    }, []);
+    }, [viewMode, initialLoad]);
 
     useEffect(() => {
         const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -1159,24 +1185,41 @@ function EventsPage() {
             }}
         >
             {/* System Alert Notification Banner */}
-            <Box
-                sx={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    backgroundColor: '#ed6c02', // Amber color
-                    color: 'white',
-                    padding: '12px',
-                    zIndex: 9999,
-                    textAlign: 'center',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                }}
-            >
-                <Typography variant="subtitle1" fontWeight="bold">
-                    SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
-                </Typography>
-            </Box>
+            {showAlert && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        backgroundColor: '#ed6c02', // Amber color
+                        color: 'white',
+                        padding: '12px',
+                        zIndex: 9999,
+                        textAlign: 'center',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                        SYSTEM ALERT: We understand we have slight issues with the custom date range filter. Our team is working to fix it. Thank you for your patience.
+                    </Typography>
+                    <IconButton 
+                        aria-label="close alert" 
+                        onClick={() => setShowAlert(false)}
+                        sx={{ 
+                            color: 'white',
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)'
+                            }
+                        }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+            )}
 
             {/* Development memory indicator - only shows in development */}
             {process.env.NODE_ENV === 'development' && memoryUsage !== null && (
@@ -1254,16 +1297,24 @@ function EventsPage() {
                             sx={{
                                 background: '#fff',
                                 borderRadius: 2,
-                                p: 4,
+                                p: { xs: 2, sm: 4 },
                                 mb: 4,
                                 color: '#000',
                                 maxWidth: '100%',
                                 overflowX: 'auto'
                             }}
                         >
-                            <Grid container spacing={3} sx={{ mb: 4, flexWrap: 'nowrap', minWidth: { xs: 'auto', lg: '1200px' } }}>
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ minWidth: '100%', mt: 1 }}>
+                            <Grid 
+                                container 
+                                spacing={2} 
+                                sx={{ 
+                                    mb: 4, 
+                                    flexWrap: { xs: 'wrap', md: 'nowrap' },
+                                    width: '100%'
+                                }}
+                            >
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="time-range-filter-label"
                                             sx={{ 
@@ -1400,8 +1451,8 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="currency-filter-label"
                                             sx={{ 
@@ -1491,8 +1542,8 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="impact-filter-label"
                                             sx={{ 
@@ -1582,8 +1633,8 @@ function EventsPage() {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} md={4} sx={{ minWidth: '280px' }}>
-                                    <FormControl fullWidth sx={{ mt: 1 }}>
+                                <Grid item xs={12} md={3} sx={{ width: '100%' }}>
+                                    <FormControl fullWidth sx={{ width: '100%', mt: 1 }}>
                                         <InputLabel 
                                             id="timezone-filter-label"
                                             sx={{ 
