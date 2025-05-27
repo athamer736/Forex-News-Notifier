@@ -29,6 +29,11 @@ const nextConfig = {
       : 'https://localhost:5000'; // For local development
     
     return [
+      // Ezoic ads.txt redirection
+      {
+        source: '/ads.txt',
+        destination: 'https://srv.adstxtmanager.com/19390/fxalert.co.uk', // Replace with your actual domain
+      },
       {
         source: '/api/:path*',
         destination: `${apiUrl}/api/:path*`,

@@ -1,0 +1,2 @@
+# Redirect ads.txt to Ezoic's ads.txt manager
+Redirect 301 /ads.txt https://srv.adstxtmanager.com/19390/yourdomainname.com 
